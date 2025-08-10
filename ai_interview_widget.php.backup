@@ -4986,36 +4986,30 @@ jQuery(document).ready(function($) {
     
     // Initialize debug panel
     aiwTranslationDebug.pushLog('INFO', 'Translation Debug Panel initialized');
-    console.log('🐛 Translation Debug Panel initialized, aiwTranslationDebug object available:', window.aiwTranslationDebug);
     
     // Toggle debug panel visibility
     $('#toggle-debug-panel').on('click', function() {
-        console.log('🐛 Debug panel toggle button clicked');
         const $content = $('#translation-debug-content');
         const $toggleText = $('#debug-panel-toggle-text');
         
         if ($content.is(':visible')) {
             $content.slideUp();
             $toggleText.text('Show Debug Info');
-            console.log('🐛 Debug panel hidden');
         } else {
             $content.slideDown();
             $toggleText.text('Hide Debug Info');
-            console.log('🐛 Debug panel shown, checking environment status...');
             checkEnvironmentStatus();
         }
     });
     
     // Clear debug log
     $('#clear-debug-log').on('click', function() {
-        console.log('🗑️ Clear debug log button clicked');
         aiwTranslationDebug.clear();
         aiwTranslationDebug.pushLog('INFO', 'Debug log cleared by user');
     });
     
     // Export debug log
     $('#export-debug-log').on('click', function() {
-        console.log('📥 Export debug log button clicked');
         aiwTranslationDebug.export();
         aiwTranslationDebug.pushLog('INFO', 'Debug log exported by user');
     });
@@ -5158,10 +5152,8 @@ jQuery(document).ready(function($) {
     
     $('.translate-prompt-btn').on('click', function(e) {
         e.preventDefault();
-        console.log('🌐 Translation button clicked');
         
         if (originalTranslationInProgress) {
-            console.log('⚠️ Translation already in progress');
             aiwTranslationDebug.pushLog('WARN', 'Translation already in progress');
             alert('Translation is already in progress. Please wait.');
             return;
@@ -9741,6 +9733,295 @@ public function documentation_page() {
     </div>
 </div>
 
+<script>
+jQuery(document).ready(function($) {
+    let translationInProgress = false;
+    
+    // Handle translate button clicks
+    $('.translate-prompt-btn').on('click', function(e) {
+        e.preventDefault();
+        
+        if (translationInProgress) {
+            alert('Translation is already in progress. Please wait.');
+            return;
+        }
+        
+        const $button = $(this);
+        const sourceLang = $button.data('source-lang');
+        const sourceLangName = $button.data('source-lang-name');
+        
+        // Find the textarea for this language - try multiple possible selectors
+        let $sourceTextarea = $('#system-prompt-' + sourceLang);
+        if ($sourceTextarea.length === 0) {
+            // Try finding by proximity to the button (for AJAX-generated content)
+            $sourceTextarea = $button.closest('.postbox, div[style*="background: #f9f9f9"]').find('textarea[name="system_prompt_content"], textarea[name="direct_system_prompt"]');
+        }
+        
+        const sourceText = $sourceTextarea.val().trim();
+        
+        if (!sourceText) {
+            alert('Please enter a system prompt before translating.');
+            return;
+        }
+        
+        // Get all supported languages from the page
+        const allLanguages = {};
+        $('.translate-prompt-btn').each(function() {
+            const lang = $(this).data('source-lang');
+            const langName = $(this).data('source-lang-name');
+            allLanguages[lang] = langName;
+        });
+        
+        // Determine target languages (all except source)
+        const targetLanguages = [];
+        const nonEmptyTargets = [];
+        
+        Object.keys(allLanguages).forEach(function(lang) {
+            if (lang !== sourceLang) {
+                targetLanguages.push(lang);
+                
+                // Find textarea for this language - try multiple approaches
+                let $targetTextarea = $('#system-prompt-' + lang);
+                if ($targetTextarea.length === 0) {
+                    // Look for textareas near translate buttons with matching data-source-lang
+                    $targetTextarea = $('.translate-prompt-btn[data-source-lang="' + lang + '"]')
+                        .closest('.postbox, div[style*="background: #f9f9f9"]')
+                        .find('textarea[name="system_prompt_content"], textarea[name="direct_system_prompt"]');
+                }
+                
+                if ($targetTextarea.length > 0 && $targetTextarea.val().trim()) {
+                    nonEmptyTargets.push({
+                        code: lang,
+                        name: allLanguages[lang],
+                        textarea: $targetTextarea
+                    });
+                }
+            }
+        });
+        
+        if (targetLanguages.length === 0) {
+            alert('No target languages available for translation.');
+            return;
+        }
+        
+        // Show confirmation dialog if there are non-empty target fields
+        if (nonEmptyTargets.length > 0) {
+            showTranslationConfirmDialog(sourceLang, sourceLangName, sourceText, targetLanguages, allLanguages, nonEmptyTargets);
+        } else {
+            // No existing content, proceed directly
+            performTranslation(sourceLang, sourceLangName, sourceText, targetLanguages);
+        }
+    });
+    
+    function showTranslationConfirmDialog(sourceLang, sourceLangName, sourceText, targetLanguages, allLanguages, nonEmptyTargets) {
+        let dialogHtml = `
+            <div id="translation-confirm-dialog" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; display: flex; align-items: center; justify-content: center;">
+                <div style="background: white; padding: 30px; border-radius: 8px; max-width: 500px; width: 90%; max-height: 80%; overflow-y: auto;">
+                    <h3 style="margin: 0 0 20px 0; color: #333;">
+                        Confirm Translation
+                    </h3>
+                    <p style="margin: 0 0 15px 0; color: #666;">
+                        You are about to translate the system prompt from <strong>${sourceLangName}</strong> to the selected languages. Some target fields already contain content.
+                    </p>
+                    <div style="margin-bottom: 20px; padding: 15px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px;">
+                        <p style="margin: 0; color: #856404; font-weight: 600;">
+                            ⚠️ Warning: Automatic translation may contain mistakes. Please review all translations before saving.
+                        </p>
+                    </div>
+                    <p style="margin: 0 0 15px 0; font-weight: 600;">
+                        Select languages to translate to:
+                    </p>
+                    <div id="language-selection" style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 4px;">
+        `;
+        
+        targetLanguages.forEach(function(lang) {
+            const hasContent = nonEmptyTargets.some(t => t.code === lang);
+            const isChecked = !hasContent; // Default to checked if empty, unchecked if has content
+            dialogHtml += `
+                <label style="display: block; margin-bottom: 10px; cursor: pointer;">
+                    <input type="checkbox" value="${lang}" ${isChecked ? 'checked' : ''} style="margin-right: 8px;">
+                    ${allLanguages[lang]} (${lang})${hasContent ? ' - ⚠️ has existing content' : ''}
+                </label>
+            `;
+        });
+        
+        dialogHtml += `
+                    </div>
+                    <div style="margin-top: 20px; text-align: right;">
+                        <button id="cancel-translation" class="button button-secondary" style="margin-right: 10px;">
+                            Cancel
+                        </button>
+                        <button id="confirm-translation" class="button button-primary">
+                            Translate Selected
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        $('body').append(dialogHtml);
+        
+        // Handle dialog buttons
+        $('#cancel-translation').on('click', function() {
+            $('#translation-confirm-dialog').remove();
+        });
+        
+        $('#confirm-translation').on('click', function() {
+            const selectedLanguages = [];
+            $('#language-selection input:checked').each(function() {
+                selectedLanguages.push($(this).val());
+            });
+            
+            $('#translation-confirm-dialog').remove();
+            
+            if (selectedLanguages.length === 0) {
+                alert('Please select at least one language to translate to.');
+                return;
+            }
+            
+            performTranslation(sourceLang, sourceLangName, sourceText, selectedLanguages);
+        });
+        
+        // Close dialog on outside click
+        $('#translation-confirm-dialog').on('click', function(e) {
+            if (e.target === this) {
+                $(this).remove();
+            }
+        });
+    }
+    
+    function performTranslation(sourceLang, sourceLangName, sourceText, targetLanguages) {
+        translationInProgress = true;
+        
+        // Show loading state on all translate buttons
+        $('.translate-prompt-btn').prop('disabled', true).html('🔄 Translating...');
+        
+        // Show warning banner for source language
+        $('#translation-warning-' + sourceLang).show();
+        
+        // Add loading indicators to target textareas
+        targetLanguages.forEach(function(lang) {
+            let $textarea = $('#system-prompt-' + lang);
+            if ($textarea.length === 0) {
+                // Find textarea for this language using button proximity
+                $textarea = $('.translate-prompt-btn[data-source-lang="' + lang + '"]')
+                    .closest('.postbox, div[style*="background: #f9f9f9"]')
+                    .find('textarea[name="system_prompt_content"], textarea[name="direct_system_prompt"]');
+            }
+            
+            if ($textarea.length > 0) {
+                $textarea.prop('disabled', true);
+                $textarea.after('<div class="translation-loading translation-loading-' + lang + '" style="position: relative; background: rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: center; font-size: 14px; color: #666; padding: 10px; border-radius: 4px; margin-top: 5px; border: 1px solid #ddd;">🔄 Translating...</div>');
+            }
+        });
+        
+        // Perform AJAX request
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'ai_interview_translate_prompt',
+                source_lang: sourceLang,
+                source_text: sourceText,
+                target_langs: JSON.stringify(targetLanguages),
+                nonce: '<?php echo wp_create_nonce('ai_interview_translate_prompt'); ?>'
+            },
+            success: function(response) {
+                handleTranslationResponse(response, targetLanguages, sourceLang, sourceLangName);
+            },
+            error: function(xhr, status, error) {
+                console.error('Translation request failed:', error);
+                alert('Translation request failed. Please try again.');
+                resetTranslationUI(targetLanguages);
+            }
+        });
+    }
+    
+    function handleTranslationResponse(response, targetLanguages, sourceLang, sourceLangName) {
+        if (response.success && response.data.translations) {
+            const translations = response.data.translations;
+            const errors = response.data.errors || {};
+            
+            let successCount = 0;
+            let errorCount = 0;
+            
+            // Update textareas with translations
+            Object.keys(translations).forEach(function(lang) {
+                let $textarea = $('#system-prompt-' + lang);
+                if ($textarea.length === 0) {
+                    // Find textarea for this language using button proximity
+                    $textarea = $('.translate-prompt-btn[data-source-lang="' + lang + '"]')
+                        .closest('.postbox, div[style*="background: #f9f9f9"]')
+                        .find('textarea[name="system_prompt_content"], textarea[name="direct_system_prompt"]');
+                }
+                
+                if ($textarea.length > 0) {
+                    $textarea.val(translations[lang]);
+                    $textarea.prop('disabled', false);
+                    $('#translation-warning-' + lang).show();
+                    successCount++;
+                }
+            });
+            
+            // Show errors for failed translations
+            Object.keys(errors).forEach(function(lang) {
+                console.error('Translation error for ' + lang + ':', errors[lang]);
+                alert('Translation failed for ' + lang + ': ' + errors[lang]);
+                errorCount++;
+            });
+            
+            // Show summary message
+            if (successCount > 0) {
+                const message = 'Successfully translated to ' + successCount + ' language(s)' + 
+                               (errorCount > 0 ? '. Failed for ' + errorCount + ' language(s).' : '.');
+                showTranslationMessage(message, 'success');
+            }
+        } else {
+            const errorMessage = response.data && response.data.message ? response.data.message : 'Translation failed. Please try again.';
+            alert(errorMessage);
+        }
+        
+        resetTranslationUI(targetLanguages);
+    }
+    
+    function resetTranslationUI(targetLanguages) {
+        translationInProgress = false;
+        
+        // Reset translate buttons
+        $('.translate-prompt-btn').prop('disabled', false).html('🌐 Translate');
+        
+        // Remove loading indicators
+        $('.translation-loading').remove();
+        
+        // Re-enable textareas
+        targetLanguages.forEach(function(lang) {
+            let $textarea = $('#system-prompt-' + lang);
+            if ($textarea.length === 0) {
+                // Find textarea for this language using button proximity
+                $textarea = $('.translate-prompt-btn[data-source-lang="' + lang + '"]')
+                    .closest('.postbox, div[style*="background: #f9f9f9"]')
+                    .find('textarea[name="system_prompt_content"], textarea[name="direct_system_prompt"]');
+            }
+            
+            if ($textarea.length > 0) {
+                $textarea.prop('disabled', false);
+            }
+        });
+    }
+    
+    function showTranslationMessage(message, type) {
+        const messageClass = type === 'success' ? 'notice-success' : 'notice-error';
+        const $message = $('<div class="notice ' + messageClass + ' is-dismissible" style="margin: 20px 0; padding: 10px;"><p>' + message + '</p></div>');
+        
+        $('.wrap').prepend($message);
+        
+        // Auto-dismiss after 5 seconds
+        setTimeout(function() {
+            $message.fadeOut();
+        }, 5000);
+    }
+});
+</script>
 
 <?php
 }

@@ -206,6 +206,51 @@ class AIInterviewWidget {
     }
 
     /**
+     * Get canvas shadow color with backward compatibility
+     * 
+     * Provides fallback logic for canvas shadow color setting:
+     * 1. Check canonical 'canvas_shadow_color' setting
+     * 2. Fall back to legacy 'ai_canvas_shadow_color' theme_mod
+     * 3. Use default value if neither exists
+     * 
+     * @since 1.9.4
+     * @param string $default Default color value
+     * @return string Sanitized hex color value
+     */
+    private function get_canvas_shadow_color($default = '#00cfff') {
+        // Get style data to check for canonical setting
+        $style_data = get_option('ai_interview_widget_styles', array());
+        
+        // Check for canonical setting first
+        if (isset($style_data['canvas_shadow_color']) && !empty($style_data['canvas_shadow_color'])) {
+            return sanitize_hex_color($style_data['canvas_shadow_color']) ?: $default;
+        }
+        
+        // Check for legacy theme_mod setting
+        $legacy_value = get_theme_mod('ai_canvas_shadow_color', null);
+        if ($legacy_value !== null) {
+            // Trigger deprecation notice in debug mode
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('AI Interview Widget: Deprecated setting "ai_canvas_shadow_color" detected. Please update to use "canvas_shadow_color" setting.');
+            }
+            
+            // Migrate legacy value to canonical setting if needed
+            if (!isset($style_data['canvas_shadow_color'])) {
+                $style_data['canvas_shadow_color'] = $legacy_value;
+                update_option('ai_interview_widget_styles', $style_data);
+                
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('AI Interview Widget: Migrated legacy "ai_canvas_shadow_color" to "canvas_shadow_color".');
+                }
+            }
+            
+            return sanitize_hex_color($legacy_value) ?: $default;
+        }
+        
+        return $default;
+    }
+
+    /**
      * Validate model setting on plugin initialization
      * 
      * Ensures that the selected AI model is valid and available.
@@ -1986,9 +2031,10 @@ class AIInterviewWidget {
         // Button size (use new variable name for JavaScript)
         $css .= "    --aiw-btn-size: {$size};\n";
         
-        // Canvas shadow color (use new variable name for JavaScript)
+        // Canvas shadow color (use canonical naming with backward compatibility)
         $canvasShadowColor = isset($style_data['canvas_shadow_color']) ? $style_data['canvas_shadow_color'] : 'rgba(0, 207, 255, 0.5)';
-        $css .= "    --aiw-shadow-color: {$canvasShadowColor};\n";
+        $css .= "    --aiw-canvas-shadow-color: {$canvasShadowColor};\n";
+        $css .= "    --aiw-shadow-color: var(--aiw-canvas-shadow-color); /* Backward compatibility alias */\n";
         
         // Canvas shadow intensity as CSS variable for live preview and dynamic updates
         $canvasShadowIntensity = isset($style_data['canvas_shadow_intensity']) ? intval($style_data['canvas_shadow_intensity']) : 20;
@@ -2303,9 +2349,10 @@ class AIInterviewWidget {
             $default_css .= "    --play-button-border-width: 2px;\n";
             $default_css .= "    --play-button-neon-intensity: 20px;\n";
             $default_css .= "    --play-button-icon-color: #ffffff;\n";
-            // New CSS variables for JavaScript compatibility
+            // CSS variables with canonical naming and backward compatibility
             $default_css .= "    --aiw-btn-size: 100;\n";
-            $default_css .= "    --aiw-shadow-color: rgba(0, 207, 255, 0.5);\n";
+            $default_css .= "    --aiw-canvas-shadow-color: rgba(0, 207, 255, 0.5);\n";
+            $default_css .= "    --aiw-shadow-color: var(--aiw-canvas-shadow-color); /* Backward compatibility alias */\n";
             $default_css .= "    --aiw-shadow-intensity: 20;\n";
             $default_css .= "}\n";
             
@@ -2362,8 +2409,8 @@ class AIInterviewWidget {
         $hover_style = get_theme_mod('ai_play_button_hover_style', 'scale');
         $focus_color = get_theme_mod('ai_play_button_focus_color', '#00cfff');
         
-        // Canvas Shadow settings
-        $canvas_shadow_color = get_theme_mod('ai_canvas_shadow_color', '#00cfff');
+        // Canvas Shadow settings - using canonical getter with backward compatibility
+        $canvas_shadow_color = $this->get_canvas_shadow_color('#00cfff');
         $canvas_shadow_intensity = get_theme_mod('ai_canvas_shadow_intensity', 30);
         
         // Only generate CSS if at least one Customizer setting exists
@@ -2399,7 +2446,7 @@ class AIInterviewWidget {
         $icon_color = sanitize_hex_color($icon_color) ?: '#ffffff';
         $pulse_color = sanitize_hex_color($pulse_color) ?: '#00cfff';
         $focus_color = sanitize_hex_color($focus_color) ?: '#00cfff';
-        $canvas_shadow_color = sanitize_hex_color($canvas_shadow_color) ?: '#00cfff';
+        // Canvas shadow color already sanitized by helper function
         
         // Validate and sanitize canvas shadow intensity
         $canvas_shadow_intensity = max(0, min(100, intval($canvas_shadow_intensity)));
@@ -2416,8 +2463,9 @@ class AIInterviewWidget {
         $css .= "    --play-button-icon-color: {$icon_color};\n";
         $css .= "    --play-button-border-color: {$pulse_color};\n";
         
-        // Canvas shadow CSS variables
-        $css .= "    --aiw-shadow-color: {$canvas_shadow_color};\n";
+        // Canvas shadow CSS variables - using canonical naming with backward compatibility alias
+        $css .= "    --aiw-canvas-shadow-color: {$canvas_shadow_color};\n";
+        $css .= "    --aiw-shadow-color: var(--aiw-canvas-shadow-color); /* Backward compatibility alias */\n";
         $css .= "    --aiw-shadow-intensity: {$canvas_shadow_intensity};\n";
         
         // Generate canvas box-shadow property based on color and intensity
@@ -4702,7 +4750,9 @@ jQuery(document).ready(function($) {
         
         // Special handling for canvas shadow properties
         if (property === 'canvas_shadow_color' || property === 'canvas-shadow-color') {
-            // Update the shadow color CSS variable
+            // Update the canonical shadow color CSS variable
+            document.documentElement.style.setProperty('--aiw-canvas-shadow-color', value);
+            // Also update legacy alias for backward compatibility
             document.documentElement.style.setProperty('--aiw-shadow-color', value);
             
             // Call the shadow update function if available
@@ -4809,7 +4859,9 @@ jQuery(document).ready(function($) {
         
         // Handle Canvas Shadow Color live preview updates
         if (property === 'canvas_shadow_color') {
-            // Update CSS variable for immediate visual feedback
+            // Update canonical CSS variable for immediate visual feedback
+            updateCSSVariable('aiw-canvas-shadow-color', value);
+            // Also update legacy alias for backward compatibility  
             updateCSSVariable('aiw-shadow-color', value);
             
             // Call the shadow color update function if available
@@ -7952,7 +8004,7 @@ public function register_customizer_controls($wp_customize) {
 
     // Canvas Shadow Color Control
     $wp_customize->add_setting('ai_canvas_shadow_color', array(
-        'default' => isset($style_data['canvas_shadow_color']) ? $style_data['canvas_shadow_color'] : '#00cfff',
+        'default' => $this->get_canvas_shadow_color('#00cfff'),
         'sanitize_callback' => 'sanitize_hex_color',
         'transport' => 'postMessage',
     ));

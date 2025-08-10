@@ -199,6 +199,8 @@
         // Canvas Shadow Color
         wp.customize('ai_canvas_shadow_color', function(value) {
             value.bind(function(newval) {
+                // Update canonical CSS variable and backward compatibility alias
+                updateCSSProperty('--aiw-canvas-shadow-color', newval);
                 updateCSSProperty('--aiw-shadow-color', newval);
                 
                 // Update the canvas shadow immediately

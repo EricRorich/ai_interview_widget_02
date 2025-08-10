@@ -838,6 +838,216 @@
     /* Legacy class - now handled by ::before pseudo-element */
 }
 
+/* === PLAY BUTTON OVERLAY === */
+.canvas-container {
+    position: relative !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    width: 100% !important;
+}
+
+.play-button-overlay {
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    z-index: 30 !important;
+    pointer-events: auto !important;
+    transition: opacity 0.3s ease !important;
+}
+
+.play-button-overlay.hidden {
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+.play-button {
+    background: none !important;
+    border: none !important;
+    cursor: pointer !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    outline: none !important;
+    font-family: inherit !important;
+    width: var(--play-button-size, 100px) !important;
+    height: var(--play-button-size, 100px) !important;
+    border-radius: 50% !important;
+    position: relative !important;
+    transition: transform 0.3s ease !important;
+}
+
+.play-button:focus {
+    outline: 2px solid #00cfff !important;
+    outline-offset: 4px !important;
+}
+
+.play-button:hover {
+    transform: scale(1.05) !important;
+}
+
+.play-button:active {
+    transform: scale(0.95) !important;
+}
+
+.play-button-inner {
+    width: 100% !important;
+    height: 100% !important;
+    border-radius: 50% !important;
+    position: relative !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+}
+
+/* Classic Design */
+.play-button[data-design="classic"] .play-button-inner {
+    background: radial-gradient(
+        circle at center,
+        var(--play-button-gradient-start, #00ffff) 0%,
+        var(--play-button-color, #00ffff) 50%,
+        var(--play-button-gradient-end, #001a33) 100%
+    ) !important;
+    box-shadow: 
+        0 0 var(--play-button-shadow-intensity, 40px) var(--play-button-color, #00ffff),
+        inset 0 0 0 2px rgba(255, 255, 255, 0.1),
+        inset 0 0 0 4px rgba(0, 207, 255, 0.3) !important;
+}
+
+/* Minimalist Design */
+.play-button[data-design="minimalist"] .play-button-inner {
+    background: var(--play-button-color, #00cfff) !important;
+    box-shadow: 
+        0 4px var(--play-button-shadow-intensity, 20px) var(--play-button-color, #00cfff),
+        inset 0 0 0 2px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Futuristic Design */
+.play-button[data-design="futuristic"] .play-button-inner {
+    background: rgba(0, 0, 0, 0.7) !important;
+    border: 4px solid var(--play-button-border-color, #00cfff) !important;
+    box-shadow: 
+        0 0 var(--play-button-neon-intensity, 30px) var(--play-button-border-color, #00cfff),
+        inset 0 0 0 2px rgba(0, 207, 255, 0.5) !important;
+}
+
+.play-button[data-design="futuristic"]::before {
+    content: '' !important;
+    position: absolute !important;
+    top: -8px !important;
+    left: -8px !important;
+    right: -8px !important;
+    bottom: -8px !important;
+    border: 2px solid var(--play-button-border-color, #00cfff) !important;
+    border-radius: 50% !important;
+    opacity: 0.3 !important;
+    animation: futuristic-ring 2s infinite ease-in-out !important;
+}
+
+.play-button[data-design="futuristic"]::after {
+    content: '' !important;
+    position: absolute !important;
+    top: -16px !important;
+    left: -16px !important;
+    right: -16px !important;
+    bottom: -16px !important;
+    border: 1px solid var(--play-button-border-color, #00cfff) !important;
+    border-radius: 50% !important;
+    opacity: 0.2 !important;
+    animation: futuristic-ring 2s infinite ease-in-out 0.5s !important;
+}
+
+.play-triangle {
+    width: 0 !important;
+    height: 0 !important;
+    border-left: calc(var(--play-button-size, 100px) * 0.25) solid var(--play-button-icon-color, #ffffff) !important;
+    border-top: calc(var(--play-button-size, 100px) * 0.15) solid transparent !important;
+    border-bottom: calc(var(--play-button-size, 100px) * 0.15) solid transparent !important;
+    margin-left: calc(var(--play-button-size, 100px) * 0.05) !important;
+    filter: drop-shadow(0 0 10px var(--play-button-icon-color, #ffffff)) !important;
+}
+
+/* Pulse Animation */
+.play-button:not([data-disable-pulse="true"]) {
+    animation: 
+        play-button-breathing calc(2.0s / var(--play-button-pulse-speed, 1)) infinite ease-in-out,
+        play-button-glow calc(1.8s / var(--play-button-pulse-speed, 1)) infinite ease-in-out !important;
+}
+
+@keyframes play-button-breathing {
+    0%, 100% { 
+        transform: scale(1); 
+    }
+    50% { 
+        transform: scale(1.08); 
+    }
+}
+
+@keyframes play-button-glow {
+    0%, 100% { 
+        box-shadow: 0 0 20px var(--play-button-color, #00cfff);
+    }
+    25% { 
+        box-shadow: 0 0 25px var(--play-button-color, #00cfff);
+    }
+    50% { 
+        box-shadow: 0 0 30px var(--play-button-color, #00cfff);
+    }
+    75% { 
+        box-shadow: 0 0 25px var(--play-button-color, #00cfff);
+    }
+}
+
+@keyframes futuristic-ring {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 0.3;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 0.1;
+    }
+}
+
+/* Responsive sizing */
+@media screen and (max-width: 1024px) and (min-width: 768px) {
+    .play-button {
+        width: calc(var(--play-button-size, 100px) * 0.8) !important;
+        height: calc(var(--play-button-size, 100px) * 0.8) !important;
+    }
+    
+    .play-triangle {
+        border-left-width: calc(var(--play-button-size, 100px) * 0.2) !important;
+        border-top-width: calc(var(--play-button-size, 100px) * 0.12) !important;
+        border-bottom-width: calc(var(--play-button-size, 100px) * 0.12) !important;
+        margin-left: calc(var(--play-button-size, 100px) * 0.04) !important;
+    }
+}
+
+@media screen and (max-width: 767px) {
+    .play-button {
+        width: calc(var(--play-button-size, 100px) * 0.6) !important;
+        height: calc(var(--play-button-size, 100px) * 0.6) !important;
+    }
+    
+    .play-triangle {
+        border-left-width: calc(var(--play-button-size, 100px) * 0.15) !important;
+        border-top-width: calc(var(--play-button-size, 100px) * 0.09) !important;
+        border-bottom-width: calc(var(--play-button-size, 100px) * 0.09) !important;
+        margin-left: calc(var(--play-button-size, 100px) * 0.03) !important;
+    }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+    .play-button,
+    .play-button[data-design="futuristic"]::before,
+    .play-button[data-design="futuristic"]::after {
+        animation: none !important;
+    }
+}
+
 /* === ELEMENTOR COMPATIBILITY === */
 .elementor-widget-container .ai-interview-container {
     overflow: visible !important;

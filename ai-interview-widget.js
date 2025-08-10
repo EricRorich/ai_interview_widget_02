@@ -1944,9 +1944,6 @@ document.addEventListener('DOMContentLoaded', function() {
             applyPlayButtonStyling();
             applyPlayButtonPulse();
         }
-                    return;
-                }
-            }
 
         async function handlePlayButtonClick() {
             debug("Play button clicked, audioReady:", audioReady, "audioSourceSet:", audioSourceSet, "currentAudioSrc:", currentAudioSrc);

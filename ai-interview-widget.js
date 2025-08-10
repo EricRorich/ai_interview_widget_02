@@ -188,7 +188,9 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!canvas) return;
             
             const intensity = parseInt(getCSSVariable('--aiw-shadow-intensity', '20'));
-            const shadowColor = getCSSVariable('--aiw-shadow-color', 'rgba(0, 207, 255, 0.5)');
+            // Use canonical variable with fallback to legacy alias
+            const shadowColor = getCSSVariable('--aiw-canvas-shadow-color', 
+                getCSSVariable('--aiw-shadow-color', 'rgba(0, 207, 255, 0.5)'));
             
             // Parse the shadow color to extract RGB values
             let r = 0, g = 207, b = 255;
@@ -3112,7 +3114,8 @@ document.addEventListener('DOMContentLoaded', function() {
             setShadowColor: (color) => {
                 // Allow manual shadow color setting for testing
                 const root = document.documentElement;
-                root.style.setProperty('--aiw-shadow-color', color);
+                root.style.setProperty('--aiw-canvas-shadow-color', color);
+                root.style.setProperty('--aiw-shadow-color', color); // Backward compatibility
                 updateCanvasShadowFromIntensity(); // Update canvas shadow
                 debug("Shadow color set to:", color);
             },

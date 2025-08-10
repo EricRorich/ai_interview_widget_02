@@ -126,6 +126,25 @@ For Troubleshooting:
 4. Use API testing tools in main settings
 5. Follow step-by-step troubleshooting guides
 
+## 📋 Deprecated Settings Notice
+
+**Canvas Shadow Color Setting Unification (v1.9.4)**
+
+The canvas shadow color setting has been unified to use canonical naming:
+- **Current (canonical):** `canvas_shadow_color` - used in all internal plugin logic
+- **Legacy (deprecated):** `ai_canvas_shadow_color` - WordPress Customizer theme_mod key
+
+**Backward Compatibility:**
+- Existing installations automatically migrate legacy settings
+- Legacy `ai_canvas_shadow_color` values are preserved during migration
+- CSS variables updated to `--aiw-canvas-shadow-color` with `--aiw-shadow-color` alias
+- Deprecation notices logged in debug mode when legacy keys detected
+
+**For Developers:**
+- Use `canvas_shadow_color` for all new integrations
+- Helper function `get_canvas_shadow_color()` handles fallback logic
+- Legacy support maintained for one release cycle
+
 🎉 Achievement Summary
 Eric, you now have a complete, professional-grade AI chat widget that:
 * Showcases your technical expertise

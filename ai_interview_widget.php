@@ -2,9 +2,9 @@
 /**
  * Plugin Name: AI Interview Widget
  * Description: Interactive AI widget for Eric Rorich's portfolio with voice capabilities. Displays greeting and handles chat interactions with speech-to-text and text-to-speech features. Now includes WordPress Customizer integration for play button designs.
- * Version: 1.9.4
+ * Version: 1.9.5
  * Author: Eric Rorich
- * Updated: 2025-08-03 18:37:12
+ * Updated: 2025-01-27 14:30:00
  */
 
 defined('ABSPATH') or die('No script kiddies please!');
@@ -203,6 +203,34 @@ class AIInterviewWidget {
      */
     private function starts_with($haystack, $needle) {
         return substr($haystack, 0, strlen($needle)) === $needle;
+    }
+
+    /**
+     * Check if deprecated customizer controls should be hidden
+     * 
+     * @since 1.9.5
+     * @return bool True to hide deprecated controls, false to show them
+     */
+    private function should_hide_deprecated_controls() {
+        // Allow filtering for development/testing purposes
+        return apply_filters('ai_interview_widget_hide_deprecated_controls', true);
+    }
+
+    /**
+     * Log deprecation notice for legacy settings access
+     * 
+     * @since 1.9.5
+     * @param string $setting_key The deprecated setting key
+     * @param string $context Context where the setting was accessed
+     */
+    private function log_deprecation_notice($setting_key, $context = 'general') {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log(sprintf(
+                'AI Interview Widget: Deprecated setting "%s" accessed in %s context. This setting was removed from UI in v1.9.5 but stored values remain honored for backward compatibility.',
+                $setting_key,
+                $context
+            ));
+        }
     }
 
     /**
@@ -3737,9 +3765,15 @@ class AIInterviewWidget {
                 </div>
             </div>
 
-            <!-- Voice Buttons Section -->
-            <div class="control-section" style="margin-bottom: 25px; padding: 15px; background: #f5f0ff; border-radius: 5px; border-left: 4px solid #6f42c1;">
-                <h3 style="margin: 0 0 15px 0; color: #555;">🎤 Voice Buttons</h3>
+            <?php if (!$this->should_hide_deprecated_controls()): ?>
+            <!-- Voice Buttons Section (DEPRECATED) -->
+            <div class="control-section" style="margin-bottom: 25px; padding: 15px; background: #ffe6e6; border-radius: 5px; border-left: 4px solid #dc3545;">
+                <h3 style="margin: 0 0 15px 0; color: #555;">🎤 Voice Buttons [DEPRECATED]</h3>
+                
+                <div style="background: #fff3cd; padding: 10px; margin-bottom: 15px; border-radius: 4px; border-left: 3px solid #ffc107;">
+                    <strong>⚠️ DEPRECATED:</strong> This section has been removed from the UI in v1.9.5. 
+                    Stored values continue to be honored for backward compatibility.
+                </div>
 
                 <div class="control-group" style="margin-bottom: 15px;">
                     <label style="display: block; margin-bottom: 5px; font-weight: 600;">Background Color:</label>
@@ -3756,6 +3790,7 @@ class AIInterviewWidget {
                     <input type="text" id="voice_btn_text_color" value="<?php echo esc_attr($style_settings['voice_btn_text_color']); ?>" class="color-picker" />
                 </div>
             </div>
+            <?php endif; ?>
 
             <!-- Action Buttons for Style Tab -->
             <div class="action-buttons" style="margin-top: 20px; display: flex; gap: 10px;">
@@ -7791,7 +7826,16 @@ array_unshift($links, $settings_link);
 return $links;
 }
 
-// WordPress Customizer Integration for Play Button Designs
+/**
+ * WordPress Customizer Integration for AI Interview Widget
+ * 
+ * @deprecated Play-Button Designs section and Canvas Shadow Intensity control
+ *            removed from UI in v1.9.5 for streamlined experience.
+ *            Stored values continue to be honored for backward compatibility.
+ * 
+ * @since 1.0.0
+ * @param WP_Customize_Manager $wp_customize WordPress Customizer Manager instance
+ */
 public function register_customizer_controls($wp_customize) {
     // Add main panel for AI Interview Widget
     $wp_customize->add_panel('ai_interview_widget', array(
@@ -7808,201 +7852,211 @@ public function register_customizer_controls($wp_customize) {
         'priority' => 5,
     ));
 
-    // Add Play-Button Designs section
-    $wp_customize->add_section('ai_interview_play_button', array(
-        'title' => __('Play-Button Designs', 'ai-interview-widget'),
-        'description' => __('Customize the play button appearance, pulse effects, and interaction styles', 'ai-interview-widget'),
-        'panel' => 'ai_interview_widget',
-        'priority' => 10,
-    ));
+    // @deprecated Play-Button Designs section removed from UI in v1.9.5
+    // Stored values continue to be honored for backward compatibility
+    if (!$this->should_hide_deprecated_controls()) {
+        // Add Play-Button Designs section (DEPRECATED)
+        $wp_customize->add_section('ai_interview_play_button', array(
+            'title' => __('Play-Button Designs (DEPRECATED)', 'ai-interview-widget'),
+            'description' => __('DEPRECATED: This section has been removed from the UI. Stored values are still honored.', 'ai-interview-widget'),
+            'panel' => 'ai_interview_widget',
+            'priority' => 10,
+        ));
+    }
 
     // Get current style settings for defaults
     $current_settings = get_option('ai_interview_widget_style_settings', '');
     $style_data = json_decode($current_settings, true);
     if (!$style_data) $style_data = array();
 
-    // Button Size Control
-    $wp_customize->add_setting('ai_play_button_size', array(
-        'default' => isset($style_data['play_button_size']) ? $style_data['play_button_size'] : 64,
-        'sanitize_callback' => array($this, 'sanitize_button_size'),
-        'transport' => 'postMessage',
-    ));
-    $wp_customize->add_control('ai_play_button_size', array(
-        'label' => __('Button Size (px)', 'ai-interview-widget'),
-        'description' => __('Size of the play button from 40px to 120px', 'ai-interview-widget'),
-        'section' => 'ai_interview_play_button',
-        'type' => 'range',
-        'input_attrs' => array(
-            'min' => 40,
-            'max' => 120,
-            'step' => 1,
-        ),
-    ));
+    // @deprecated All Play-Button Design controls removed from UI in v1.9.5
+    // Wrapped in deprecation check to allow restoration if needed
+    if (!$this->should_hide_deprecated_controls()) {
+        
+        // Button Size Control (DEPRECATED)
+        $wp_customize->add_setting('ai_play_button_size', array(
+            'default' => isset($style_data['play_button_size']) ? $style_data['play_button_size'] : 64,
+            'sanitize_callback' => array($this, 'sanitize_button_size'),
+            'transport' => 'postMessage',
+        ));
+        $wp_customize->add_control('ai_play_button_size', array(
+            'label' => __('Button Size (px) [DEPRECATED]', 'ai-interview-widget'),
+            'description' => __('DEPRECATED: This control was removed from UI but stored values are honored.', 'ai-interview-widget'),
+            'section' => 'ai_interview_play_button',
+            'type' => 'range',
+            'input_attrs' => array(
+                'min' => 40,
+                'max' => 120,
+                'step' => 1,
+            ),
+        ));
 
-    // Button Shape Control
-    $wp_customize->add_setting('ai_play_button_shape', array(
-        'default' => isset($style_data['play_button_shape']) ? $style_data['play_button_shape'] : 'circle',
-        'sanitize_callback' => array($this, 'sanitize_button_shape'),
-        'transport' => 'postMessage',
-    ));
-    $wp_customize->add_control('ai_play_button_shape', array(
-        'label' => __('Button Shape', 'ai-interview-widget'),
-        'description' => __('Choose the shape of the play button', 'ai-interview-widget'),
-        'section' => 'ai_interview_play_button',
-        'type' => 'select',
-        'choices' => array(
-            'circle' => __('Circle', 'ai-interview-widget'),
-            'rounded' => __('Rounded', 'ai-interview-widget'),
-            'square' => __('Square', 'ai-interview-widget'),
-        ),
-    ));
+        // Button Shape Control (DEPRECATED)
+        $wp_customize->add_setting('ai_play_button_shape', array(
+            'default' => isset($style_data['play_button_shape']) ? $style_data['play_button_shape'] : 'circle',
+            'sanitize_callback' => array($this, 'sanitize_button_shape'),
+            'transport' => 'postMessage',
+        ));
+        $wp_customize->add_control('ai_play_button_shape', array(
+            'label' => __('Button Shape [DEPRECATED]', 'ai-interview-widget'),
+            'description' => __('DEPRECATED: This control was removed from UI but stored values are honored.', 'ai-interview-widget'),
+            'section' => 'ai_interview_play_button',
+            'type' => 'select',
+            'choices' => array(
+                'circle' => __('Circle', 'ai-interview-widget'),
+                'rounded' => __('Rounded', 'ai-interview-widget'),
+                'square' => __('Square', 'ai-interview-widget'),
+            ),
+        ));
 
-    // Primary Color Control
-    $wp_customize->add_setting('ai_play_button_color', array(
-        'default' => isset($style_data['play_button_color']) ? $style_data['play_button_color'] : '#00cfff',
-        'sanitize_callback' => 'sanitize_hex_color',
-        'transport' => 'postMessage',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'ai_play_button_color', array(
-        'label' => __('Primary Color', 'ai-interview-widget'),
-        'description' => __('Main color of the play button', 'ai-interview-widget'),
-        'section' => 'ai_interview_play_button',
-    )));
+        // Primary Color Control (DEPRECATED)
+        $wp_customize->add_setting('ai_play_button_color', array(
+            'default' => isset($style_data['play_button_color']) ? $style_data['play_button_color'] : '#00cfff',
+            'sanitize_callback' => 'sanitize_hex_color',
+            'transport' => 'postMessage',
+        ));
+        $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'ai_play_button_color', array(
+            'label' => __('Primary Color [DEPRECATED]', 'ai-interview-widget'),
+            'description' => __('DEPRECATED: This control was removed from UI but stored values are honored.', 'ai-interview-widget'),
+            'section' => 'ai_interview_play_button',
+        )));
 
-    // Secondary Color for Gradient Control
-    $wp_customize->add_setting('ai_play_button_gradient_end', array(
-        'default' => isset($style_data['play_button_gradient_end']) ? $style_data['play_button_gradient_end'] : '',
-        'sanitize_callback' => 'sanitize_hex_color',
-        'transport' => 'postMessage',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'ai_play_button_gradient_end', array(
-        'label' => __('Secondary Color (Gradient)', 'ai-interview-widget'),
-        'description' => __('Leave empty for solid color, or choose a color for gradient effect', 'ai-interview-widget'),
-        'section' => 'ai_interview_play_button',
-    )));
+        // Secondary Color for Gradient Control (DEPRECATED)
+        $wp_customize->add_setting('ai_play_button_gradient_end', array(
+            'default' => isset($style_data['play_button_gradient_end']) ? $style_data['play_button_gradient_end'] : '',
+            'sanitize_callback' => 'sanitize_hex_color',
+            'transport' => 'postMessage',
+        ));
+        $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'ai_play_button_gradient_end', array(
+            'label' => __('Secondary Color (Gradient) [DEPRECATED]', 'ai-interview-widget'),
+            'description' => __('DEPRECATED: This control was removed from UI but stored values are honored.', 'ai-interview-widget'),
+            'section' => 'ai_interview_play_button',
+        )));
 
-    // Icon Style Control
-    $wp_customize->add_setting('ai_play_button_icon_style', array(
-        'default' => isset($style_data['play_button_icon_style']) ? $style_data['play_button_icon_style'] : 'triangle',
-        'sanitize_callback' => array($this, 'sanitize_icon_style'),
-        'transport' => 'postMessage',
-    ));
-    $wp_customize->add_control('ai_play_button_icon_style', array(
-        'label' => __('Icon Style', 'ai-interview-widget'),
-        'description' => __('Choose the play icon style', 'ai-interview-widget'),
-        'section' => 'ai_interview_play_button',
-        'type' => 'select',
-        'choices' => array(
-            'triangle' => __('Triangle (Default)', 'ai-interview-widget'),
-            'triangle_border' => __('Triangle with Border', 'ai-interview-widget'),
-            'minimal' => __('Minimal Triangle', 'ai-interview-widget'),
-        ),
-    ));
+        // Icon Style Control (DEPRECATED)
+        $wp_customize->add_setting('ai_play_button_icon_style', array(
+            'default' => isset($style_data['play_button_icon_style']) ? $style_data['play_button_icon_style'] : 'triangle',
+            'sanitize_callback' => array($this, 'sanitize_icon_style'),
+            'transport' => 'postMessage',
+        ));
+        $wp_customize->add_control('ai_play_button_icon_style', array(
+            'label' => __('Icon Style [DEPRECATED]', 'ai-interview-widget'),
+            'description' => __('DEPRECATED: This control was removed from UI but stored values are honored.', 'ai-interview-widget'),
+            'section' => 'ai_interview_play_button',
+            'type' => 'select',
+            'choices' => array(
+                'triangle' => __('Triangle (Default)', 'ai-interview-widget'),
+                'triangle_border' => __('Triangle with Border', 'ai-interview-widget'),
+                'minimal' => __('Minimal Triangle', 'ai-interview-widget'),
+            ),
+        ));
 
-    // Icon Color Control
-    $wp_customize->add_setting('ai_play_button_icon_color', array(
-        'default' => isset($style_data['play_button_icon_color']) ? $style_data['play_button_icon_color'] : '#ffffff',
-        'sanitize_callback' => 'sanitize_hex_color',
-        'transport' => 'postMessage',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'ai_play_button_icon_color', array(
-        'label' => __('Icon Color', 'ai-interview-widget'),
-        'description' => __('Color of the play icon', 'ai-interview-widget'),
-        'section' => 'ai_interview_play_button',
-    )));
+        // Icon Color Control (DEPRECATED)
+        $wp_customize->add_setting('ai_play_button_icon_color', array(
+            'default' => isset($style_data['play_button_icon_color']) ? $style_data['play_button_icon_color'] : '#ffffff',
+            'sanitize_callback' => 'sanitize_hex_color',
+            'transport' => 'postMessage',
+        ));
+        $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'ai_play_button_icon_color', array(
+            'label' => __('Icon Color [DEPRECATED]', 'ai-interview-widget'),
+            'description' => __('DEPRECATED: This control was removed from UI but stored values are honored.', 'ai-interview-widget'),
+            'section' => 'ai_interview_play_button',
+        )));
 
-    // Pulse Enabled Control
-    $wp_customize->add_setting('ai_play_button_pulse_enabled', array(
-        'default' => !isset($style_data['play_button_disable_pulse']) || !$style_data['play_button_disable_pulse'],
-        'sanitize_callback' => 'rest_sanitize_boolean',
-        'transport' => 'postMessage',
-    ));
-    $wp_customize->add_control('ai_play_button_pulse_enabled', array(
-        'label' => __('Enable Pulse Effect', 'ai-interview-widget'),
-        'description' => __('Show a continuously looping pulse animation', 'ai-interview-widget'),
-        'section' => 'ai_interview_play_button',
-        'type' => 'checkbox',
-    ));
+        // Pulse Enabled Control (DEPRECATED)
+        $wp_customize->add_setting('ai_play_button_pulse_enabled', array(
+            'default' => !isset($style_data['play_button_disable_pulse']) || !$style_data['play_button_disable_pulse'],
+            'sanitize_callback' => 'rest_sanitize_boolean',
+            'transport' => 'postMessage',
+        ));
+        $wp_customize->add_control('ai_play_button_pulse_enabled', array(
+            'label' => __('Enable Pulse Effect [DEPRECATED]', 'ai-interview-widget'),
+            'description' => __('DEPRECATED: This control was removed from UI but stored values are honored.', 'ai-interview-widget'),
+            'section' => 'ai_interview_play_button',
+            'type' => 'checkbox',
+        ));
 
-    // Pulse Color Control
-    $wp_customize->add_setting('ai_play_button_pulse_color', array(
-        'default' => isset($style_data['play_button_border_color']) ? $style_data['play_button_border_color'] : '#00cfff',
-        'sanitize_callback' => 'sanitize_hex_color',
-        'transport' => 'postMessage',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'ai_play_button_pulse_color', array(
-        'label' => __('Pulse Color', 'ai-interview-widget'),
-        'description' => __('Color of the pulse effect (defaults to primary color)', 'ai-interview-widget'),
-        'section' => 'ai_interview_play_button',
-    )));
+        // Pulse Color Control (DEPRECATED)
+        $wp_customize->add_setting('ai_play_button_pulse_color', array(
+            'default' => isset($style_data['play_button_border_color']) ? $style_data['play_button_border_color'] : '#00cfff',
+            'sanitize_callback' => 'sanitize_hex_color',
+            'transport' => 'postMessage',
+        ));
+        $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'ai_play_button_pulse_color', array(
+            'label' => __('Pulse Color [DEPRECATED]', 'ai-interview-widget'),
+            'description' => __('DEPRECATED: This control was removed from UI but stored values are honored.', 'ai-interview-widget'),
+            'section' => 'ai_interview_play_button',
+        )));
 
-    // Pulse Duration Control
-    $wp_customize->add_setting('ai_play_button_pulse_duration', array(
-        'default' => isset($style_data['play_button_pulse_speed']) ? (2.0 / $style_data['play_button_pulse_speed']) : 2.0,
-        'sanitize_callback' => array($this, 'sanitize_pulse_duration'),
-        'transport' => 'postMessage',
-    ));
-    $wp_customize->add_control('ai_play_button_pulse_duration', array(
-        'label' => __('Pulse Duration (seconds)', 'ai-interview-widget'),
-        'description' => __('Time for one complete pulse cycle', 'ai-interview-widget'),
-        'section' => 'ai_interview_play_button',
-        'type' => 'range',
-        'input_attrs' => array(
-            'min' => 0.8,
-            'max' => 3.5,
-            'step' => 0.1,
-        ),
-    ));
+        // Pulse Duration Control (DEPRECATED)
+        $wp_customize->add_setting('ai_play_button_pulse_duration', array(
+            'default' => isset($style_data['play_button_pulse_speed']) ? (2.0 / $style_data['play_button_pulse_speed']) : 2.0,
+            'sanitize_callback' => array($this, 'sanitize_pulse_duration'),
+            'transport' => 'postMessage',
+        ));
+        $wp_customize->add_control('ai_play_button_pulse_duration', array(
+            'label' => __('Pulse Duration (seconds) [DEPRECATED]', 'ai-interview-widget'),
+            'description' => __('DEPRECATED: This control was removed from UI but stored values are honored.', 'ai-interview-widget'),
+            'section' => 'ai_interview_play_button',
+            'type' => 'range',
+            'input_attrs' => array(
+                'min' => 0.8,
+                'max' => 3.5,
+                'step' => 0.1,
+            ),
+        ));
 
-    // Pulse Max Spread Control
-    $wp_customize->add_setting('ai_play_button_pulse_spread', array(
-        'default' => isset($style_data['play_button_shadow_intensity']) ? $style_data['play_button_shadow_intensity'] : 24,
-        'sanitize_callback' => array($this, 'sanitize_pulse_spread'),
-        'transport' => 'postMessage',
-    ));
-    $wp_customize->add_control('ai_play_button_pulse_spread', array(
-        'label' => __('Pulse Max Spread (px)', 'ai-interview-widget'),
-        'description' => __('Maximum radius of the pulse shadow effect', 'ai-interview-widget'),
-        'section' => 'ai_interview_play_button',
-        'type' => 'range',
-        'input_attrs' => array(
-            'min' => 8,
-            'max' => 40,
-            'step' => 1,
-        ),
-    ));
+        // Pulse Max Spread Control (DEPRECATED)
+        $wp_customize->add_setting('ai_play_button_pulse_spread', array(
+            'default' => isset($style_data['play_button_shadow_intensity']) ? $style_data['play_button_shadow_intensity'] : 24,
+            'sanitize_callback' => array($this, 'sanitize_pulse_spread'),
+            'transport' => 'postMessage',
+        ));
+        $wp_customize->add_control('ai_play_button_pulse_spread', array(
+            'label' => __('Pulse Max Spread (px) [DEPRECATED]', 'ai-interview-widget'),
+            'description' => __('DEPRECATED: This control was removed from UI but stored values are honored.', 'ai-interview-widget'),
+            'section' => 'ai_interview_play_button',
+            'type' => 'range',
+            'input_attrs' => array(
+                'min' => 8,
+                'max' => 40,
+                'step' => 1,
+            ),
+        ));
 
-    // Hover Effect Style Control
-    $wp_customize->add_setting('ai_play_button_hover_style', array(
-        'default' => isset($style_data['play_button_hover_style']) ? $style_data['play_button_hover_style'] : 'scale',
-        'sanitize_callback' => array($this, 'sanitize_hover_style'),
-        'transport' => 'postMessage',
-    ));
-    $wp_customize->add_control('ai_play_button_hover_style', array(
-        'label' => __('Hover Effect Style', 'ai-interview-widget'),
-        'description' => __('Choose the hover interaction effect', 'ai-interview-widget'),
-        'section' => 'ai_interview_play_button',
-        'type' => 'select',
-        'choices' => array(
-            'scale' => __('Scale (Default)', 'ai-interview-widget'),
-            'glow' => __('Glow', 'ai-interview-widget'),
-            'none' => __('None', 'ai-interview-widget'),
-        ),
-    ));
+        // Hover Effect Style Control (DEPRECATED)
+        $wp_customize->add_setting('ai_play_button_hover_style', array(
+            'default' => isset($style_data['play_button_hover_style']) ? $style_data['play_button_hover_style'] : 'scale',
+            'sanitize_callback' => array($this, 'sanitize_hover_style'),
+            'transport' => 'postMessage',
+        ));
+        $wp_customize->add_control('ai_play_button_hover_style', array(
+            'label' => __('Hover Effect Style [DEPRECATED]', 'ai-interview-widget'),
+            'description' => __('DEPRECATED: This control was removed from UI but stored values are honored.', 'ai-interview-widget'),
+            'section' => 'ai_interview_play_button',
+            'type' => 'select',
+            'choices' => array(
+                'scale' => __('Scale (Default)', 'ai-interview-widget'),
+                'glow' => __('Glow', 'ai-interview-widget'),
+                'none' => __('None', 'ai-interview-widget'),
+            ),
+        ));
 
-    // Focus Ring Color Control
-    $wp_customize->add_setting('ai_play_button_focus_color', array(
-        'default' => isset($style_data['play_button_color']) ? $style_data['play_button_color'] : '#00cfff',
-        'sanitize_callback' => 'sanitize_hex_color',
-        'transport' => 'postMessage',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'ai_play_button_focus_color', array(
-        'label' => __('Focus Ring Color', 'ai-interview-widget'),
-        'description' => __('Color of the accessibility focus outline', 'ai-interview-widget'),
-        'section' => 'ai_interview_play_button',
-    )));
+        // Focus Ring Color Control (DEPRECATED)
+        $wp_customize->add_setting('ai_play_button_focus_color', array(
+            'default' => isset($style_data['play_button_color']) ? $style_data['play_button_color'] : '#00cfff',
+            'sanitize_callback' => 'sanitize_hex_color',
+            'transport' => 'postMessage',
+        ));
+        $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'ai_play_button_focus_color', array(
+            'label' => __('Focus Ring Color [DEPRECATED]', 'ai-interview-widget'),
+            'description' => __('DEPRECATED: This control was removed from UI but stored values are honored.', 'ai-interview-widget'),
+            'section' => 'ai_interview_play_button',
+        )));
+        
+    } // End deprecated Play-Button controls
 
-    // Canvas Shadow Color Control
+    // Canvas Shadow Color Control (keeping this one)
     $wp_customize->add_setting('ai_canvas_shadow_color', array(
         'default' => $this->get_canvas_shadow_color('#00cfff'),
         'sanitize_callback' => 'sanitize_hex_color',
@@ -8014,23 +8068,27 @@ public function register_customizer_controls($wp_customize) {
         'section' => 'ai_interview_canvas',
     )));
 
-    // Canvas Shadow Intensity Control
-    $wp_customize->add_setting('ai_canvas_shadow_intensity', array(
-        'default' => isset($style_data['canvas_shadow_intensity']) ? $style_data['canvas_shadow_intensity'] : 30,
-        'sanitize_callback' => array($this, 'sanitize_canvas_shadow_intensity'),
-        'transport' => 'postMessage',
-    ));
-    $wp_customize->add_control('ai_canvas_shadow_intensity', array(
-        'label' => __('Canvas Shadow Intensity', 'ai-interview-widget'),
-        'description' => __('Controls the strength/opacity of the canvas shadow effect (0 = no shadow, 100 = maximum)', 'ai-interview-widget'),
-        'section' => 'ai_interview_canvas',
-        'type' => 'range',
-        'input_attrs' => array(
-            'min' => 0,
-            'max' => 100,
-            'step' => 1,
-        ),
-    ));
+    // @deprecated Canvas Shadow Intensity control removed from UI in v1.9.5
+    // Stored values continue to be honored for backward compatibility
+    if (!$this->should_hide_deprecated_controls()) {
+        // Canvas Shadow Intensity Control (DEPRECATED)
+        $wp_customize->add_setting('ai_canvas_shadow_intensity', array(
+            'default' => isset($style_data['canvas_shadow_intensity']) ? $style_data['canvas_shadow_intensity'] : 30,
+            'sanitize_callback' => array($this, 'sanitize_canvas_shadow_intensity'),
+            'transport' => 'postMessage',
+        ));
+        $wp_customize->add_control('ai_canvas_shadow_intensity', array(
+            'label' => __('Canvas Shadow Intensity [DEPRECATED]', 'ai-interview-widget'),
+            'description' => __('DEPRECATED: This control was removed from UI but stored values are honored. (0 = no shadow, 100 = maximum)', 'ai-interview-widget'),
+            'section' => 'ai_interview_canvas',
+            'type' => 'range',
+            'input_attrs' => array(
+                'min' => 0,
+                'max' => 100,
+                'step' => 1,
+            ),
+        ));
+    }
 }
 
 // Enqueue Customizer live preview script
@@ -8045,43 +8103,80 @@ public function enqueue_customizer_preview_script() {
 }
 
 // Sanitization functions for Customizer controls
+// @deprecated Play-Button sanitization functions maintained for backward compatibility
+
+/**
+ * @deprecated since v1.9.5 - Play-Button controls removed from UI
+ */
 public function sanitize_button_size($size) {
+    $this->log_deprecation_notice('play_button_size', 'sanitization');
     $size = absint($size);
     return max(40, min(120, $size));
 }
 
+/**
+ * @deprecated since v1.9.5 - Play-Button controls removed from UI
+ */
 public function sanitize_button_shape($shape) {
+    $this->log_deprecation_notice('play_button_shape', 'sanitization');
     $allowed_shapes = array('circle', 'rounded', 'square');
     return in_array($shape, $allowed_shapes) ? $shape : 'circle';
 }
 
+/**
+ * @deprecated since v1.9.5 - Play-Button controls removed from UI
+ */
 public function sanitize_icon_style($style) {
+    $this->log_deprecation_notice('play_button_icon_style', 'sanitization');
     $allowed_styles = array('triangle', 'triangle_border', 'minimal');
     return in_array($style, $allowed_styles) ? $style : 'triangle';
 }
 
+/**
+ * @deprecated since v1.9.5 - Play-Button controls removed from UI
+ */
 public function sanitize_pulse_duration($duration) {
+    $this->log_deprecation_notice('play_button_pulse_duration', 'sanitization');
     $duration = floatval($duration);
     return max(0.8, min(3.5, $duration));
 }
 
+/**
+ * @deprecated since v1.9.5 - Play-Button controls removed from UI
+ */
 public function sanitize_pulse_spread($spread) {
+    $this->log_deprecation_notice('play_button_pulse_spread', 'sanitization');
     $spread = absint($spread);
     return max(8, min(40, $spread));
 }
 
+/**
+ * @deprecated since v1.9.5 - Play-Button controls removed from UI
+ */
 public function sanitize_hover_style($style) {
+    $this->log_deprecation_notice('play_button_hover_style', 'sanitization');
     $allowed_styles = array('scale', 'glow', 'none');
     return in_array($style, $allowed_styles) ? $style : 'scale';
 }
 
+/**
+ * @deprecated since v1.9.5 - Canvas Shadow Intensity control removed from UI
+ */
 public function sanitize_canvas_shadow_intensity($intensity) {
+    $this->log_deprecation_notice('canvas_shadow_intensity', 'sanitization');
     $intensity = absint($intensity);
     if ($intensity < 0) $intensity = 0; // Handle edge case for negative values
     return max(0, min(100, $intensity));
 }
 
-// Sync WordPress Customizer settings to plugin internal settings
+/**
+ * Sync WordPress Customizer settings to plugin internal settings
+ * 
+ * @deprecated Play-Button and Canvas Shadow Intensity settings sync
+ *            maintained for backward compatibility but logged as deprecated
+ * 
+ * @since 1.0.0
+ */
 public function sync_customizer_to_plugin_settings() {
     // Get current plugin style settings
     $style_settings_json = get_option('ai_interview_widget_style_settings', '');
@@ -8089,21 +8184,31 @@ public function sync_customizer_to_plugin_settings() {
     if (!$style_settings) $style_settings = array();
     
     // Map WordPress Customizer settings to plugin settings
+    // @deprecated Most play button settings removed from UI in v1.9.5
     $customizer_to_plugin_map = array(
-        'ai_canvas_shadow_color' => 'canvas_shadow_color',
-        'ai_canvas_shadow_intensity' => 'canvas_shadow_intensity',
-        'ai_play_button_size' => 'play_button_size',
-        'ai_play_button_color' => 'play_button_color',
-        'ai_play_button_gradient_end' => 'play_button_gradient_end',
-        'ai_play_button_icon_color' => 'play_button_icon_color',
-        'ai_play_button_icon_style' => 'play_button_icon_style',
-        'ai_play_button_pulse_enabled' => 'play_button_disable_pulse', // Note: inverted logic
-        'ai_play_button_pulse_color' => 'play_button_border_color',
-        'ai_play_button_pulse_duration' => 'play_button_pulse_speed', // Note: needs conversion
-        'ai_play_button_pulse_spread' => 'play_button_shadow_intensity',
-        'ai_play_button_hover_style' => 'play_button_hover_style',
-        'ai_play_button_focus_color' => 'play_button_focus_color',
-        'ai_play_button_shape' => 'play_button_shape',
+        'ai_canvas_shadow_color' => 'canvas_shadow_color', // Still active
+        'ai_canvas_shadow_intensity' => 'canvas_shadow_intensity', // DEPRECATED
+        'ai_play_button_size' => 'play_button_size', // DEPRECATED
+        'ai_play_button_color' => 'play_button_color', // DEPRECATED
+        'ai_play_button_gradient_end' => 'play_button_gradient_end', // DEPRECATED
+        'ai_play_button_icon_color' => 'play_button_icon_color', // DEPRECATED
+        'ai_play_button_icon_style' => 'play_button_icon_style', // DEPRECATED
+        'ai_play_button_pulse_enabled' => 'play_button_disable_pulse', // DEPRECATED - Note: inverted logic
+        'ai_play_button_pulse_color' => 'play_button_border_color', // DEPRECATED
+        'ai_play_button_pulse_duration' => 'play_button_pulse_speed', // DEPRECATED - Note: needs conversion
+        'ai_play_button_pulse_spread' => 'play_button_shadow_intensity', // DEPRECATED
+        'ai_play_button_hover_style' => 'play_button_hover_style', // DEPRECATED
+        'ai_play_button_focus_color' => 'play_button_focus_color', // DEPRECATED
+        'ai_play_button_shape' => 'play_button_shape', // DEPRECATED
+    );
+    
+    // Deprecated settings that should be logged
+    $deprecated_settings = array(
+        'ai_canvas_shadow_intensity', 'ai_play_button_size', 'ai_play_button_color',
+        'ai_play_button_gradient_end', 'ai_play_button_icon_color', 'ai_play_button_icon_style',
+        'ai_play_button_pulse_enabled', 'ai_play_button_pulse_color', 'ai_play_button_pulse_duration',
+        'ai_play_button_pulse_spread', 'ai_play_button_hover_style', 'ai_play_button_focus_color',
+        'ai_play_button_shape'
     );
     
     $settings_updated = false;
@@ -8112,6 +8217,11 @@ public function sync_customizer_to_plugin_settings() {
         $customizer_value = get_theme_mod($customizer_key);
         
         if ($customizer_value !== false && $customizer_value !== null) {
+            // Log deprecation notice for deprecated settings
+            if (in_array($customizer_key, $deprecated_settings)) {
+                $this->log_deprecation_notice($customizer_key, 'customizer_sync');
+            }
+            
             // Handle special conversions
             if ($plugin_key === 'play_button_disable_pulse') {
                 // Invert boolean logic: pulse_enabled -> disable_pulse

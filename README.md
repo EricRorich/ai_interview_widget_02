@@ -126,9 +126,61 @@ For Troubleshooting:
 4. Use API testing tools in main settings
 5. Follow step-by-step troubleshooting guides
 
-## 📋 Deprecated Settings Notice
+## 📋 Deprecated / Removed Customizer Options
 
-**Canvas Shadow Color Setting Unification (v1.9.4)**
+**As of v1.9.5, the following customization options have been removed from the Customizer UI to streamline the user experience. Previously saved values continue to be honored for backward compatibility.**
+
+### Removed Sections & Controls:
+
+#### 🎤 Voice Buttons (Entire Section)
+- **Background Color** - Voice button background styling
+- **Border Color** - Voice button border styling  
+- **Text Color** - Voice button text styling
+- **Status:** Removed from Enhanced Customizer UI
+- **Impact:** Voice button features remain active with last saved configuration
+
+#### ▶️ Play-Button Designs (Entire Section)
+- **Button Size** - Size control (40px-120px range)
+- **Button Shape** - Circle, Rounded, Square options
+- **Primary Color** - Main button color
+- **Secondary Color (Gradient)** - Gradient end color
+- **Icon Style** - Triangle variants and styles
+- **Icon Color** - Play icon color
+- **Pulse Effect** - Enable/disable pulse animation
+- **Pulse Color** - Pulse effect color
+- **Pulse Duration** - Animation timing (0.8s-3.5s)
+- **Pulse Max Spread** - Shadow radius (8px-40px)
+- **Hover Effect Style** - Scale, Glow, or None
+- **Focus Ring Color** - Accessibility outline color
+- **Status:** Removed from WordPress Customizer
+- **Impact:** Play button continues to render with stored design configuration
+
+#### 🎨 Canvas Shadow Intensity (Single Control)
+- **Canvas Shadow Intensity** - Shadow strength control (0-100 range)
+- **Status:** Removed from Canvas & Background section
+- **Impact:** Canvas shadow uses last saved intensity value, shadow color control remains available
+
+### Backward Compatibility Guarantees:
+
+✅ **No Visual Regression** - Existing sites retain their current appearance  
+✅ **Stored Values Preserved** - No deletion of saved customization data  
+✅ **Frontend Functionality** - All features continue to work as configured  
+✅ **Graceful Degradation** - Fresh installs use sensible defaults  
+
+### For Developers:
+
+- **Filter Available:** `ai_interview_widget_hide_deprecated_controls` - Set to `false` to restore deprecated controls for testing
+- **Debug Logging:** Deprecation notices logged when `WP_DEBUG` is enabled
+- **Future Removal:** Deprecated code paths marked for removal in v2.0.0
+
+### Migration Path:
+No action required. The plugin automatically maintains compatibility with existing configurations while providing a cleaner UI for new users.
+
+---
+
+## 📋 Canvas Shadow Color Setting Unification (v1.9.4)
+
+**Backward Compatibility Notice**
 
 The canvas shadow color setting has been unified to use canonical naming:
 - **Current (canonical):** `canvas_shadow_color` - used in all internal plugin logic
@@ -154,4 +206,4 @@ Eric, you now have a complete, professional-grade AI chat widget that:
 * Includes robust debugging capabilities
 * Follows WordPress best practices
 * Ready for production deployment
-Current Version: 1.8.10 | Status: Complete & Production Ready ✅
+Current Version: 1.9.5 | Status: Complete & Production Ready ✅

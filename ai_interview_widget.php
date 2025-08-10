@@ -70,6 +70,10 @@ class AIInterviewWidget {
         // Add custom CSS to frontend
         add_action('wp_head', array($this, 'output_custom_css'));
 
+        // Add WordPress Customizer integration
+        add_action('customize_register', array($this, 'register_customizer_controls'));
+        add_action('customize_preview_init', array($this, 'enqueue_customizer_preview_script'));
+
         // AJAX handlers for customizer
         add_action('wp_ajax_ai_interview_save_styles', array($this, 'save_custom_styles'));
         add_action('wp_ajax_ai_interview_save_content', array($this, 'save_custom_content'));
@@ -2209,8 +2213,11 @@ class AIInterviewWidget {
         $style_settings = get_option('ai_interview_widget_style_settings', '');
         $content_settings = get_option('ai_interview_widget_content_settings', '');
         
+        // Get WordPress Customizer settings (new system)
+        $wp_customizer_css = $this->get_wp_customizer_css();
+        
         // Always generate CSS to ensure all variables are available, including canvas background and pulse effect
-        if (empty($style_settings)) {
+        if (empty($style_settings) && empty($wp_customizer_css)) {
             // If no custom styles, at least output default CSS variables for all effects
             $default_css = "/* AI Interview Widget - Default CSS Variables */\n";
             $default_css .= ":root {\n";
@@ -2240,15 +2247,155 @@ class AIInterviewWidget {
             echo $default_css;
             echo "</style>\n";
         } else {
-            $custom_css = $this->generate_css_from_settings($style_settings, $content_settings);
+            echo "\n<!-- AI Interview Widget Custom Styles -->\n";
+            echo "<style type=\"text/css\" id=\"ai-interview-widget-custom-styles\">\n";
             
-            if (!empty($custom_css)) {
-                echo "\n<!-- AI Interview Widget Custom Styles -->\n";
-                echo "<style type=\"text/css\" id=\"ai-interview-widget-custom-styles\">\n";
-                echo $custom_css;
-                echo "</style>\n";
+            // Output Enhanced Customizer CSS (existing system)
+            if (!empty($style_settings)) {
+                $custom_css = $this->generate_css_from_settings($style_settings, $content_settings);
+                if (!empty($custom_css)) {
+                    echo "/* Enhanced Customizer Styles */\n";
+                    echo $custom_css;
+                }
             }
+            
+            // Output WordPress Customizer CSS (new system) 
+            if (!empty($wp_customizer_css)) {
+                echo "\n/* WordPress Customizer Styles */\n";
+                echo $wp_customizer_css;
+            }
+            
+            echo "</style>\n";
         }
+    }
+
+    // Generate CSS from WordPress Customizer settings
+    private function get_wp_customizer_css() {
+        $css = '';
+        
+        // Get WordPress Customizer settings
+        $button_size = get_theme_mod('ai_play_button_size', 64);
+        $button_shape = get_theme_mod('ai_play_button_shape', 'circle');
+        $button_color = get_theme_mod('ai_play_button_color', '#00cfff');
+        $button_gradient_end = get_theme_mod('ai_play_button_gradient_end', '');
+        $icon_style = get_theme_mod('ai_play_button_icon_style', 'triangle');
+        $icon_color = get_theme_mod('ai_play_button_icon_color', '#ffffff');
+        $pulse_enabled = get_theme_mod('ai_play_button_pulse_enabled', true);
+        $pulse_color = get_theme_mod('ai_play_button_pulse_color', '#00cfff');
+        $pulse_duration = get_theme_mod('ai_play_button_pulse_duration', 2.0);
+        $pulse_spread = get_theme_mod('ai_play_button_pulse_spread', 24);
+        $hover_style = get_theme_mod('ai_play_button_hover_style', 'scale');
+        $focus_color = get_theme_mod('ai_play_button_focus_color', '#00cfff');
+        
+        // Only generate CSS if at least one Customizer setting exists
+        $has_customizer_settings = get_theme_mod('ai_play_button_size') !== null || 
+                                   get_theme_mod('ai_play_button_color') !== null ||
+                                   get_theme_mod('ai_play_button_pulse_enabled') !== null;
+        
+        if (!$has_customizer_settings) {
+            return $css;
+        }
+        
+        $css .= ":root {\n";
+        
+        // Button size
+        $css .= "    --play-button-size: {$button_size}px;\n";
+        $css .= "    --aiw-btn-size: {$button_size};\n";
+        
+        // Button shape (border-radius)
+        $border_radius = '50%'; // circle default
+        if ($button_shape === 'rounded') {
+            $border_radius = '15px';
+        } elseif ($button_shape === 'square') {
+            $border_radius = '0px';
+        }
+        
+        // Button colors
+        if (!empty($button_gradient_end)) {
+            // Gradient background
+            $css .= "    --play-button-color: linear-gradient(135deg, {$button_color}, {$button_gradient_end});\n";
+        } else {
+            // Solid color
+            $css .= "    --play-button-color: {$button_color};\n";
+        }
+        
+        $css .= "    --play-button-icon-color: {$icon_color};\n";
+        $css .= "    --play-button-border-color: {$pulse_color};\n";
+        
+        // Pulse settings
+        $css .= "    --play-button-disable-pulse: " . ($pulse_enabled ? 'false' : 'true') . ";\n";
+        $css .= "    --play-button-pulse-speed: " . (2.0 / $pulse_duration) . ";\n";
+        $css .= "    --play-button-shadow-intensity: {$pulse_spread}px;\n";
+        
+        $css .= "}\n\n";
+        
+        // Play button specific styles
+        $css .= ".play-button {\n";
+        $css .= "    border-radius: {$border_radius} !important;\n";
+        
+        // Apply background based on gradient or solid
+        if (!empty($button_gradient_end)) {
+            $css .= "    background: linear-gradient(135deg, {$button_color}, {$button_gradient_end}) !important;\n";
+        } else {
+            $css .= "    background: {$button_color} !important;\n";
+        }
+        
+        $css .= "    color: {$icon_color} !important;\n";
+        $css .= "    border-color: {$pulse_color} !important;\n";
+        $css .= "}\n\n";
+        
+        // Hover effects
+        if ($hover_style === 'scale') {
+            $css .= ".play-button:hover {\n";
+            $css .= "    transform: scale(1.1) !important;\n";
+            $css .= "}\n\n";
+        } elseif ($hover_style === 'glow') {
+            $css .= ".play-button:hover {\n";
+            $css .= "    box-shadow: 0 0 " . ($pulse_spread * 2) . "px {$pulse_color} !important;\n";
+            $css .= "}\n\n";
+        } elseif ($hover_style === 'none') {
+            $css .= ".play-button:hover {\n";
+            $css .= "    transform: none !important;\n";
+            $css .= "    box-shadow: 0 0 {$pulse_spread}px {$pulse_color} !important;\n";
+            $css .= "}\n\n";
+        }
+        
+        // Focus ring accessibility
+        $css .= ".play-button:focus {\n";
+        $css .= "    outline: 2px solid {$focus_color} !important;\n";
+        $css .= "    outline-offset: 4px !important;\n";
+        $css .= "}\n\n";
+        
+        // Icon style variations
+        if ($icon_style === 'triangle_border') {
+            $css .= ".play-button .play-icon {\n";
+            $css .= "    border: 2px solid {$icon_color};\n";
+            $css .= "    background: transparent;\n";
+            $css .= "    width: 0;\n";
+            $css .= "    height: 0;\n";
+            $css .= "    border-left: 8px solid {$icon_color};\n";
+            $css .= "    border-top: 6px solid transparent;\n";
+            $css .= "    border-bottom: 6px solid transparent;\n";
+            $css .= "    border-right: none;\n";
+            $css .= "}\n\n";
+        } elseif ($icon_style === 'minimal') {
+            $css .= ".play-button .play-icon {\n";
+            $css .= "    font-size: 0.8em;\n";
+            $css .= "    opacity: 0.9;\n";
+            $css .= "}\n\n";
+        }
+        
+        // Pulse effect styles with prefers-reduced-motion support
+        if ($pulse_enabled) {
+            $css .= "@media (prefers-reduced-motion: no-preference) {\n";
+            $css .= "    .play-button-container:not(.hidden) .play-button:not([data-disable-pulse=\"true\"]) {\n";
+            $css .= "        animation: play-button-breathing-pulse " . $pulse_duration . "s infinite ease-in-out,\n";
+            $css .= "                   play-button-dots-pulse " . ($pulse_duration * 0.9) . "s infinite ease-in-out;\n";
+            $css .= "    }\n";
+            $css .= "}\n\n";
+        }
+        
+        return $css;
     }
 
     // Preview widget version - shows full interface for customizer
@@ -7457,6 +7604,252 @@ public function add_settings_link($links) {
 $settings_link = '<a href="' . admin_url('admin.php?page=ai-interview-widget') . '">Settings</a>';
 array_unshift($links, $settings_link);
 return $links;
+}
+
+// WordPress Customizer Integration for Play Button Designs
+public function register_customizer_controls($wp_customize) {
+    // Add main panel for AI Interview Widget
+    $wp_customize->add_panel('ai_interview_widget', array(
+        'title' => __('AI Interview Widget', 'ai-interview-widget'),
+        'description' => __('Customize the AI Interview Widget appearance and behavior', 'ai-interview-widget'),
+        'priority' => 160,
+    ));
+
+    // Add Play-Button Designs section
+    $wp_customize->add_section('ai_interview_play_button', array(
+        'title' => __('Play-Button Designs', 'ai-interview-widget'),
+        'description' => __('Customize the play button appearance, pulse effects, and interaction styles', 'ai-interview-widget'),
+        'panel' => 'ai_interview_widget',
+        'priority' => 10,
+    ));
+
+    // Get current style settings for defaults
+    $current_settings = get_option('ai_interview_widget_style_settings', '');
+    $style_data = json_decode($current_settings, true);
+    if (!$style_data) $style_data = array();
+
+    // Button Size Control
+    $wp_customize->add_setting('ai_play_button_size', array(
+        'default' => isset($style_data['play_button_size']) ? $style_data['play_button_size'] : 64,
+        'sanitize_callback' => array($this, 'sanitize_button_size'),
+        'transport' => 'postMessage',
+    ));
+    $wp_customize->add_control('ai_play_button_size', array(
+        'label' => __('Button Size (px)', 'ai-interview-widget'),
+        'description' => __('Size of the play button from 40px to 120px', 'ai-interview-widget'),
+        'section' => 'ai_interview_play_button',
+        'type' => 'range',
+        'input_attrs' => array(
+            'min' => 40,
+            'max' => 120,
+            'step' => 1,
+        ),
+    ));
+
+    // Button Shape Control
+    $wp_customize->add_setting('ai_play_button_shape', array(
+        'default' => isset($style_data['play_button_shape']) ? $style_data['play_button_shape'] : 'circle',
+        'sanitize_callback' => array($this, 'sanitize_button_shape'),
+        'transport' => 'postMessage',
+    ));
+    $wp_customize->add_control('ai_play_button_shape', array(
+        'label' => __('Button Shape', 'ai-interview-widget'),
+        'description' => __('Choose the shape of the play button', 'ai-interview-widget'),
+        'section' => 'ai_interview_play_button',
+        'type' => 'select',
+        'choices' => array(
+            'circle' => __('Circle', 'ai-interview-widget'),
+            'rounded' => __('Rounded', 'ai-interview-widget'),
+            'square' => __('Square', 'ai-interview-widget'),
+        ),
+    ));
+
+    // Primary Color Control
+    $wp_customize->add_setting('ai_play_button_color', array(
+        'default' => isset($style_data['play_button_color']) ? $style_data['play_button_color'] : '#00cfff',
+        'sanitize_callback' => 'sanitize_hex_color',
+        'transport' => 'postMessage',
+    ));
+    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'ai_play_button_color', array(
+        'label' => __('Primary Color', 'ai-interview-widget'),
+        'description' => __('Main color of the play button', 'ai-interview-widget'),
+        'section' => 'ai_interview_play_button',
+    )));
+
+    // Secondary Color for Gradient Control
+    $wp_customize->add_setting('ai_play_button_gradient_end', array(
+        'default' => isset($style_data['play_button_gradient_end']) ? $style_data['play_button_gradient_end'] : '',
+        'sanitize_callback' => 'sanitize_hex_color',
+        'transport' => 'postMessage',
+    ));
+    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'ai_play_button_gradient_end', array(
+        'label' => __('Secondary Color (Gradient)', 'ai-interview-widget'),
+        'description' => __('Leave empty for solid color, or choose a color for gradient effect', 'ai-interview-widget'),
+        'section' => 'ai_interview_play_button',
+    )));
+
+    // Icon Style Control
+    $wp_customize->add_setting('ai_play_button_icon_style', array(
+        'default' => isset($style_data['play_button_icon_style']) ? $style_data['play_button_icon_style'] : 'triangle',
+        'sanitize_callback' => array($this, 'sanitize_icon_style'),
+        'transport' => 'postMessage',
+    ));
+    $wp_customize->add_control('ai_play_button_icon_style', array(
+        'label' => __('Icon Style', 'ai-interview-widget'),
+        'description' => __('Choose the play icon style', 'ai-interview-widget'),
+        'section' => 'ai_interview_play_button',
+        'type' => 'select',
+        'choices' => array(
+            'triangle' => __('Triangle (Default)', 'ai-interview-widget'),
+            'triangle_border' => __('Triangle with Border', 'ai-interview-widget'),
+            'minimal' => __('Minimal Triangle', 'ai-interview-widget'),
+        ),
+    ));
+
+    // Icon Color Control
+    $wp_customize->add_setting('ai_play_button_icon_color', array(
+        'default' => isset($style_data['play_button_icon_color']) ? $style_data['play_button_icon_color'] : '#ffffff',
+        'sanitize_callback' => 'sanitize_hex_color',
+        'transport' => 'postMessage',
+    ));
+    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'ai_play_button_icon_color', array(
+        'label' => __('Icon Color', 'ai-interview-widget'),
+        'description' => __('Color of the play icon', 'ai-interview-widget'),
+        'section' => 'ai_interview_play_button',
+    )));
+
+    // Pulse Enabled Control
+    $wp_customize->add_setting('ai_play_button_pulse_enabled', array(
+        'default' => !isset($style_data['play_button_disable_pulse']) || !$style_data['play_button_disable_pulse'],
+        'sanitize_callback' => 'rest_sanitize_boolean',
+        'transport' => 'postMessage',
+    ));
+    $wp_customize->add_control('ai_play_button_pulse_enabled', array(
+        'label' => __('Enable Pulse Effect', 'ai-interview-widget'),
+        'description' => __('Show a continuously looping pulse animation', 'ai-interview-widget'),
+        'section' => 'ai_interview_play_button',
+        'type' => 'checkbox',
+    ));
+
+    // Pulse Color Control
+    $wp_customize->add_setting('ai_play_button_pulse_color', array(
+        'default' => isset($style_data['play_button_border_color']) ? $style_data['play_button_border_color'] : '#00cfff',
+        'sanitize_callback' => 'sanitize_hex_color',
+        'transport' => 'postMessage',
+    ));
+    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'ai_play_button_pulse_color', array(
+        'label' => __('Pulse Color', 'ai-interview-widget'),
+        'description' => __('Color of the pulse effect (defaults to primary color)', 'ai-interview-widget'),
+        'section' => 'ai_interview_play_button',
+    )));
+
+    // Pulse Duration Control
+    $wp_customize->add_setting('ai_play_button_pulse_duration', array(
+        'default' => isset($style_data['play_button_pulse_speed']) ? (2.0 / $style_data['play_button_pulse_speed']) : 2.0,
+        'sanitize_callback' => array($this, 'sanitize_pulse_duration'),
+        'transport' => 'postMessage',
+    ));
+    $wp_customize->add_control('ai_play_button_pulse_duration', array(
+        'label' => __('Pulse Duration (seconds)', 'ai-interview-widget'),
+        'description' => __('Time for one complete pulse cycle', 'ai-interview-widget'),
+        'section' => 'ai_interview_play_button',
+        'type' => 'range',
+        'input_attrs' => array(
+            'min' => 0.8,
+            'max' => 3.5,
+            'step' => 0.1,
+        ),
+    ));
+
+    // Pulse Max Spread Control
+    $wp_customize->add_setting('ai_play_button_pulse_spread', array(
+        'default' => isset($style_data['play_button_shadow_intensity']) ? $style_data['play_button_shadow_intensity'] : 24,
+        'sanitize_callback' => array($this, 'sanitize_pulse_spread'),
+        'transport' => 'postMessage',
+    ));
+    $wp_customize->add_control('ai_play_button_pulse_spread', array(
+        'label' => __('Pulse Max Spread (px)', 'ai-interview-widget'),
+        'description' => __('Maximum radius of the pulse shadow effect', 'ai-interview-widget'),
+        'section' => 'ai_interview_play_button',
+        'type' => 'range',
+        'input_attrs' => array(
+            'min' => 8,
+            'max' => 40,
+            'step' => 1,
+        ),
+    ));
+
+    // Hover Effect Style Control
+    $wp_customize->add_setting('ai_play_button_hover_style', array(
+        'default' => isset($style_data['play_button_hover_style']) ? $style_data['play_button_hover_style'] : 'scale',
+        'sanitize_callback' => array($this, 'sanitize_hover_style'),
+        'transport' => 'postMessage',
+    ));
+    $wp_customize->add_control('ai_play_button_hover_style', array(
+        'label' => __('Hover Effect Style', 'ai-interview-widget'),
+        'description' => __('Choose the hover interaction effect', 'ai-interview-widget'),
+        'section' => 'ai_interview_play_button',
+        'type' => 'select',
+        'choices' => array(
+            'scale' => __('Scale (Default)', 'ai-interview-widget'),
+            'glow' => __('Glow', 'ai-interview-widget'),
+            'none' => __('None', 'ai-interview-widget'),
+        ),
+    ));
+
+    // Focus Ring Color Control
+    $wp_customize->add_setting('ai_play_button_focus_color', array(
+        'default' => isset($style_data['play_button_color']) ? $style_data['play_button_color'] : '#00cfff',
+        'sanitize_callback' => 'sanitize_hex_color',
+        'transport' => 'postMessage',
+    ));
+    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'ai_play_button_focus_color', array(
+        'label' => __('Focus Ring Color', 'ai-interview-widget'),
+        'description' => __('Color of the accessibility focus outline', 'ai-interview-widget'),
+        'section' => 'ai_interview_play_button',
+    )));
+}
+
+// Enqueue Customizer live preview script
+public function enqueue_customizer_preview_script() {
+    wp_enqueue_script(
+        'ai-interview-customizer-preview',
+        plugin_dir_url(__FILE__) . 'customizer-preview.js',
+        array('jquery', 'customize-preview'),
+        '1.0.0',
+        true
+    );
+}
+
+// Sanitization functions for Customizer controls
+public function sanitize_button_size($size) {
+    $size = absint($size);
+    return max(40, min(120, $size));
+}
+
+public function sanitize_button_shape($shape) {
+    $allowed_shapes = array('circle', 'rounded', 'square');
+    return in_array($shape, $allowed_shapes) ? $shape : 'circle';
+}
+
+public function sanitize_icon_style($style) {
+    $allowed_styles = array('triangle', 'triangle_border', 'minimal');
+    return in_array($style, $allowed_styles) ? $style : 'triangle';
+}
+
+public function sanitize_pulse_duration($duration) {
+    $duration = floatval($duration);
+    return max(0.8, min(3.5, $duration));
+}
+
+public function sanitize_pulse_spread($spread) {
+    $spread = absint($spread);
+    return max(8, min(40, $spread));
+}
+
+public function sanitize_hover_style($style) {
+    $allowed_styles = array('scale', 'glow', 'none');
+    return in_array($style, $allowed_styles) ? $style : 'scale';
 }
 
 // TESTING PAGE - COMPLETE VERSION

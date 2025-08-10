@@ -9030,18 +9030,25 @@ jQuery(document).ready(function($) {
         e.preventDefault();
         
         if (translationInProgress) {
-            alert('<?php echo esc_js(__('Translation is already in progress. Please wait.', 'ai-interview-widget')); ?>');
+            alert('Translation is already in progress. Please wait.');
             return;
         }
         
         const $button = $(this);
         const sourceLang = $button.data('source-lang');
         const sourceLangName = $button.data('source-lang-name');
-        const $sourceTextarea = $('#system-prompt-' + sourceLang);
+        
+        // Find the textarea for this language - try multiple possible selectors
+        let $sourceTextarea = $('#system-prompt-' + sourceLang);
+        if ($sourceTextarea.length === 0) {
+            // Try finding by proximity to the button (for AJAX-generated content)
+            $sourceTextarea = $button.closest('.postbox, div[style*="background: #f9f9f9"]').find('textarea[name="system_prompt_content"], textarea[name="direct_system_prompt"]');
+        }
+        
         const sourceText = $sourceTextarea.val().trim();
         
         if (!sourceText) {
-            alert('<?php echo esc_js(__('Please enter a system prompt before translating.', 'ai-interview-widget')); ?>');
+            alert('Please enter a system prompt before translating.');
             return;
         }
         
@@ -9060,8 +9067,17 @@ jQuery(document).ready(function($) {
         Object.keys(allLanguages).forEach(function(lang) {
             if (lang !== sourceLang) {
                 targetLanguages.push(lang);
-                const $targetTextarea = $('#system-prompt-' + lang);
-                if ($targetTextarea.val().trim()) {
+                
+                // Find textarea for this language - try multiple approaches
+                let $targetTextarea = $('#system-prompt-' + lang);
+                if ($targetTextarea.length === 0) {
+                    // Look for textareas near translate buttons with matching data-source-lang
+                    $targetTextarea = $('.translate-prompt-btn[data-source-lang="' + lang + '"]')
+                        .closest('.postbox, div[style*="background: #f9f9f9"]')
+                        .find('textarea[name="system_prompt_content"], textarea[name="direct_system_prompt"]');
+                }
+                
+                if ($targetTextarea.length > 0 && $targetTextarea.val().trim()) {
                     nonEmptyTargets.push({
                         code: lang,
                         name: allLanguages[lang],
@@ -9072,7 +9088,7 @@ jQuery(document).ready(function($) {
         });
         
         if (targetLanguages.length === 0) {
-            alert('<?php echo esc_js(__('No target languages available for translation.', 'ai-interview-widget')); ?>');
+            alert('No target languages available for translation.');
             return;
         }
         
@@ -9090,18 +9106,18 @@ jQuery(document).ready(function($) {
             <div id="translation-confirm-dialog" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; display: flex; align-items: center; justify-content: center;">
                 <div style="background: white; padding: 30px; border-radius: 8px; max-width: 500px; width: 90%; max-height: 80%; overflow-y: auto;">
                     <h3 style="margin: 0 0 20px 0; color: #333;">
-                        ${$('<div>').text('<?php echo esc_js(__('Confirm Translation', 'ai-interview-widget')); ?>').html()}
+                        Confirm Translation
                     </h3>
                     <p style="margin: 0 0 15px 0; color: #666;">
-                        ${$('<div>').text('<?php echo esc_js(__('You are about to translate the system prompt from', 'ai-interview-widget')); ?>').html()} <strong>${sourceLangName}</strong> ${$('<div>').text('<?php echo esc_js(__('to the selected languages. Some target fields already contain content.', 'ai-interview-widget')); ?>').html()}
+                        You are about to translate the system prompt from <strong>${sourceLangName}</strong> to the selected languages. Some target fields already contain content.
                     </p>
                     <div style="margin-bottom: 20px; padding: 15px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px;">
                         <p style="margin: 0; color: #856404; font-weight: 600;">
-                            ⚠️ ${$('<div>').text('<?php echo esc_js(__('Warning: Automatic translation may contain mistakes. Please review all translations before saving.', 'ai-interview-widget')); ?>').html()}
+                            ⚠️ Warning: Automatic translation may contain mistakes. Please review all translations before saving.
                         </p>
                     </div>
                     <p style="margin: 0 0 15px 0; font-weight: 600;">
-                        ${$('<div>').text('<?php echo esc_js(__('Select languages to translate to:', 'ai-interview-widget')); ?>').html()}
+                        Select languages to translate to:
                     </p>
                     <div id="language-selection" style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 4px;">
         `;
@@ -9112,7 +9128,7 @@ jQuery(document).ready(function($) {
             dialogHtml += `
                 <label style="display: block; margin-bottom: 10px; cursor: pointer;">
                     <input type="checkbox" value="${lang}" ${isChecked ? 'checked' : ''} style="margin-right: 8px;">
-                    ${allLanguages[lang]} (${lang})${hasContent ? ' - ⚠️ ' + $('<div>').text('<?php echo esc_js(__('has existing content', 'ai-interview-widget')); ?>').html() : ''}
+                    ${allLanguages[lang]} (${lang})${hasContent ? ' - ⚠️ has existing content' : ''}
                 </label>
             `;
         });
@@ -9121,10 +9137,10 @@ jQuery(document).ready(function($) {
                     </div>
                     <div style="margin-top: 20px; text-align: right;">
                         <button id="cancel-translation" class="button button-secondary" style="margin-right: 10px;">
-                            ${$('<div>').text('<?php echo esc_js(__('Cancel', 'ai-interview-widget')); ?>').html()}
+                            Cancel
                         </button>
                         <button id="confirm-translation" class="button button-primary">
-                            ${$('<div>').text('<?php echo esc_js(__('Translate Selected', 'ai-interview-widget')); ?>').html()}
+                            Translate Selected
                         </button>
                     </div>
                 </div>
@@ -9147,7 +9163,7 @@ jQuery(document).ready(function($) {
             $('#translation-confirm-dialog').remove();
             
             if (selectedLanguages.length === 0) {
-                alert('<?php echo esc_js(__('Please select at least one language to translate to.', 'ai-interview-widget')); ?>');
+                alert('Please select at least one language to translate to.');
                 return;
             }
             
@@ -9166,16 +9182,25 @@ jQuery(document).ready(function($) {
         translationInProgress = true;
         
         // Show loading state on all translate buttons
-        $('.translate-prompt-btn').prop('disabled', true).html('🔄 <?php echo esc_js(__('Translating...', 'ai-interview-widget')); ?>');
+        $('.translate-prompt-btn').prop('disabled', true).html('🔄 Translating...');
         
         // Show warning banner for source language
         $('#translation-warning-' + sourceLang).show();
         
         // Add loading indicators to target textareas
         targetLanguages.forEach(function(lang) {
-            const $textarea = $('#system-prompt-' + lang);
-            $textarea.prop('disabled', true);
-            $textarea.after('<div class="translation-loading" style="position: absolute; background: rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: center; font-size: 14px; color: #666; padding: 10px; border-radius: 4px; margin-top: 5px;">🔄 <?php echo esc_js(__('Translating...', 'ai-interview-widget')); ?></div>');
+            let $textarea = $('#system-prompt-' + lang);
+            if ($textarea.length === 0) {
+                // Find textarea for this language using button proximity
+                $textarea = $('.translate-prompt-btn[data-source-lang="' + lang + '"]')
+                    .closest('.postbox, div[style*="background: #f9f9f9"]')
+                    .find('textarea[name="system_prompt_content"], textarea[name="direct_system_prompt"]');
+            }
+            
+            if ($textarea.length > 0) {
+                $textarea.prop('disabled', true);
+                $textarea.after('<div class="translation-loading translation-loading-' + lang + '" style="position: relative; background: rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: center; font-size: 14px; color: #666; padding: 10px; border-radius: 4px; margin-top: 5px; border: 1px solid #ddd;">🔄 Translating...</div>');
+            }
         });
         
         // Perform AJAX request
@@ -9194,7 +9219,7 @@ jQuery(document).ready(function($) {
             },
             error: function(xhr, status, error) {
                 console.error('Translation request failed:', error);
-                alert('<?php echo esc_js(__('Translation request failed. Please try again.', 'ai-interview-widget')); ?>');
+                alert('Translation request failed. Please try again.');
                 resetTranslationUI(targetLanguages);
             }
         });
@@ -9210,28 +9235,37 @@ jQuery(document).ready(function($) {
             
             // Update textareas with translations
             Object.keys(translations).forEach(function(lang) {
-                const $textarea = $('#system-prompt-' + lang);
-                $textarea.val(translations[lang]);
-                $textarea.prop('disabled', false);
-                $('#translation-warning-' + lang).show();
-                successCount++;
+                let $textarea = $('#system-prompt-' + lang);
+                if ($textarea.length === 0) {
+                    // Find textarea for this language using button proximity
+                    $textarea = $('.translate-prompt-btn[data-source-lang="' + lang + '"]')
+                        .closest('.postbox, div[style*="background: #f9f9f9"]')
+                        .find('textarea[name="system_prompt_content"], textarea[name="direct_system_prompt"]');
+                }
+                
+                if ($textarea.length > 0) {
+                    $textarea.val(translations[lang]);
+                    $textarea.prop('disabled', false);
+                    $('#translation-warning-' + lang).show();
+                    successCount++;
+                }
             });
             
             // Show errors for failed translations
             Object.keys(errors).forEach(function(lang) {
                 console.error('Translation error for ' + lang + ':', errors[lang]);
-                alert('<?php echo esc_js(__('Translation failed for', 'ai-interview-widget')); ?> ' + lang + ': ' + errors[lang]);
+                alert('Translation failed for ' + lang + ': ' + errors[lang]);
                 errorCount++;
             });
             
             // Show summary message
             if (successCount > 0) {
-                const message = '<?php echo esc_js(__('Successfully translated to', 'ai-interview-widget')); ?> ' + successCount + ' <?php echo esc_js(__('language(s)', 'ai-interview-widget')); ?>' + 
-                               (errorCount > 0 ? '. <?php echo esc_js(__('Failed for', 'ai-interview-widget')); ?> ' + errorCount + ' <?php echo esc_js(__('language(s)', 'ai-interview-widget')); ?>.' : '.');
+                const message = 'Successfully translated to ' + successCount + ' language(s)' + 
+                               (errorCount > 0 ? '. Failed for ' + errorCount + ' language(s).' : '.');
                 showTranslationMessage(message, 'success');
             }
         } else {
-            const errorMessage = response.data && response.data.message ? response.data.message : '<?php echo esc_js(__('Translation failed. Please try again.', 'ai-interview-widget')); ?>';
+            const errorMessage = response.data && response.data.message ? response.data.message : 'Translation failed. Please try again.';
             alert(errorMessage);
         }
         
@@ -9242,14 +9276,24 @@ jQuery(document).ready(function($) {
         translationInProgress = false;
         
         // Reset translate buttons
-        $('.translate-prompt-btn').prop('disabled', false).html('🌐 <?php echo esc_js(__('Translate', 'ai-interview-widget')); ?>');
+        $('.translate-prompt-btn').prop('disabled', false).html('🌐 Translate');
         
         // Remove loading indicators
         $('.translation-loading').remove();
         
         // Re-enable textareas
         targetLanguages.forEach(function(lang) {
-            $('#system-prompt-' + lang).prop('disabled', false);
+            let $textarea = $('#system-prompt-' + lang);
+            if ($textarea.length === 0) {
+                // Find textarea for this language using button proximity
+                $textarea = $('.translate-prompt-btn[data-source-lang="' + lang + '"]')
+                    .closest('.postbox, div[style*="background: #f9f9f9"]')
+                    .find('textarea[name="system_prompt_content"], textarea[name="direct_system_prompt"]');
+            }
+            
+            if ($textarea.length > 0) {
+                $textarea.prop('disabled', false);
+            }
         });
     }
     

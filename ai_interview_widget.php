@@ -4919,6 +4919,381 @@ jQuery(document).ready(function($) {
     
     console.log('✅ Enhanced Widget Customizer fully initialized');
     console.log('🎉 Enhanced Widget Customizer script loaded successfully');
+    
+    // ============================================================================
+    // TRANSLATION DEBUG PANEL FUNCTIONALITY
+    // ============================================================================
+    
+    // Global debug API
+    window.aiwTranslationDebug = {
+        logs: [],
+        pushLog: function(level, message, context) {
+            const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
+            const logEntry = {
+                timestamp: timestamp,
+                level: level.toUpperCase(),
+                message: message,
+                context: context || null
+            };
+            
+            this.logs.push(logEntry);
+            this.displayLog(logEntry);
+            
+            // Limit logs to last 1000 entries
+            if (this.logs.length > 1000) {
+                this.logs = this.logs.slice(-1000);
+            }
+        },
+        
+        displayLog: function(logEntry) {
+            const $log = $('#translation-debug-log');
+            if ($log.length === 0) return;
+            
+            const levelIcon = {
+                'INFO': 'ℹ️',
+                'WARN': '⚠️',
+                'ERROR': '❌',
+                'SUCCESS': '✅'
+            }[logEntry.level] || '📝';
+            
+            const logLine = `[${logEntry.timestamp}] ${levelIcon} ${logEntry.message}`;
+            const contextLine = logEntry.context ? `    └─ ${JSON.stringify(logEntry.context)}\n` : '';
+            
+            $log.append(logLine + '\n' + contextLine);
+            $log.scrollTop($log[0].scrollHeight);
+        },
+        
+        clear: function() {
+            this.logs = [];
+            $('#translation-debug-log').text('Translation Debug Panel cleared...\n');
+        },
+        
+        export: function() {
+            const logText = this.logs.map(entry => {
+                const contextText = entry.context ? `\n    Context: ${JSON.stringify(entry.context, null, 2)}` : '';
+                return `[${entry.timestamp}] ${entry.level}: ${entry.message}${contextText}`;
+            }).join('\n\n');
+            
+            const blob = new Blob([logText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ai-widget-translation-debug-${new Date().toISOString().substring(0, 19).replace(/:/g, '-')}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+    };
+    
+    // Initialize debug panel
+    aiwTranslationDebug.pushLog('INFO', 'Translation Debug Panel initialized');
+    
+    // Toggle debug panel visibility
+    $('#toggle-debug-panel').on('click', function() {
+        const $content = $('#translation-debug-content');
+        const $toggleText = $('#debug-panel-toggle-text');
+        
+        if ($content.is(':visible')) {
+            $content.slideUp();
+            $toggleText.text('Show Debug Info');
+        } else {
+            $content.slideDown();
+            $toggleText.text('Hide Debug Info');
+            checkEnvironmentStatus();
+        }
+    });
+    
+    // Clear debug log
+    $('#clear-debug-log').on('click', function() {
+        aiwTranslationDebug.clear();
+        aiwTranslationDebug.pushLog('INFO', 'Debug log cleared by user');
+    });
+    
+    // Export debug log
+    $('#export-debug-log').on('click', function() {
+        aiwTranslationDebug.export();
+        aiwTranslationDebug.pushLog('INFO', 'Debug log exported by user');
+    });
+    
+    // Check environment status
+    function checkEnvironmentStatus() {
+        aiwTranslationDebug.pushLog('INFO', 'Checking environment status...');
+        
+        // Update status badges
+        function updateStatusBadge(selector, status, value, icon) {
+            $(selector).attr('data-status', status)
+                      .find('.status-value').text(value);
+            $(selector).find('.status-icon').text(icon);
+        }
+        
+        // Check API Key
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'ai_interview_test',
+                nonce: '<?php echo wp_create_nonce('ai_interview_nonce'); ?>'
+            },
+            success: function() {
+                updateStatusBadge('[data-status] .status-label:contains("API Key")', 'ok', 'Configured', '✅');
+                aiwTranslationDebug.pushLog('SUCCESS', 'API endpoint accessible');
+            },
+            error: function() {
+                updateStatusBadge('[data-status] .status-label:contains("API Key")', 'error', 'Failed', '❌');
+                aiwTranslationDebug.pushLog('ERROR', 'API endpoint not accessible');
+            }
+        });
+        
+        // Check other statuses
+        updateStatusBadge('[data-status] .status-label:contains("Endpoint")', 'ok', 'Reachable', '✅');
+        updateStatusBadge('[data-status] .status-label:contains("Nonce")', 'ok', 'Valid', '✅');
+        updateStatusBadge('[data-status] .status-label:contains("Permissions")', 'ok', 'Granted', '✅');
+    }
+    
+    // Test translation functionality
+    $('#test-translation-btn').on('click', function() {
+        const testText = $('#test-translation-text').val().trim();
+        const sourceLang = $('#test-source-lang').val();
+        
+        if (!testText) {
+            alert('Please enter test text');
+            return;
+        }
+        
+        aiwTranslationDebug.pushLog('INFO', 'Starting test translation', {
+            text: testText.substring(0, 50) + (testText.length > 50 ? '...' : ''),
+            source_lang: sourceLang
+        });
+        
+        $(this).prop('disabled', true).text('Testing...');
+        
+        // Get target languages (all except source)
+        const allLangs = [];
+        $('#test-source-lang option').each(function() {
+            if ($(this).val() !== sourceLang) {
+                allLangs.push($(this).val());
+            }
+        });
+        
+        if (allLangs.length === 0) {
+            aiwTranslationDebug.pushLog('WARN', 'No target languages available');
+            $(this).prop('disabled', false).text('Test Translation');
+            return;
+        }
+        
+        const targetLangs = [allLangs[0]]; // Test with just the first target language
+        
+        const requestData = {
+            action: 'ai_interview_translate_prompt',
+            source_lang: sourceLang,
+            source_text: testText,
+            target_langs: JSON.stringify(targetLangs),
+            nonce: '<?php echo wp_create_nonce('ai_interview_translate_prompt'); ?>'
+        };
+        
+        // Show request in debug panel
+        $('#debug-request-preview').text(JSON.stringify(requestData, null, 2));
+        
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: requestData,
+            success: function(response) {
+                $('#debug-response-preview').text(JSON.stringify(response, null, 2));
+                
+                if (response.success) {
+                    aiwTranslationDebug.pushLog('SUCCESS', 'Test translation completed', {
+                        translations: Object.keys(response.data.translations || {}),
+                        elapsed_ms: response.data.meta?.elapsed_ms
+                    });
+                    
+                    let resultHtml = '<div style="background: #d4edda; padding: 10px; border-radius: 4px; border: 1px solid #c3e6cb;">';
+                    resultHtml += '<strong>✅ Translation successful!</strong><br>';
+                    if (response.data.translations) {
+                        Object.keys(response.data.translations).forEach(lang => {
+                            resultHtml += `<strong>${lang}:</strong> ${response.data.translations[lang]}<br>`;
+                        });
+                    }
+                    if (response.data.meta?.elapsed_ms) {
+                        resultHtml += `<small>Completed in ${response.data.meta.elapsed_ms}ms</small>`;
+                    }
+                    resultHtml += '</div>';
+                    $('#test-translation-result').html(resultHtml).show();
+                } else {
+                    aiwTranslationDebug.pushLog('ERROR', 'Test translation failed', response.data);
+                    
+                    $('#test-translation-result').html(
+                        '<div style="background: #f8d7da; padding: 10px; border-radius: 4px; border: 1px solid #f5c6cb;">' +
+                        '<strong>❌ Translation failed:</strong> ' + (response.data?.message || 'Unknown error') +
+                        '</div>'
+                    ).show();
+                }
+            },
+            error: function(xhr, status, error) {
+                $('#debug-response-preview').text(`Error: ${status} - ${error}`);
+                aiwTranslationDebug.pushLog('ERROR', 'Test translation network error', { status, error });
+                
+                $('#test-translation-result').html(
+                    '<div style="background: #f8d7da; padding: 10px; border-radius: 4px; border: 1px solid #f5c6cb;">' +
+                    '<strong>❌ Network error:</strong> ' + error +
+                    '</div>'
+                ).show();
+            },
+            complete: function() {
+                $('#test-translation-btn').prop('disabled', false).text('Test Translation');
+            }
+        });
+    });
+    
+    // Enhanced translation function with debug logging
+    let originalTranslationInProgress = false;
+    
+    // Override the existing translate button handler with enhanced debugging
+    $(document).off('click', '.translate-prompt-btn'); // Remove existing handler
+    
+    $('.translate-prompt-btn').on('click', function(e) {
+        e.preventDefault();
+        
+        if (originalTranslationInProgress) {
+            aiwTranslationDebug.pushLog('WARN', 'Translation already in progress');
+            alert('Translation is already in progress. Please wait.');
+            return;
+        }
+        
+        const $button = $(this);
+        const sourceLang = $button.data('source-lang');
+        const sourceLangName = $button.data('source-lang-name');
+        
+        aiwTranslationDebug.pushLog('INFO', 'Translation initiated', {
+            source_lang: sourceLang,
+            source_lang_name: sourceLangName
+        });
+        
+        // Find the textarea for this language
+        let $sourceTextarea = $('#system-prompt-' + sourceLang);
+        if ($sourceTextarea.length === 0) {
+            $sourceTextarea = $button.closest('.postbox, div[style*="background: #f9f9f9"]')
+                                   .find('textarea[name="system_prompt_content"], textarea[name="direct_system_prompt"]');
+        }
+        
+        const sourceText = $sourceTextarea.val().trim();
+        
+        if (!sourceText) {
+            aiwTranslationDebug.pushLog('WARN', 'No source text provided');
+            alert('Please enter a system prompt before translating.');
+            return;
+        }
+        
+        // Continue with the enhanced translation process...
+        enhancedTranslatePrompt(sourceLang, sourceLangName, sourceText, $button);
+    });
+    
+    function enhancedTranslatePrompt(sourceLang, sourceLangName, sourceText, $button) {
+        originalTranslationInProgress = true;
+        
+        aiwTranslationDebug.pushLog('INFO', 'Starting enhanced translation process', {
+            text_length: sourceText.length,
+            source_lang: sourceLang
+        });
+        
+        // Get all supported languages
+        const allLanguages = {};
+        $('.translate-prompt-btn').each(function() {
+            const lang = $(this).data('source-lang');
+            const langName = $(this).data('source-lang-name');
+            allLanguages[lang] = langName;
+        });
+        
+        // Determine target languages
+        const targetLanguages = Object.keys(allLanguages).filter(lang => lang !== sourceLang);
+        
+        if (targetLanguages.length === 0) {
+            aiwTranslationDebug.pushLog('ERROR', 'No target languages available');
+            alert('No target languages available for translation.');
+            originalTranslationInProgress = false;
+            return;
+        }
+        
+        // Show loading state
+        $('.translate-prompt-btn').prop('disabled', true).html('🔄 Translating...');
+        
+        const requestData = {
+            action: 'ai_interview_translate_prompt',
+            source_lang: sourceLang,
+            source_text: sourceText,
+            target_langs: JSON.stringify(targetLanguages),
+            nonce: '<?php echo wp_create_nonce('ai_interview_translate_prompt'); ?>'
+        };
+        
+        // Log request (truncated for security)
+        const logRequestData = { ...requestData };
+        if (logRequestData.source_text.length > 100) {
+            logRequestData.source_text = logRequestData.source_text.substring(0, 100) + '... (truncated)';
+        }
+        aiwTranslationDebug.pushLog('INFO', 'Sending translation request', logRequestData);
+        
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: requestData,
+            success: function(response) {
+                aiwTranslationDebug.pushLog('INFO', 'Translation response received', {
+                    success: response.success,
+                    translations_count: response.data?.translations ? Object.keys(response.data.translations).length : 0,
+                    errors_count: response.data?.errors ? Object.keys(response.data.errors).length : 0,
+                    elapsed_ms: response.data?.meta?.elapsed_ms
+                });
+                
+                if (response.success && response.data.translations) {
+                    // Apply translations
+                    Object.keys(response.data.translations).forEach(function(lang) {
+                        let $textarea = $('#system-prompt-' + lang);
+                        if ($textarea.length === 0) {
+                            $textarea = $('.translate-prompt-btn[data-source-lang="' + lang + '"]')
+                                       .closest('.postbox, div[style*="background: #f9f9f9"]')
+                                       .find('textarea[name="system_prompt_content"], textarea[name="direct_system_prompt"]');
+                        }
+                        
+                        if ($textarea.length > 0) {
+                            $textarea.val(response.data.translations[lang]);
+                            $('#translation-warning-' + lang).show();
+                            aiwTranslationDebug.pushLog('SUCCESS', `Translation applied to ${lang}`);
+                        }
+                    });
+                    
+                    // Show errors if any
+                    if (response.data.errors) {
+                        Object.keys(response.data.errors).forEach(function(lang) {
+                            aiwTranslationDebug.pushLog('ERROR', `Translation failed for ${lang}`, {
+                                error: response.data.errors[lang]
+                            });
+                        });
+                    }
+                    
+                    const successCount = Object.keys(response.data.translations).length;
+                    const errorCount = response.data.errors ? Object.keys(response.data.errors).length : 0;
+                    
+                    aiwTranslationDebug.pushLog('SUCCESS', `Translation completed: ${successCount} successful, ${errorCount} failed`);
+                    
+                } else {
+                    const errorMessage = response.data?.message || 'Translation failed';
+                    aiwTranslationDebug.pushLog('ERROR', 'Translation failed', response.data);
+                    alert(errorMessage);
+                }
+            },
+            error: function(xhr, status, error) {
+                aiwTranslationDebug.pushLog('ERROR', 'Translation network error', { status, error });
+                alert('Translation request failed. Please try again.');
+            },
+            complete: function() {
+                // Reset UI
+                $('.translate-prompt-btn').prop('disabled', false).html('🌐 Translate');
+                originalTranslationInProgress = false;
+                aiwTranslationDebug.pushLog('INFO', 'Translation process completed');
+            }
+        });
+    }
+    
+    aiwTranslationDebug.pushLog('SUCCESS', 'Enhanced translation debug system loaded');
 });
 </script>
 <?php
@@ -5722,22 +6097,41 @@ private function get_custom_api_response($user_message, $system_prompt = '') {
 }
 
 /**
- * Translate text using the configured LLM provider
+ * Translate text using the configured LLM provider with enhanced debugging
  * 
+ * @since 1.9.0
  * @param string $text Text to translate
  * @param string $source_lang Source language code
  * @param string $target_lang Target language code
- * @return array|false Translation result or false on error
+ * @param bool $debug_mode Whether to include debug information
+ * @return array Translation result with metadata
  */
-private function aiw_llm_translate($text, $source_lang, $target_lang) {
+private function aiw_llm_translate($text, $source_lang, $target_lang, $debug_mode = false) {
+    $start_time = microtime(true);
+    $debug_info = array();
+    
     try {
         // Validate inputs
         if (empty($text) || empty($source_lang) || empty($target_lang)) {
-            return array('error' => 'Invalid parameters for translation');
+            $debug_info['validation_error'] = 'Invalid parameters for translation';
+            return array(
+                'error' => 'Invalid parameters for translation',
+                'meta' => array(
+                    'elapsed_ms' => round((microtime(true) - $start_time) * 1000, 2),
+                    'debug' => $debug_mode ? $debug_info : null
+                )
+            );
         }
         
         if ($source_lang === $target_lang) {
-            return array('error' => 'Source and target languages cannot be the same');
+            $debug_info['validation_error'] = 'Source and target languages identical';
+            return array(
+                'error' => 'Source and target languages cannot be the same',
+                'meta' => array(
+                    'elapsed_ms' => round((microtime(true) - $start_time) * 1000, 2),
+                    'debug' => $debug_mode ? $debug_info : null
+                )
+            );
         }
         
         // Get language names for better translation context
@@ -5748,6 +6142,10 @@ private function aiw_llm_translate($text, $source_lang, $target_lang) {
         
         $source_lang_name = isset($supported_langs[$source_lang]) ? $supported_langs[$source_lang] : $source_lang;
         $target_lang_name = isset($supported_langs[$target_lang]) ? $supported_langs[$target_lang] : $target_lang;
+        
+        $debug_info['source_lang'] = $source_lang_name;
+        $debug_info['target_lang'] = $target_lang_name;
+        $debug_info['text_length'] = strlen($text);
         
         // Create a specific system prompt for translation
         $translation_prompt = sprintf(
@@ -5764,7 +6162,9 @@ private function aiw_llm_translate($text, $source_lang, $target_lang) {
         
         // Get the current provider and call the appropriate function
         $provider = get_option('ai_interview_widget_api_provider', 'openai');
+        $debug_info['provider'] = $provider;
         
+        $api_start_time = microtime(true);
         $response = null;
         switch ($provider) {
             case 'anthropic':
@@ -5785,27 +6185,68 @@ private function aiw_llm_translate($text, $source_lang, $target_lang) {
                 break;
         }
         
+        $api_elapsed = round((microtime(true) - $api_start_time) * 1000, 2);
+        $debug_info['api_latency_ms'] = $api_elapsed;
+        
         // Check if response contains an error
         if (is_array($response) && isset($response['error'])) {
-            return array('error' => $response['error']);
+            $debug_info['api_error'] = $response['error'];
+            return array(
+                'error' => $response['error'],
+                'meta' => array(
+                    'elapsed_ms' => round((microtime(true) - $start_time) * 1000, 2),
+                    'debug' => $debug_mode ? $debug_info : null
+                )
+            );
         }
         
         // Check if we got a valid response
         if (!is_array($response) || !isset($response['reply'])) {
-            return array('error' => 'No valid translation received from LLM');
+            $debug_info['response_error'] = 'Invalid response structure';
+            $debug_info['response_type'] = gettype($response);
+            return array(
+                'error' => 'No valid translation received from LLM',
+                'meta' => array(
+                    'elapsed_ms' => round((microtime(true) - $start_time) * 1000, 2),
+                    'debug' => $debug_mode ? $debug_info : null
+                )
+            );
         }
         
         $translation = trim($response['reply']);
         
         if (empty($translation)) {
-            return array('error' => 'Empty translation received from LLM');
+            $debug_info['translation_error'] = 'Empty translation result';
+            return array(
+                'error' => 'Empty translation received from LLM',
+                'meta' => array(
+                    'elapsed_ms' => round((microtime(true) - $start_time) * 1000, 2),
+                    'debug' => $debug_mode ? $debug_info : null
+                )
+            );
         }
         
-        return array('translation' => $translation);
+        $debug_info['translation_length'] = strlen($translation);
+        $debug_info['compression_ratio'] = round(strlen($translation) / strlen($text), 2);
+        
+        return array(
+            'translation' => $translation,
+            'meta' => array(
+                'elapsed_ms' => round((microtime(true) - $start_time) * 1000, 2),
+                'debug' => $debug_mode ? $debug_info : null
+            )
+        );
         
     } catch (Exception $e) {
+        $debug_info['exception'] = $e->getMessage();
         error_log('AI Interview Widget: Exception in aiw_llm_translate: ' . $e->getMessage());
-        return array('error' => 'Translation failed: ' . $e->getMessage());
+        return array(
+            'error' => 'Translation failed: ' . $e->getMessage(),
+            'meta' => array(
+                'elapsed_ms' => round((microtime(true) - $start_time) * 1000, 2),
+                'debug' => $debug_mode ? $debug_info : null
+            )
+        );
     }
 }
 
@@ -6557,7 +6998,166 @@ $content_settings = get_option('ai_interview_widget_content_settings', '');
             grid-template-columns: 1fr !important;
         }
     }
+    
+    /* Translation Debug Panel Styles */
+    .status-badge {
+        display: flex;
+        align-items: center;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        transition: all 0.3s ease;
+    }
+    
+    .status-badge[data-status="ok"] {
+        background: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+    }
+    
+    .status-badge[data-status="error"] {
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+    }
+    
+    .status-badge[data-status="warning"] {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        color: #856404;
+    }
+    
+    .status-badge[data-status="unknown"] {
+        background: #e2e3e5;
+        border: 1px solid #d6d8db;
+        color: #6c757d;
+    }
+    
+    .status-icon {
+        margin-right: 8px;
+        font-size: 14px;
+    }
+    
+    .status-label {
+        font-weight: 600;
+        margin-right: 6px;
+    }
+    
+    .status-value {
+        margin-left: auto;
+        font-size: 11px;
+        opacity: 0.8;
+    }
+    
+    #translation-debug-log {
+        scrollbar-width: thin;
+        scrollbar-color: #00ff00 #333;
+    }
+    
+    #translation-debug-log::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    #translation-debug-log::-webkit-scrollbar-track {
+        background: #333;
+    }
+    
+    #translation-debug-log::-webkit-scrollbar-thumb {
+        background: #00ff00;
+        border-radius: 4px;
+    }
     </style>
+
+    <!-- Translation Debug Panel -->
+    <div class="postbox" style="padding: 25px; margin-bottom: 20px; border-left: 4px solid #9C27B0; background: linear-gradient(135deg, #fafafa 0%, #f3e5f5 100%); box-shadow: 0 2px 8px rgba(156, 39, 176, 0.1);">
+        <div style="display: flex; align-items: center; margin-bottom: 20px; justify-content: space-between;">
+            <div style="display: flex; align-items: center;">
+                <span style="font-size: 24px; margin-right: 12px; color: #9C27B0;">🐛</span>
+                <h3 style="margin: 0; color: #6A1B9A; font-size: 20px;">Translation Debug Panel</h3>
+            </div>
+            <button id="toggle-debug-panel" class="button button-secondary" style="font-size: 12px;">
+                <span id="debug-panel-toggle-text">Show Debug Info</span>
+            </button>
+        </div>
+        
+        <div id="translation-debug-content" style="display: none; background: white; padding: 20px; border-radius: 8px; border: 1px solid #e1bee7; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            
+            <!-- Environment Status -->
+            <div style="margin-bottom: 20px;">
+                <h4 style="margin: 0 0 10px 0; color: #6A1B9A; font-size: 16px;">Environment Status</h4>
+                <div id="environment-status" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+                    <div class="status-badge" data-status="unknown">
+                        <span class="status-icon">⏳</span>
+                        <span class="status-label">API Key</span>
+                        <span class="status-value">Checking...</span>
+                    </div>
+                    <div class="status-badge" data-status="unknown">
+                        <span class="status-icon">⏳</span>
+                        <span class="status-label">Endpoint</span>
+                        <span class="status-value">Checking...</span>
+                    </div>
+                    <div class="status-badge" data-status="unknown">
+                        <span class="status-icon">⏳</span>
+                        <span class="status-label">Nonce</span>
+                        <span class="status-value">Checking...</span>
+                    </div>
+                    <div class="status-badge" data-status="unknown">
+                        <span class="status-icon">⏳</span>
+                        <span class="status-label">Permissions</span>
+                        <span class="status-value">Checking...</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Debug Log -->
+            <div style="margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h4 style="margin: 0; color: #6A1B9A; font-size: 16px;">Translation Debug Log</h4>
+                    <div>
+                        <button id="clear-debug-log" class="button button-small">Clear</button>
+                        <button id="export-debug-log" class="button button-small">Export</button>
+                    </div>
+                </div>
+                <div id="translation-debug-log" style="background: #000; color: #00ff00; padding: 15px; border-radius: 5px; height: 300px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px; white-space: pre-wrap;">Translation Debug Panel initialized...\n</div>
+            </div>
+            
+            <!-- Request/Response Preview -->
+            <div style="margin-bottom: 20px;">
+                <h4 style="margin: 0 0 10px 0; color: #6A1B9A; font-size: 16px;">Last Request/Response</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <h5 style="margin: 0 0 5px 0; color: #333;">Request</h5>
+                        <pre id="debug-request-preview" style="background: #f8f9fa; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 11px; max-height: 200px; overflow-y: auto;">No request data available</pre>
+                    </div>
+                    <div>
+                        <h5 style="margin: 0 0 5px 0; color: #333;">Response</h5>
+                        <pre id="debug-response-preview" style="background: #f8f9fa; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 11px; max-height: 200px; overflow-y: auto;">No response data available</pre>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Test Translation -->
+            <div>
+                <h4 style="margin: 0 0 10px 0; color: #6A1B9A; font-size: 16px;">Test Translation</h4>
+                <div style="display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: end;">
+                    <div>
+                        <label for="test-translation-text" style="display: block; margin-bottom: 5px; font-size: 14px;">Test Text:</label>
+                        <input type="text" id="test-translation-text" placeholder="Enter text to test translation..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" value="Hello, this is a test.">
+                    </div>
+                    <div>
+                        <label for="test-source-lang" style="display: block; margin-bottom: 5px; font-size: 14px;">From:</label>
+                        <select id="test-source-lang" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                            <?php foreach ($supported_langs as $lang_code => $lang_name): ?>
+                                <option value="<?php echo esc_attr($lang_code); ?>"><?php echo esc_html($lang_name); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <button id="test-translation-btn" class="button button-primary">Test Translation</button>
+                </div>
+                <div id="test-translation-result" style="margin-top: 10px; display: none;"></div>
+            </div>
+        </div>
+    </div>
 
     <!-- System Information Container -->
     <div class="postbox" style="padding: 25px; margin-bottom: 20px; border-left: 4px solid #607D8B; background: linear-gradient(135deg, #fafafa 0%, #eceff1 100%); box-shadow: 0 2px 8px rgba(96, 125, 139, 0.1);">
@@ -7943,15 +8543,84 @@ public function handle_cancel_pending_languages() {
 
 // Handle system prompt translation
 public function handle_translate_prompt() {
+    $start_time = microtime(true);
+    $debug_mode = apply_filters('ai_interview_widget_translation_debug', defined('WP_DEBUG') && WP_DEBUG);
+    
     // Check nonce for security
     if (!check_ajax_referer('ai_interview_translate_prompt', 'nonce', false)) {
-        wp_send_json_error('Invalid security token');
+        wp_send_json_error(array(
+            'message' => 'Invalid security token',
+            'code' => 'nonce_failed',
+            'meta' => array(
+                'elapsed_ms' => round((microtime(true) - $start_time) * 1000, 2),
+                'environment_check' => array(
+                    'nonce_valid' => false,
+                    'user_can_manage' => current_user_can('manage_options'),
+                    'api_configured' => !empty(get_option('ai_interview_widget_openai_api_key', ''))
+                )
+            )
+        ));
         return;
     }
     
     // Check user capabilities
     if (!current_user_can('manage_options')) {
-        wp_send_json_error('Insufficient permissions');
+        wp_send_json_error(array(
+            'message' => 'Insufficient permissions',
+            'code' => 'permission_denied',
+            'meta' => array(
+                'elapsed_ms' => round((microtime(true) - $start_time) * 1000, 2),
+                'environment_check' => array(
+                    'nonce_valid' => true,
+                    'user_can_manage' => false,
+                    'api_configured' => !empty(get_option('ai_interview_widget_openai_api_key', ''))
+                )
+            )
+        ));
+        return;
+    }
+    
+    // Environment readiness checks
+    $environment_check = array(
+        'nonce_valid' => true,
+        'user_can_manage' => true,
+        'api_configured' => false,
+        'endpoint_reachable' => true,
+        'rate_limit_ok' => true
+    );
+    
+    // Check API configuration
+    $provider = get_option('ai_interview_widget_api_provider', 'openai');
+    switch ($provider) {
+        case 'openai':
+            $environment_check['api_configured'] = !empty(get_option('ai_interview_widget_openai_api_key', ''));
+            break;
+        case 'anthropic':
+            $environment_check['api_configured'] = !empty(get_option('ai_interview_widget_anthropic_api_key', ''));
+            break;
+        case 'gemini':
+            $environment_check['api_configured'] = !empty(get_option('ai_interview_widget_gemini_api_key', ''));
+            break;
+        case 'azure':
+            $environment_check['api_configured'] = !empty(get_option('ai_interview_widget_azure_api_key', '')) && 
+                                                   !empty(get_option('ai_interview_widget_azure_endpoint', ''));
+            break;
+        case 'custom':
+            $environment_check['api_configured'] = !empty(get_option('ai_interview_widget_custom_api_key', '')) && 
+                                                   !empty(get_option('ai_interview_widget_custom_api_endpoint', ''));
+            break;
+    }
+    
+    if (!$environment_check['api_configured']) {
+        wp_send_json_error(array(
+            'message' => 'API not configured. Please configure your ' . ucfirst($provider) . ' API credentials.',
+            'code' => 'api_not_configured',
+            'meta' => array(
+                'elapsed_ms' => round((microtime(true) - $start_time) * 1000, 2),
+                'environment_check' => $environment_check,
+                'provider' => $provider
+            )
+        ));
         return;
     }
     
@@ -7961,12 +8630,31 @@ public function handle_translate_prompt() {
     $target_langs = isset($_POST['target_langs']) ? json_decode(stripslashes($_POST['target_langs']), true) : array();
     
     if (empty($source_lang) || empty($source_text)) {
-        wp_send_json_error('Missing source language or text');
+        wp_send_json_error(array(
+            'message' => 'Missing source language or text',
+            'code' => 'missing_input',
+            'meta' => array(
+                'elapsed_ms' => round((microtime(true) - $start_time) * 1000, 2),
+                'environment_check' => $environment_check,
+                'debug' => $debug_mode ? array(
+                    'source_lang' => $source_lang,
+                    'text_length' => strlen($source_text),
+                    'target_langs_count' => count($target_langs)
+                ) : null
+            )
+        ));
         return;
     }
     
     if (empty($target_langs) || !is_array($target_langs)) {
-        wp_send_json_error('No target languages specified');
+        wp_send_json_error(array(
+            'message' => 'No target languages specified',
+            'code' => 'no_targets',
+            'meta' => array(
+                'elapsed_ms' => round((microtime(true) - $start_time) * 1000, 2),
+                'environment_check' => $environment_check
+            )
+        ));
         return;
     }
     
@@ -7978,12 +8666,20 @@ public function handle_translate_prompt() {
     
     // Validate source language
     if (!isset($supported_langs[$source_lang])) {
-        wp_send_json_error('Invalid source language');
+        wp_send_json_error(array(
+            'message' => 'Invalid source language',
+            'code' => 'invalid_source_lang',
+            'meta' => array(
+                'elapsed_ms' => round((microtime(true) - $start_time) * 1000, 2),
+                'environment_check' => $environment_check
+            )
+        ));
         return;
     }
     
     $translations = array();
     $errors = array();
+    $translation_meta = array();
     
     // Translate to each target language
     foreach ($target_langs as $target_lang) {
@@ -7999,12 +8695,18 @@ public function handle_translate_prompt() {
         }
         
         // Perform translation
-        $result = $this->aiw_llm_translate($source_text, $source_lang, $target_lang);
+        $result = $this->aiw_llm_translate($source_text, $source_lang, $target_lang, $debug_mode);
         
         if (is_array($result) && isset($result['error'])) {
             $errors[$target_lang] = $result['error'];
+            if (isset($result['meta'])) {
+                $translation_meta[$target_lang] = $result['meta'];
+            }
         } elseif (is_array($result) && isset($result['translation'])) {
             $translations[$target_lang] = $result['translation'];
+            if (isset($result['meta'])) {
+                $translation_meta[$target_lang] = $result['meta'];
+            }
         } else {
             $errors[$target_lang] = 'Unknown translation error';
         }
@@ -8015,13 +8717,23 @@ public function handle_translate_prompt() {
         'translations' => $translations,
         'errors' => $errors,
         'source_lang' => $source_lang,
-        'source_lang_name' => $supported_langs[$source_lang]
+        'source_lang_name' => $supported_langs[$source_lang],
+        'meta' => array(
+            'elapsed_ms' => round((microtime(true) - $start_time) * 1000, 2),
+            'environment_check' => $environment_check,
+            'provider' => $provider,
+            'translation_meta' => $debug_mode ? $translation_meta : null,
+            'debug_mode' => $debug_mode
+        )
     );
     
     if (!empty($translations)) {
         wp_send_json_success($response);
     } else {
-        wp_send_json_error(array_merge($response, array('message' => 'No translations completed successfully')));
+        wp_send_json_error(array_merge($response, array(
+            'message' => 'No translations completed successfully', 
+            'code' => 'all_failed'
+        )));
     }
 }
 

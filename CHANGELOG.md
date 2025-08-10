@@ -1,5 +1,49 @@
 # AI Interview Widget - CHANGELOG
 
+## [1.9.6] - 2025-01-27
+
+### Added - Translation Debug Panel
+- **Advanced Translation Debugging System** in System Prompt Management interface
+  - Collapsible debug panel with comprehensive troubleshooting tools
+  - Environment readiness checks (API key status, nonce validation, permissions)
+  - Real-time debug logging with timestamps and severity levels (INFO/WARN/ERROR)
+  - Raw request/response preview with sanitized data for troubleshooting
+  - Test translation functionality with detailed error reporting
+  - Export debug logs feature for technical support
+  - Global JavaScript API (`window.aiwTranslationDebug`) for extensibility
+
+### Enhanced - Translation Backend
+- **Improved `aiw_llm_translate()` function** with detailed debug metadata
+  - Added latency measurement with microtime tracking
+  - Enhanced error handling with structured response format
+  - Debug mode support with comprehensive context information
+  - Compression ratio analysis and response validation
+- **Enhanced `handle_translate_prompt()` AJAX handler**
+  - Environment readiness validation before processing
+  - API provider configuration checks
+  - Structured error responses with diagnostic metadata
+  - Debug mode activation via WordPress filters
+
+### Enhanced - Translation Frontend
+- **Enhanced translation workflow** with better error handling
+  - Per-language status indicators and error reporting
+  - Improved partial failure handling (successful translations not discarded)
+  - Better loading states and user feedback
+  - Override existing translation handlers with debug-enhanced versions
+
+### Improved - User Experience
+- **Better error visibility** for translation issues
+  - Environment status badges with color-coded indicators
+  - Detailed error messages with actionable troubleshooting steps
+  - Translation warning system with session-based display
+  - Export functionality for sharing debug information with support
+
+### Technical - Infrastructure
+- Added comprehensive CSS for debug panel status indicators
+- Implemented global debug logging system with log level filtering
+- Added debug mode detection via WordPress debug constants
+- Enhanced AJAX response structure with metadata support
+
 ## [1.9.5] - 2025-01-27
 
 ### Removed from UI

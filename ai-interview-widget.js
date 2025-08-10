@@ -118,8 +118,25 @@ document.addEventListener('DOMContentLoaded', function() {
         let chatInterfaceInitialized = false;
 
         function debug(message, ...args) {
-            if (DEBUG) {
+            // Only log in development mode or when explicitly enabled
+            if (DEBUG || (typeof window !== 'undefined' && window.aiWidgetDebugMode === true)) {
                 console.log(`[AI Widget] ${message}`, ...args);
+            }
+        }
+        
+        function debugError(message, ...args) {
+            // Always log errors, but less verbosely in production
+            if (DEBUG) {
+                console.error(`[AI Widget Error] ${message}`, ...args);
+            } else {
+                console.error(`[AI Widget] ${message}`);
+            }
+        }
+        
+        function debugWarn(message, ...args) {
+            // Log warnings only in development
+            if (DEBUG) {
+                console.warn(`[AI Widget Warning] ${message}`, ...args);
             }
         }
 
@@ -493,6 +510,55 @@ document.addEventListener('DOMContentLoaded', function() {
             canvas.style.height = canvas.height + 'px';
             
             debug("Canvas sized to:", canvas.width, "x", canvas.height, "for device type:", {isMobile, isTablet});
+        }
+        
+        // Add image error handler for missing thumbnails and background images
+        function addImageErrorHandlers() {
+            // Handle background images that fail to load
+            const elementsWithBgImages = document.querySelectorAll('[style*="background-image"]');
+            elementsWithBgImages.forEach(element => {
+                const bgImage = getComputedStyle(element).backgroundImage;
+                if (bgImage && bgImage !== 'none') {
+                    const imageUrl = bgImage.slice(5, -2); // Remove url(" and ")
+                    if (imageUrl) {
+                        // Test if image loads
+                        const testImg = new Image();
+                        testImg.onerror = function() {
+                            if (DEBUG) {
+                                debugWarn(`Background image failed to load: ${imageUrl}`);
+                            }
+                            // Set fallback gradient
+                            element.style.backgroundImage = 'linear-gradient(135deg, #0f0c29, #302b63, #24243e)';
+                            element.classList.add('aiw-image--error');
+                        };
+                        testImg.src = imageUrl;
+                    }
+                }
+            });
+            
+            // Handle regular images that fail to load
+            const images = document.querySelectorAll('img');
+            images.forEach(img => {
+                if (!img.hasAttribute('data-error-handled')) {
+                    img.onerror = function() {
+                        if (DEBUG) {
+                            debugWarn(`Image failed to load: ${this.src}`);
+                        }
+                        // Create SVG fallback
+                        const svgPlaceholder = 'data:image/svg+xml;base64,' + btoa(`
+                            <svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+                                <rect width="200" height="200" fill="#f0f0f0"/>
+                                <circle cx="100" cy="80" r="30" fill="#ccc"/>
+                                <path d="M60 140 Q100 120 140 140" stroke="#ccc" stroke-width="3" fill="none"/>
+                                <text x="100" y="170" text-anchor="middle" font-family="Arial" font-size="12" fill="#999">Image unavailable</text>
+                            </svg>
+                        `);
+                        this.src = svgPlaceholder;
+                        this.classList.add('aiw-image--error');
+                        this.setAttribute('data-error-handled', 'true');
+                    };
+                }
+            });
         }
 
         // Only update canvas size if canvas exists
@@ -1499,86 +1565,72 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         /**
-         * Enhanced IP-based country detection with multiple fallback services
-         * Robust error handling and timeout management for production use
+         * Privacy-conscious geolocation detection with graceful fallbacks
+         * Uses single reliable service with proper error handling and makes feature optional
          */
         async function detectCountryAutomatically() {
-            debug("Starting automatic country detection...");
-            
-            // Multiple reliable IP geolocation services (free tier)
-            // Ordered by reliability and response speed
-            const ipServices = [
-                {
-                    url: 'https://ip-api.com/json/',
-                    extractCountry: (data) => data.countryCode || data.country
-                },
-                {
-                    url: 'https://ipapi.co/json/',
-                    extractCountry: (data) => data.country_code || data.country
-                },
-                {
-                    url: 'https://api.country.is/',
-                    extractCountry: (data) => data.country
-                },
-                {
-                    url: 'https://get.geojs.io/v1/ip/country.json',
-                    extractCountry: (data) => data.country
-                },
-                {
-                    url: 'https://freegeoip.app/json/',
-                    extractCountry: (data) => data.country_code
-                }
-            ];
-            
-            // Try each service with timeout and proper error handling
-            for (const service of ipServices) {
-                try {
-                    debug(`Trying IP service: ${service.url}`);
-                    
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout - increased for reliability
-                    
-                    const response = await fetch(service.url, {
-                        method: 'GET',
-                        signal: controller.signal,
-                        headers: {
-                            'Accept': 'application/json',
-                            'User-Agent': 'Mozilla/5.0 (compatible; AI-Widget/1.0)'
-                        }
-                    });
-                    
-                    clearTimeout(timeoutId);
-                    
-                    if (!response.ok) {
-                        debug(`Service responded with status: ${response.status}`);
-                        continue;
-                    }
-                    
-                    const data = await response.json();
-                    debug(`Service response:`, data);
-                    
-                    const country = service.extractCountry(data);
-                    if (country && typeof country === 'string' && country.length >= 2) {
-                        debug(`Successfully detected country: ${country} from ${service.url}`);
-                        return country.toUpperCase();
-                    }
-                    
-                } catch (error) {
-                    debug(`Service ${service.url} failed:`, error.message);
-                    // Log specific error types for better debugging
-                    if (error.name === 'AbortError') {
-                        debug(`Request to ${service.url} timed out`);
-                    } else if (error.name === 'TypeError') {
-                        debug(`Network error accessing ${service.url} - possibly blocked or offline`);
-                    } else {
-                        debug(`Unexpected error with ${service.url}:`, error);
-                    }
-                    continue;
-                }
+            // Check if geolocation is disabled in settings or by user preference
+            if (widgetData.disable_geolocation || typeof window.aiWidgetDisableGeolocation !== 'undefined' && window.aiWidgetDisableGeolocation) {
+                debug("Geolocation disabled by configuration");
+                return null;
             }
             
-            debug("All IP detection services failed or returned invalid data");
-            return null;
+            debug("Starting optional country detection...");
+            
+            // Use single, reliable service to avoid rate limiting and CORS issues
+            // CloudFlare's trace service is reliable and doesn't require CORS
+            try {
+                debug("Attempting CloudFlare trace service for country detection");
+                
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000); // Shorter timeout for better UX
+                
+                // CloudFlare trace service - reliable and CORS-friendly
+                const response = await fetch('https://www.cloudflare.com/cdn-cgi/trace', {
+                    method: 'GET',
+                    signal: controller.signal,
+                    headers: {
+                        'Accept': 'text/plain'
+                    }
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) {
+                    debug(`CloudFlare trace service responded with status: ${response.status}`);
+                    return null;
+                }
+                
+                const traceText = await response.text();
+                debug(`CloudFlare trace response received`);
+                
+                // Parse the trace response to extract country code
+                const lines = traceText.split('\n');
+                for (const line of lines) {
+                    if (line.startsWith('loc=')) {
+                        const country = line.split('=')[1].trim();
+                        if (country && country.length === 2) {
+                            debug(`Successfully detected country: ${country} via CloudFlare trace`);
+                            return country.toUpperCase();
+                        }
+                    }
+                }
+                
+                debug("No country found in CloudFlare trace response");
+                return null;
+                
+            } catch (error) {
+                // Silently handle errors in production to avoid console noise
+                if (DEBUG) {
+                    debug(`Country detection failed gracefully:`, error.message);
+                    if (error.name === 'AbortError') {
+                        debug(`Request timed out - continuing without geolocation`);
+                    } else if (error.name === 'TypeError') {
+                        debug(`Network error - possibly offline or blocked`);
+                    }
+                }
+                return null;
+            }
         }
 
         /**
@@ -3004,10 +3056,15 @@ document.addEventListener('DOMContentLoaded', function() {
             debug("Voice controls hidden - voice features disabled");
         }
 
+        // Initialize image error handlers to prevent 404 errors
+        addImageErrorHandlers();
+        
         debug("Widget initialization complete", {
             voiceEnabled: voiceEnabled,
             hasElevenLabsKey: hasElevenLabsKey,
-            detectedLanguage: detectedLanguage
+            detectedLanguage: detectedLanguage,
+            geolocationDisabled: widgetData.disable_geolocation,
+            productionMode: widgetData.production_mode
         });
 
         // Debug functions for console testing
@@ -3106,17 +3163,49 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Global error handler
+// Global error handler with production-friendly logging
 window.addEventListener('error', function(e) {
     if (e.filename && e.filename.includes('ai-interview-widget')) {
-        console.error('🚨 AI Interview Widget Error:', e.error);
-        console.error('Error details:', {
-            message: e.message,
-            filename: e.filename,
-            lineno: e.lineno,
-            colno: e.colno,
-            timestamp: new Date().toISOString()
-        });
+        // Check if we're in debug mode
+        const isDebugMode = typeof window.aiWidgetData !== 'undefined' && window.aiWidgetData.debug;
+        
+        if (isDebugMode) {
+            console.error('🚨 AI Interview Widget Error:', e.error);
+            console.error('Error details:', {
+                message: e.message,
+                filename: e.filename,
+                lineno: e.lineno,
+                colno: e.colno,
+                timestamp: new Date().toISOString()
+            });
+        } else {
+            // In production, log minimal error information
+            console.error('AI Widget: An error occurred. Enable debug mode for details.');
+        }
+        
+        // Attempt graceful recovery for known issues
+        if (e.message.includes('geolocation') || e.message.includes('fetch')) {
+            // Geolocation or network errors - widget should continue working
+            if (isDebugMode) {
+                console.warn('AI Widget: Recovering from network/geolocation error');
+            }
+        }
+    }
+});
+
+// Handle unhandled promise rejections
+window.addEventListener('unhandledrejection', function(e) {
+    if (e.reason && e.reason.message && e.reason.message.includes('ai-interview-widget')) {
+        const isDebugMode = typeof window.aiWidgetData !== 'undefined' && window.aiWidgetData.debug;
+        
+        if (isDebugMode) {
+            console.error('🚨 AI Interview Widget Promise Rejection:', e.reason);
+        } else {
+            console.error('AI Widget: Promise rejection occurred.');
+        }
+        
+        // Prevent unhandled rejection from breaking the page
+        e.preventDefault();
     }
 });
 

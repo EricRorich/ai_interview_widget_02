@@ -48,6 +48,12 @@ class AIInterviewWidget {
         add_filter('upload_mimes', array($this, 'add_mp3_mime_type'));
         add_filter('wp_check_filetype_and_ext', array($this, 'fix_mp3_mime_type'), 10, 4);
         
+        // Fix mixed content issues with stylesheets
+        add_filter('style_loader_src', array($this, 'fix_stylesheet_protocol'), 10, 2);
+        
+        // Fix Elementor Google Fonts mixed content
+        add_filter('elementor/frontend/print_google_fonts', array($this, 'fix_elementor_fonts_protocol'), 10, 1);
+        
         // Add rewrite rule for direct MP3 access
         add_action('init', array($this, 'add_audio_rewrite_rules'));
         add_filter('query_vars', array($this, 'add_audio_query_vars'));
@@ -656,6 +662,17 @@ class AIInterviewWidget {
                 'default' => json_encode(array('en' => 'English', 'de' => 'German'))
             )
         );
+        
+        // Privacy and Security Settings
+        register_setting(
+            $settings_group,
+            'ai_interview_widget_disable_geolocation',
+            array(
+                'type' => 'boolean',
+                'sanitize_callback' => 'rest_sanitize_boolean',
+                'default' => false
+            )
+        );
 
         // Settings sections
         add_settings_section(
@@ -827,6 +844,14 @@ class AIInterviewWidget {
             'supported_languages',
             'Supported Languages',
             array($this, 'supported_languages_field_callback'),
+            'ai-interview-widget',
+            'ai_interview_widget_language_section'
+        );
+        
+        add_settings_field(
+            'disable_geolocation',
+            'Disable Geolocation',
+            array($this, 'disable_geolocation_field_callback'),
             'ai-interview-widget',
             'ai_interview_widget_language_section'
         );
@@ -5397,76 +5422,92 @@ private function get_custom_api_response($user_message, $system_prompt = '') {
 
 // ENHANCED SCRIPT ENQUEUING - FIXED DATA PASSING
 public function enqueue_scripts() {
-$plugin_url = plugin_dir_url(__FILE__);
-
-if (!wp_script_is('ai-interview-widget', 'enqueued')) {
-wp_enqueue_style('ai-interview-widget', $plugin_url . 'ai-interview-widget.css', array(), '1.9.3');
-wp_enqueue_script('ai-interview-widget', $plugin_url . 'ai-interview-widget.js', array('jquery'), '1.9.3', true);
-}
-
-$valid_audio_files = $this->validate_audio_files();
-$nonce = wp_create_nonce('ai_interview_nonce');
-
-// Get content settings for dynamic prompts and messages
-$content_settings = get_option('ai_interview_widget_content_settings', '');
-$content_data = json_decode($content_settings, true);
-
-// Get supported languages to dynamically create content defaults
-$supported_langs = json_decode(get_option('ai_interview_widget_supported_languages', ''), true);
-if (!$supported_langs) $supported_langs = array('en' => 'English', 'de' => 'German');
-
-$content_defaults = array(
-    'headline_text' => 'Ask Eric',
-    'headline_font_size' => 18,
-    'headline_font_family' => 'inherit',
-    'headline_color' => '#ffffff'
-);
-
-// Dynamically add welcome messages and system prompts for each supported language
-foreach ($supported_langs as $lang_code => $lang_name) {
-    $content_defaults['welcome_message_' . $lang_code] = ($lang_code === 'en') ? "Hello! Talk to me!" : 
-                                                          (($lang_code === 'de') ? "Hallo! Sprich mit mir!" : 
-                                                           "Hello! Talk to me! (Please configure in Admin Settings)");
+    $plugin_url = plugin_dir_url(__FILE__);
     
-    // Use placeholder system for system prompts
-    $content_defaults['Systemprompts_Placeholder_' . $lang_code] = $this->get_default_system_prompt($lang_code);
-}
-// Merge with current settings
-$content_settings_merged = array_merge($content_defaults, $content_data ?: array());
+    // Force HTTPS for secure sites to prevent mixed content warnings
+    if (is_ssl() && strpos($plugin_url, 'http://') === 0) {
+        $plugin_url = set_url_scheme($plugin_url, 'https');
+    }
 
-// Get style settings for visualizer and other customizations
-$style_settings = get_option('ai_interview_widget_style_settings', '');
-$style_data = json_decode($style_settings, true);
-$style_defaults = array(
-    // Audio Visualizer Settings
-    'visualizer_theme' => 'default',
-    'visualizer_primary_color' => '#00cfff',
-    'visualizer_secondary_color' => '#0066ff',
-    'visualizer_accent_color' => '#001a33',
-    'visualizer_bar_width' => 2,
-    'visualizer_bar_spacing' => 2,
-    'visualizer_glow_intensity' => 10,
-    'visualizer_animation_speed' => 1.0
-);
-// Merge with current settings
-$style_settings_merged = array_merge($style_defaults, $style_data ?: array());
+    if (!wp_script_is('ai-interview-widget', 'enqueued')) {
+        // Add cache busting for development, version for production
+        $version = defined('WP_DEBUG') && WP_DEBUG ? filemtime(plugin_dir_path(__FILE__) . 'ai-interview-widget.css') : '1.9.4';
+        $js_version = defined('WP_DEBUG') && WP_DEBUG ? filemtime(plugin_dir_path(__FILE__) . 'ai-interview-widget.js') : '1.9.4';
+        
+        wp_enqueue_style('ai-interview-widget', $plugin_url . 'ai-interview-widget.css', array(), $version);
+        wp_enqueue_script('ai-interview-widget', $plugin_url . 'ai-interview-widget.js', array('jquery'), $js_version, true);
+        
+        // Add integrity checking in development
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('AI Interview Widget: Enqueued assets with cache busting');
+            error_log('CSS: ' . $plugin_url . 'ai-interview-widget.css?ver=' . $version);
+            error_log('JS: ' . $plugin_url . 'ai-interview-widget.js?ver=' . $js_version);
+        }
+    }
 
-// COMPLETE widget data with ALL required properties for voice features
-$widget_data = array(
-// Core AJAX settings
-'ajaxurl' => admin_url('admin-ajax.php'),
-'nonce' => $nonce,
-'debug' => defined('WP_DEBUG') && WP_DEBUG,
+    $valid_audio_files = $this->validate_audio_files();
+    $nonce = wp_create_nonce('ai_interview_nonce');
 
-// Audio file settings
-'greeting_en' => isset($valid_audio_files['greeting_en.mp3']) ? $valid_audio_files['greeting_en.mp3'] : '',
-'greeting_de' => isset($valid_audio_files['greeting_de.mp3']) ? $valid_audio_files['greeting_de.mp3'] : '',
-'greeting_en_alt' => isset($valid_audio_files['greeting_en.mp3_alt']) ? $valid_audio_files['greeting_en.mp3_alt'] : '',
-'greeting_de_alt' => isset($valid_audio_files['greeting_de.mp3_alt']) ? $valid_audio_files['greeting_de.mp3_alt'] : '',
-'audio_files_available' => !empty($valid_audio_files),
+    // Get content settings for dynamic prompts and messages
+    $content_settings = get_option('ai_interview_widget_content_settings', '');
+    $content_data = json_decode($content_settings, true);
 
-// Content settings (now dynamic instead of FIXED)
-);
+    // Get supported languages to dynamically create content defaults
+    $supported_langs = json_decode(get_option('ai_interview_widget_supported_languages', ''), true);
+    if (!$supported_langs) $supported_langs = array('en' => 'English', 'de' => 'German');
+
+    $content_defaults = array(
+        'headline_text' => 'Ask Eric',
+        'headline_font_size' => 18,
+        'headline_font_family' => 'inherit',
+        'headline_color' => '#ffffff'
+    );
+
+    // Dynamically add welcome messages and system prompts for each supported language
+    foreach ($supported_langs as $lang_code => $lang_name) {
+        $content_defaults['welcome_message_' . $lang_code] = ($lang_code === 'en') ? "Hello! Talk to me!" : 
+                                                              (($lang_code === 'de') ? "Hallo! Sprich mit mir!" : 
+                                                               "Hello! Talk to me! (Please configure in Admin Settings)");
+        
+        // Use placeholder system for system prompts
+        $content_defaults['Systemprompts_Placeholder_' . $lang_code] = $this->get_default_system_prompt($lang_code);
+    }
+    // Merge with current settings
+    $content_settings_merged = array_merge($content_defaults, $content_data ?: array());
+
+    // Get style settings for visualizer and other customizations
+    $style_settings = get_option('ai_interview_widget_style_settings', '');
+    $style_data = json_decode($style_settings, true);
+    $style_defaults = array(
+        // Audio Visualizer Settings
+        'visualizer_theme' => 'default',
+        'visualizer_primary_color' => '#00cfff',
+        'visualizer_secondary_color' => '#0066ff',
+        'visualizer_accent_color' => '#001a33',
+        'visualizer_bar_width' => 2,
+        'visualizer_bar_spacing' => 2,
+        'visualizer_glow_intensity' => 10,
+        'visualizer_animation_speed' => 1.0
+    );
+    // Merge with current settings
+    $style_settings_merged = array_merge($style_defaults, $style_data ?: array());
+
+    // COMPLETE widget data with ALL required properties for voice features
+    $widget_data = array(
+    // Core AJAX settings - ensure HTTPS for secure sites
+    'ajaxurl' => is_ssl() ? set_url_scheme(admin_url('admin-ajax.php'), 'https') : admin_url('admin-ajax.php'),
+    'nonce' => $nonce,
+    'debug' => defined('WP_DEBUG') && WP_DEBUG,
+
+    // Audio file settings - force HTTPS for secure sites
+    'greeting_en' => isset($valid_audio_files['greeting_en.mp3']) ? (is_ssl() ? set_url_scheme($valid_audio_files['greeting_en.mp3'], 'https') : $valid_audio_files['greeting_en.mp3']) : '',
+    'greeting_de' => isset($valid_audio_files['greeting_de.mp3']) ? (is_ssl() ? set_url_scheme($valid_audio_files['greeting_de.mp3'], 'https') : $valid_audio_files['greeting_de.mp3']) : '',
+    'greeting_en_alt' => isset($valid_audio_files['greeting_en.mp3_alt']) ? (is_ssl() ? set_url_scheme($valid_audio_files['greeting_en.mp3_alt'], 'https') : $valid_audio_files['greeting_en.mp3_alt']) : '',
+    'greeting_de_alt' => isset($valid_audio_files['greeting_de.mp3_alt']) ? (is_ssl() ? set_url_scheme($valid_audio_files['greeting_de.mp3_alt'], 'https') : $valid_audio_files['greeting_de.mp3_alt']) : '',
+    'audio_files_available' => !empty($valid_audio_files),
+
+    // Content settings (now dynamic instead of FIXED)
+    );
 
 // Dynamically add content settings for each supported language
 foreach ($supported_langs as $lang_code => $lang_name) {
@@ -5516,7 +5557,11 @@ $widget_data = array_merge($widget_data, array(
 
 // Browser detection helpers
 'https_enabled' => is_ssl(),
-'user_agent' => isset($_SERVER['HTTP_USER_AGENT']) ? sanitize_text_field($_SERVER['HTTP_USER_AGENT']) : ''
+'user_agent' => isset($_SERVER['HTTP_USER_AGENT']) ? sanitize_text_field($_SERVER['HTTP_USER_AGENT']) : '',
+
+// Privacy and feature controls
+'disable_geolocation' => get_option('ai_interview_widget_disable_geolocation', false),
+'production_mode' => !defined('WP_DEBUG') || !WP_DEBUG
 ));
 
 // DEBUG: Log the data being passed
@@ -6725,6 +6770,23 @@ public function supported_languages_field_callback() {
         });
     });
     </script>
+    <?php
+}
+
+public function disable_geolocation_field_callback() {
+    $disable_geolocation = get_option('ai_interview_widget_disable_geolocation', false);
+    ?>
+    <label>
+        <input type="checkbox" 
+               name="ai_interview_widget_disable_geolocation" 
+               value="1" 
+               <?php checked($disable_geolocation, true); ?> />
+        Disable automatic country detection for language selection
+    </label>
+    <p class="description">
+        When enabled, this disables automatic IP-based country detection to improve privacy and prevent CORS/rate limiting issues. 
+        The widget will use browser language preferences only.
+    </p>
     <?php
 }
 
@@ -7995,6 +8057,74 @@ public function documentation_page() {
 </div>
 <?php
 }
+
+/**
+ * Fix mixed content issues by forcing HTTPS for stylesheets on secure sites
+ */
+public function fix_stylesheet_protocol($src, $handle) {
+    // Only fix URLs for secure sites and if URL uses HTTP
+    if (is_ssl() && strpos($src, 'http://') === 0) {
+        $src = set_url_scheme($src, 'https');
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('AI Interview Widget: Fixed mixed content for stylesheet: ' . $handle);
+        }
+    }
+    return $src;
+}
+
+/**
+ * Fix Elementor Google Fonts mixed content issues
+ */
+public function fix_elementor_fonts_protocol($google_fonts_url) {
+    if (is_ssl() && strpos($google_fonts_url, 'http://') === 0) {
+        $google_fonts_url = set_url_scheme($google_fonts_url, 'https');
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('AI Interview Widget: Fixed mixed content for Elementor Google Fonts');
+        }
+    }
+    return $google_fonts_url;
+}
+
+/**
+ * Improved audio file validation with better error handling
+ */
+private function validate_audio_files_safe() {
+    $plugin_dir = plugin_dir_path(__FILE__);
+    $plugin_url = plugin_dir_url(__FILE__);
+    
+    // Force HTTPS for secure sites
+    if (is_ssl()) {
+        $plugin_url = set_url_scheme($plugin_url, 'https');
+    }
+    
+    $files = ['greeting_en.mp3', 'greeting_de.mp3'];
+    $valid_files = [];
+
+    foreach ($files as $file) {
+        $file_path = $plugin_dir . $file;
+        $file_url = $plugin_url . $file;
+
+        if (file_exists($file_path) && is_readable($file_path)) {
+            $file_size = filesize($file_path);
+            
+            // Only log in debug mode to prevent log spam
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('AI Interview Widget: Audio file validated: ' . $file . ' (Size: ' . $file_size . ' bytes)');
+            }
+
+            $valid_files[$file] = $file_url;
+            $valid_files[$file . '_alt'] = home_url('/ai-widget-audio/' . $file);
+        } else {
+            // Only log missing files in debug mode
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('AI Interview Widget: Missing audio file: ' . $file . ' at path: ' . $file_path);
+            }
+        }
+    }
+
+    return $valid_files;
+}
+
 }
 
 // Initialize the plugin

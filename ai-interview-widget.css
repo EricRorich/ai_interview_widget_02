@@ -129,9 +129,20 @@
     outline: none !important;
 }
 
-.play-button:hover {
+.play-button:hover,
+.play-button.hover-scale:hover {
     transform: scale(1.1) !important;
     box-shadow: 0 0 calc(var(--play-button-shadow-intensity, 20px) * 1.5) var(--play-button-border-color, #00cfff) !important;
+}
+
+.play-button.hover-glow:hover {
+    transform: none !important;
+    box-shadow: 0 0 calc(var(--play-button-shadow-intensity, 20px) * 2) var(--play-button-border-color, #00cfff) !important;
+}
+
+.play-button.hover-none:hover {
+    transform: none !important;
+    box-shadow: 0 0 var(--play-button-shadow-intensity, 20px) var(--play-button-border-color, #00cfff) !important;
 }
 
 .play-button:active {
@@ -860,6 +871,12 @@
 
 /* Apply pulse animations to the dedicated play button when enabled */
 .play-button-container:not(.hidden) .play-button:not([data-disable-pulse="true"]) {
+    animation: play-button-breathing-pulse calc(2.0s / var(--play-button-pulse-speed, 1)) infinite ease-in-out,
+               play-button-dots-pulse calc(1.8s / var(--play-button-pulse-speed, 1)) infinite ease-in-out;
+}
+
+/* WordPress Customizer integration support */
+.play-button-container:not(.hidden) .play-button:not([data-disable-pulse="true"]):not(.hover-none) {
     animation: play-button-breathing-pulse calc(2.0s / var(--play-button-pulse-speed, 1)) infinite ease-in-out,
                play-button-dots-pulse calc(1.8s / var(--play-button-pulse-speed, 1)) infinite ease-in-out;
 }

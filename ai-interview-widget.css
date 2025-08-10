@@ -758,85 +758,7 @@
     }
 }
 
-/* === PLAY BUTTON PULSE ANIMATIONS - RESTRICTED SCOPE === */
-/* Create a virtual overlay for play button pulse that doesn't affect canvas shadow */
-#soundbar::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    pointer-events: none;
-    border-radius: inherit;
-    z-index: 1;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-/* Only show pulse overlay when play button is visible and pulse is enabled */
-#soundbar.show-play-button:not([data-disable-pulse="true"])::before {
-    opacity: 1;
-}
-
-/* Breathing-Pulse Animation - Smooth scale breathing effect */
-@keyframes breathing-pulse {
-    0%, 100% { 
-        transform: scale(1); 
-        opacity: 1;
-    }
-    50% { 
-        transform: scale(1.08); 
-        opacity: 0.9;
-    }
-}
-
-/* Dot-Pulse Animation - Subtle pulsing with glow effect */
-@keyframes dots-pulse {
-    0%, 100% { 
-        transform: scale(1);
-        box-shadow: 0 0 20px var(--aiw-shadow-color);
-    }
-    25% { 
-        transform: scale(1.02);
-        box-shadow: 0 0 25px var(--aiw-shadow-color);
-    }
-    50% { 
-        transform: scale(1.05);
-        box-shadow: 0 0 30px var(--aiw-shadow-color);
-    }
-    75% { 
-        transform: scale(1.02);
-        box-shadow: 0 0 25px var(--aiw-shadow-color);
-    }
-}
-
-/* Apply pulse animations only to the pseudo-element overlay, not the canvas itself */
-#soundbar.pulse-breathing.show-play-button:not([data-disable-pulse="true"])::before {
-    animation: breathing-pulse calc(2.0s / var(--play-button-pulse-speed, 1)) infinite ease-in-out;
-}
-
-#soundbar.pulse-dots.show-play-button:not([data-disable-pulse="true"])::before {
-    animation: dots-pulse calc(1.8s / var(--play-button-pulse-speed, 1)) infinite ease-in-out;
-}
-
-#soundbar.pulse-breathing.pulse-dots.show-play-button:not([data-disable-pulse="true"])::before {
-    animation: breathing-pulse calc(2.0s / var(--play-button-pulse-speed, 1)) infinite ease-in-out, 
-               dots-pulse calc(1.8s / var(--play-button-pulse-speed, 1)) infinite ease-in-out;
-}
-
-/* Ensure the main canvas never pulses - only the overlay */
-#soundbar.pulse-breathing,
-#soundbar.pulse-dots,
-#soundbar.pulse-effect {
-    animation: none !important;
-    transform: translateZ(0) !important;
-}
-
-/* Legacy support - convert old pulse classes to new overlay system */
-.pulse-effect {
-    /* Legacy class - now handled by ::before pseudo-element */
-}
+/* Legacy canvas pulse effects removed - now handled by play button overlay */
 
 /* === PLAY BUTTON OVERLAY === */
 .canvas-container {
@@ -943,6 +865,7 @@
     border-radius: 50% !important;
     opacity: 0.3 !important;
     animation: futuristic-ring 2s infinite ease-in-out !important;
+    pointer-events: none !important;
 }
 
 .play-button[data-design="futuristic"]::after {
@@ -956,6 +879,7 @@
     border-radius: 50% !important;
     opacity: 0.2 !important;
     animation: futuristic-ring 2s infinite ease-in-out 0.5s !important;
+    pointer-events: none !important;
 }
 
 .play-triangle {
@@ -1025,10 +949,14 @@
     }
 }
 
+/* Mobile touch optimization */
 @media screen and (max-width: 767px) {
     .play-button {
         width: calc(var(--play-button-size, 100px) * 0.6) !important;
         height: calc(var(--play-button-size, 100px) * 0.6) !important;
+        /* Larger touch target for mobile */
+        min-width: 60px !important;
+        min-height: 60px !important;
     }
     
     .play-triangle {
@@ -1036,6 +964,17 @@
         border-top-width: calc(var(--play-button-size, 100px) * 0.09) !important;
         border-bottom-width: calc(var(--play-button-size, 100px) * 0.09) !important;
         margin-left: calc(var(--play-button-size, 100px) * 0.03) !important;
+    }
+    
+    /* Increase touch area for better mobile experience */
+    .play-button::before {
+        content: '' !important;
+        position: absolute !important;
+        top: -20px !important;
+        left: -20px !important;
+        right: -20px !important;
+        bottom: -20px !important;
+        z-index: -1 !important;
     }
 }
 

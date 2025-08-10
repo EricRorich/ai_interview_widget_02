@@ -8,6 +8,14 @@
     --aiw-shadow-intensity: 20; /* Default canvas shadow intensity */
     --play-button-pulse-speed: 1.0; /* Default pulse speed multiplier */
     --play-button-disable-pulse: false; /* Default pulse state */
+    
+    /* Legacy Play Button Design Variables */
+    --aiw-legacy-btn-size: 80px; /* Legacy button size */
+    --aiw-legacy-btn-bg: linear-gradient(135deg, #4a90e2, #357abd); /* Legacy background */
+    --aiw-legacy-btn-bg-hover: linear-gradient(135deg, #5ba3f5, #4a90e2); /* Legacy hover background */
+    --aiw-legacy-btn-icon-color: #ffffff; /* Legacy icon color */
+    --aiw-legacy-btn-shadow: 0 4px 15px rgba(74, 144, 226, 0.4); /* Legacy shadow */
+    --aiw-legacy-btn-border: 2px solid #ffffff; /* Legacy border */
 }
 
 /* WordPress Theme Independence - Override all potential theme interference */
@@ -882,6 +890,91 @@
     pointer-events: none !important;
 }
 
+/* Legacy Design */
+.play-button[data-design="legacy"] {
+    width: var(--aiw-legacy-btn-size, 80px) !important;
+    height: var(--aiw-legacy-btn-size, 80px) !important;
+}
+
+.play-button[data-design="legacy"] .play-button-inner {
+    background: var(--aiw-legacy-btn-bg, linear-gradient(135deg, #4a90e2, #357abd)) !important;
+    border: var(--aiw-legacy-btn-border, 2px solid #ffffff) !important;
+    box-shadow: var(--aiw-legacy-btn-shadow, 0 4px 15px rgba(74, 144, 226, 0.4)) !important;
+    transition: all 0.3s ease !important;
+}
+
+.play-button[data-design="legacy"]:hover .play-button-inner {
+    background: var(--aiw-legacy-btn-bg-hover, linear-gradient(135deg, #5ba3f5, #4a90e2)) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 
+        var(--aiw-legacy-btn-shadow, 0 4px 15px rgba(74, 144, 226, 0.4)),
+        0 8px 25px rgba(74, 144, 226, 0.3) !important;
+}
+
+.play-button[data-design="legacy"]:active .play-button-inner {
+    transform: translateY(0px) !important;
+    box-shadow: var(--aiw-legacy-btn-shadow, 0 4px 15px rgba(74, 144, 226, 0.4)) !important;
+}
+
+/* Legacy design uses SVG icon instead of CSS triangle */
+.play-button[data-design="legacy"] .play-triangle {
+    display: none !important;
+}
+
+.play-button[data-design="legacy"] .play-svg-icon {
+    width: calc(var(--aiw-legacy-btn-size, 80px) * 0.3) !important;
+    height: calc(var(--aiw-legacy-btn-size, 80px) * 0.3) !important;
+    fill: var(--aiw-legacy-btn-icon-color, #ffffff) !important;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3)) !important;
+    margin-left: calc(var(--aiw-legacy-btn-size, 80px) * 0.03) !important;
+}
+
+/* Legacy single pulse animation on first load */
+.play-button[data-design="legacy"]:not([data-disable-pulse="true"]) {
+    animation: none !important; /* Remove continuous pulse */
+}
+
+.play-button[data-design="legacy"].initial-pulse:not([data-disable-pulse="true"]) {
+    animation: legacy-initial-pulse 1.5s ease-out !important;
+}
+
+.play-button[data-design="legacy"].initial-pulse:not([data-disable-pulse="true"])::before {
+    content: '' !important;
+    position: absolute !important;
+    top: -10px !important;
+    left: -10px !important;
+    right: -10px !important;
+    bottom: -10px !important;
+    border: 3px solid var(--aiw-legacy-btn-icon-color, #ffffff) !important;
+    border-radius: 50% !important;
+    opacity: 0 !important;
+    animation: legacy-pulse-ring 1.5s ease-out !important;
+    pointer-events: none !important;
+}
+
+@keyframes legacy-initial-pulse {
+    0% { 
+        transform: scale(1); 
+    }
+    30% { 
+        transform: scale(1.1); 
+    }
+    100% { 
+        transform: scale(1); 
+    }
+}
+
+@keyframes legacy-pulse-ring {
+    0% {
+        transform: scale(1);
+        opacity: 0.7;
+    }
+    100% {
+        transform: scale(1.4);
+        opacity: 0;
+    }
+}
+
 .play-triangle {
     width: 0 !important;
     height: 0 !important;
@@ -941,11 +1034,21 @@
         height: calc(var(--play-button-size, 100px) * 0.8) !important;
     }
     
+    .play-button[data-design="legacy"] {
+        width: calc(var(--aiw-legacy-btn-size, 80px) * 0.8) !important;
+        height: calc(var(--aiw-legacy-btn-size, 80px) * 0.8) !important;
+    }
+    
     .play-triangle {
         border-left-width: calc(var(--play-button-size, 100px) * 0.2) !important;
         border-top-width: calc(var(--play-button-size, 100px) * 0.12) !important;
         border-bottom-width: calc(var(--play-button-size, 100px) * 0.12) !important;
         margin-left: calc(var(--play-button-size, 100px) * 0.04) !important;
+    }
+    
+    .play-button[data-design="legacy"] .play-svg-icon {
+        width: calc(var(--aiw-legacy-btn-size, 80px) * 0.8 * 0.3) !important;
+        height: calc(var(--aiw-legacy-btn-size, 80px) * 0.8 * 0.3) !important;
     }
 }
 
@@ -959,11 +1062,23 @@
         min-height: 60px !important;
     }
     
+    .play-button[data-design="legacy"] {
+        width: calc(var(--aiw-legacy-btn-size, 80px) * 0.6) !important;
+        height: calc(var(--aiw-legacy-btn-size, 80px) * 0.6) !important;
+        min-width: 48px !important;
+        min-height: 48px !important;
+    }
+    
     .play-triangle {
         border-left-width: calc(var(--play-button-size, 100px) * 0.15) !important;
         border-top-width: calc(var(--play-button-size, 100px) * 0.09) !important;
         border-bottom-width: calc(var(--play-button-size, 100px) * 0.09) !important;
         margin-left: calc(var(--play-button-size, 100px) * 0.03) !important;
+    }
+    
+    .play-button[data-design="legacy"] .play-svg-icon {
+        width: calc(var(--aiw-legacy-btn-size, 80px) * 0.6 * 0.3) !important;
+        height: calc(var(--aiw-legacy-btn-size, 80px) * 0.6 * 0.3) !important;
     }
     
     /* Increase touch area for better mobile experience */
@@ -982,8 +1097,14 @@
 @media (prefers-reduced-motion: reduce) {
     .play-button,
     .play-button[data-design="futuristic"]::before,
-    .play-button[data-design="futuristic"]::after {
+    .play-button[data-design="futuristic"]::after,
+    .play-button[data-design="legacy"].initial-pulse,
+    .play-button[data-design="legacy"].initial-pulse::before {
         animation: none !important;
+    }
+    
+    .play-button[data-design="legacy"]:hover .play-button-inner {
+        transform: none !important;
     }
 }
 

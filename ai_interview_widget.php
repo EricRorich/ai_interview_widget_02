@@ -1842,6 +1842,14 @@ class AIInterviewWidget {
         $canvasShadowIntensity = isset($style_data['canvas_shadow_intensity']) ? intval($style_data['canvas_shadow_intensity']) : 20;
         $css .= "    --aiw-shadow-intensity: {$canvasShadowIntensity};\n";
         
+        // Legacy Play Button Design Variables (for legacy design option)
+        $css .= "    --aiw-legacy-btn-size: 80px;\n";
+        $css .= "    --aiw-legacy-btn-bg: linear-gradient(135deg, #4a90e2, #357abd);\n";
+        $css .= "    --aiw-legacy-btn-bg-hover: linear-gradient(135deg, #5ba3f5, #4a90e2);\n";
+        $css .= "    --aiw-legacy-btn-icon-color: #ffffff;\n";
+        $css .= "    --aiw-legacy-btn-shadow: 0 4px 15px rgba(74, 144, 226, 0.4);\n";
+        $css .= "    --aiw-legacy-btn-border: 2px solid #ffffff;\n";
+        
         $css .= "}\n\n";
         
         if (isset($style_data['voice_btn_text_color'])) {
@@ -2152,6 +2160,13 @@ class AIInterviewWidget {
             $default_css .= "    --aiw-btn-size: 100;\n";
             $default_css .= "    --aiw-shadow-color: rgba(0, 207, 255, 0.5);\n";
             $default_css .= "    --aiw-shadow-intensity: 20;\n";
+            // Legacy Play Button Design Variables
+            $default_css .= "    --aiw-legacy-btn-size: 80px;\n";
+            $default_css .= "    --aiw-legacy-btn-bg: linear-gradient(135deg, #4a90e2, #357abd);\n";
+            $default_css .= "    --aiw-legacy-btn-bg-hover: linear-gradient(135deg, #5ba3f5, #4a90e2);\n";
+            $default_css .= "    --aiw-legacy-btn-icon-color: #ffffff;\n";
+            $default_css .= "    --aiw-legacy-btn-shadow: 0 4px 15px rgba(74, 144, 226, 0.4);\n";
+            $default_css .= "    --aiw-legacy-btn-border: 2px solid #ffffff;\n";
             $default_css .= "}\n";
             
             echo "\n<!-- AI Interview Widget Default CSS Variables -->\n";
@@ -3092,6 +3107,7 @@ class AIInterviewWidget {
                         <option value="classic" <?php selected($style_settings['play_button_design'], 'classic'); ?>>Classic (Current) - Radial gradient with pulse</option>
                         <option value="minimalist" <?php selected($style_settings['play_button_design'], 'minimalist'); ?>>Minimalist - Solid color with subtle shadow</option>
                         <option value="futuristic" <?php selected($style_settings['play_button_design'], 'futuristic'); ?>>Futuristic - Glowing neon border</option>
+                        <option value="legacy" <?php selected($style_settings['play_button_design'], 'legacy'); ?>>Legacy - Old design with single pulse</option>
                     </select>
                 </div>
                 
@@ -3148,6 +3164,32 @@ class AIInterviewWidget {
                                 <div class="slider-track-fill" style="position: absolute; top: 50%; left: 0; height: 8px; background: #00cfff; border-radius: 5px; pointer-events: none; transform: translateY(-50%); width: <?php echo (($style_settings['play_button_neon_intensity']-10)/70)*100; ?>%; transition: width 0.2s ease;"></div>
                             </div>
                             <button type="button" class="button button-small reset-button" data-setting="play_button_neon_intensity" data-default="30" style="padding: 5px 10px;">Reset</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Legacy Design Settings -->
+                <div id="play_button_legacy_group" style="<?php echo $style_settings['play_button_design'] !== 'legacy' ? 'display: none;' : ''; ?>">
+                    <div class="control-group" style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">Legacy Background:</label>
+                        <select id="legacy_bg_type" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 10px;">
+                            <option value="blue_gradient">Blue Gradient (Default)</option>
+                            <option value="green_gradient">Green Gradient</option>
+                            <option value="purple_gradient">Purple Gradient</option>
+                            <option value="custom">Custom Colors</option>
+                        </select>
+                    </div>
+                    <div class="control-group" style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">Legacy Size: <span id="legacy_size_value">80px</span></label>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div style="flex: 1; position: relative;">
+                                <input type="range" id="legacy_size_slider" 
+                                       min="60" max="120" value="80" 
+                                       class="modern-slider" 
+                                       oninput="updateLegacySize(this.value)" 
+                                       style="width: 100%; height: 8px; border-radius: 5px; background: linear-gradient(to right, #4a90e2 0%, #4a90e2 33%, #ddd 33%, #ddd 100%); outline: none; -webkit-appearance: none;">
+                            </div>
+                            <button type="button" class="button button-small reset-button" onclick="resetLegacySize()" style="padding: 5px 10px;">Reset</button>
                         </div>
                     </div>
                 </div>
@@ -4461,12 +4503,93 @@ jQuery(document).ready(function($) {
         }
     };
 
+    // Legacy design functions
+    window.updateLegacySize = function(value) {
+        document.getElementById('legacy_size_value').textContent = value + 'px';
+        updateCSSVariable('aiw-legacy-btn-size', value + 'px');
+        
+        // Update the slider background
+        const slider = document.getElementById('legacy_size_slider');
+        const percentage = ((value - 60) / (120 - 60)) * 100;
+        slider.style.background = 
+            'linear-gradient(to right, #4a90e2 0%, #4a90e2 ' + percentage + '%, #ddd ' + percentage + '%, #ddd 100%)';
+    };
+    
+    window.resetLegacySize = function() {
+        updateLegacySize(80);
+        document.getElementById('legacy_size_slider').value = 80;
+    };
+    
+    // Handle play button design changes
+    function handlePlayButtonDesignChange() {
+        const design = document.getElementById('play_button_design').value;
+        
+        // Show/hide design-specific groups
+        const classicGroup = document.getElementById('play_button_gradient_group');
+        const futuristicGroup = document.getElementById('play_button_neon_group');
+        const legacyGroup = document.getElementById('play_button_legacy_group');
+        
+        // Hide all groups first
+        if (classicGroup) classicGroup.style.display = 'none';
+        if (futuristicGroup) futuristicGroup.style.display = 'none';
+        if (legacyGroup) legacyGroup.style.display = 'none';
+        
+        // Show relevant group
+        if (design === 'classic' && classicGroup) {
+            classicGroup.style.display = 'block';
+        } else if (design === 'futuristic' && futuristicGroup) {
+            futuristicGroup.style.display = 'block';
+        } else if (design === 'legacy' && legacyGroup) {
+            legacyGroup.style.display = 'block';
+        }
+        
+        // Update the preview if possible
+        updateCSSVariable('play-button-design', "'" + design + "'");
+        
+        console.log('Play button design changed to:', design);
+    }
+    
+    // Handle legacy background type changes
+    function handleLegacyBackgroundChange() {
+        const type = document.getElementById('legacy_bg_type').value;
+        let bgValue = '';
+        
+        switch(type) {
+            case 'blue_gradient':
+                bgValue = 'linear-gradient(135deg, #4a90e2, #357abd)';
+                break;
+            case 'green_gradient':
+                bgValue = 'linear-gradient(135deg, #46b450, #357a35)';
+                break;
+            case 'purple_gradient':
+                bgValue = 'linear-gradient(135deg, #9b59b6, #7a4a7a)';
+                break;
+            case 'custom':
+                bgValue = 'linear-gradient(135deg, #666666, #333333)';
+                break;
+        }
+        
+        updateCSSVariable('aiw-legacy-btn-bg', bgValue);
+        console.log('Legacy background changed to:', type);
+    }
+
     // Initialize all controls
     initializeColorPickers();
     initializeSliders();
     initializeTabs();
     initializeSaveHandlers();
     initializeOtherControls();
+    
+    // Add event listeners for legacy design
+    const playButtonDesign = document.getElementById('play_button_design');
+    if (playButtonDesign) {
+        playButtonDesign.addEventListener('change', handlePlayButtonDesignChange);
+    }
+    
+    const legacyBgType = document.getElementById('legacy_bg_type');
+    if (legacyBgType) {
+        legacyBgType.addEventListener('change', handleLegacyBackgroundChange);
+    }
     
     console.log('✅ Enhanced Widget Customizer fully initialized');
     console.log('🎉 Enhanced Widget Customizer script loaded successfully');
@@ -5607,6 +5730,9 @@ if ($canvas_shadow_color) {
     <button id="playButton" class="play-button" aria-label="Play audio">
         <div class="play-button-inner">
             <div class="play-triangle"></div>
+            <svg class="play-svg-icon" viewBox="0 0 24 24" style="display: none;">
+                <path d="M8 5v14l11-7z"/>
+            </svg>
         </div>
     </button>
 </div>

@@ -373,6 +373,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const disablePulse = getCSSVariable('--play-button-disable-pulse', 'false').toLowerCase() === 'true';
             playButton.setAttribute('data-disable-pulse', disablePulse.toString());
             
+            // Update design to handle icon visibility and effects
+            updatePlayButtonDesign();
+            
             // Add click event listener
             playButton.addEventListener('click', handlePlayButtonClick);
             
@@ -406,6 +409,29 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const disablePulse = getCSSVariable('--play-button-disable-pulse', 'false').toLowerCase() === 'true';
             playButton.setAttribute('data-disable-pulse', disablePulse.toString());
+            
+            // Handle icon visibility based on design
+            const triangleIcon = playButton.querySelector('.play-triangle');
+            const svgIcon = playButton.querySelector('.play-svg-icon');
+            
+            if (design === 'legacy') {
+                // Legacy design uses SVG icon
+                if (triangleIcon) triangleIcon.style.display = 'none';
+                if (svgIcon) svgIcon.style.display = 'block';
+                
+                // Add initial pulse effect for legacy design
+                if (!disablePulse) {
+                    playButton.classList.add('initial-pulse');
+                    // Remove the class after animation completes
+                    setTimeout(() => {
+                        playButton.classList.remove('initial-pulse');
+                    }, 1500);
+                }
+            } else {
+                // Other designs use CSS triangle
+                if (triangleIcon) triangleIcon.style.display = 'block';
+                if (svgIcon) svgIcon.style.display = 'none';
+            }
             
             debug("Play button design updated", { design, disablePulse });
         }

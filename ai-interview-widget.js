@@ -1,82 +1,92 @@
-// AI Interview Widget v1.9.3 FIXED - COMPLETE WORKING VERSION
-// Current Date and Time (UTC): 2025-08-03 18:54:44
-// Current User's Login: EricRorich
-
-console.log('🎤 AI Interview Widget v1.9.3 FIXED Loading - TTS/Voice Features RESTORED');
-console.log('🕐 Current Time: 2025-08-03 18:54:44 UTC');
-console.log('👤 Current User: EricRorich');
+/**
+ * AI Interview Widget v1.9.4 - Complete Interactive Widget
+ * 
+ * Provides full audio visualization, chat interface, and voice capabilities
+ * for Eric Rorich's portfolio. Includes TTS/STT integration and responsive design.
+ * 
+ * @version 1.9.4
+ * @author Eric Rorich
+ * @since 1.0.0
+ */
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Give Elementor a moment to fully render the canvas
-    setTimeout(() => {
-        initializeWidget();
-    }, 300);
+  // Give Elementor a moment to fully render the canvas
+  setTimeout(() => {
+    initializeWidget();
+  }, 300);
 
-    function initializeWidget() {
-        // Debug flag - set to false for production
-        const DEBUG = false;
-        
-        // Device detection
-        const isMobile = window.innerWidth <= 767;
-        const isTablet = window.innerWidth <= 1024 && window.innerWidth > 767;
-        const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-        
-        // Voice feature availability - FIXED
-        let voiceEnabled = false;
-        let hasElevenLabsKey = false;
-        let speechRecognition = null;
-        let speechSynthesis = null;
-        let isListening = false;
-        let ttsEnabled = true;
-        let currentTTSAudio = null;
-        
-        // Voice Activity Detection (VAD) variables
-        let vadEnabled = true;
-        let vadSilenceTimeout = 2500; // 2.5 seconds default
-        let vadSilenceTimer = null;
-        let vadLastSpeechTime = null;
-        let vadAutoSendEnabled = true;
-        let vadMinSpeechDuration = 500; // Minimum 0.5 seconds of speech before considering auto-send
-        
-        // Audio Visualizer Theme System
-        let currentVisualizerTheme = 'default';
-        let visualizerSettings = {
-            theme: 'default',
-            primaryColor: '#00cfff',
-            secondaryColor: '#0066ff',
-            accentColor: '#001a33',
-            barWidth: 2,
-            barSpacing: 2,
-            glowIntensity: 10,
-            animationSpeed: 1.0
-        };
-        
-        const visualizerThemes = {
-            default: {
-                name: 'Default',
-                description: 'Original futuristic design with cyan gradients',
-                renderFunction: drawSoundbarDefault,
-                settings: {
-                    primaryColor: '#00cfff',
-                    secondaryColor: '#0066ff', 
-                    accentColor: '#001a33',
-                    barWidth: 2,
-                    barSpacing: 2,
-                    glowIntensity: 10
-                }
-            },
-            minimal: {
-                name: 'Minimal',
-                description: 'Clean, subtle lines with soft fade effects',
-                renderFunction: drawSoundbarMinimal,
-                settings: {
-                    primaryColor: '#ffffff',
-                    secondaryColor: '#e0e0e0',
-                    accentColor: '#cccccc',
-                    barWidth: 1,
-                    barSpacing: 3,
-                    glowIntensity: 2
-                }
+  /**
+   * Main widget initialization function
+   * 
+   * Sets up all widget functionality including audio playback,
+   * chat interface, voice features, and responsive behavior.
+   * 
+   * @since 1.0.0
+   */
+  function initializeWidget() {
+    // Debug flag - set to false for production
+    const DEBUG = false;
+
+    // Device detection
+    const isMobile = window.innerWidth <= 767;
+    const isTablet = window.innerWidth <= 1024 && window.innerWidth > 767;
+    const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+    // Voice feature state
+    let voiceEnabled = false;
+    let hasElevenLabsKey = false;
+    let speechRecognition = null;
+    let speechSynthesis = null;
+    let isListening = false;
+    let ttsEnabled = true;
+    let currentTTSAudio = null;
+
+    // Voice Activity Detection (VAD) configuration
+    let vadEnabled = true;
+    let vadSilenceTimeout = 2500; // 2.5 seconds default
+    let vadSilenceTimer = null;
+    let vadLastSpeechTime = null;
+    let vadAutoSendEnabled = true;
+    let vadMinSpeechDuration = 500; // Minimum 0.5 seconds of speech before considering auto-send
+
+    // Audio Visualizer Theme System
+    let currentVisualizerTheme = 'default';
+    let visualizerSettings = {
+      theme: 'default',
+      primaryColor: '#00cfff',
+      secondaryColor: '#0066ff',
+      accentColor: '#001a33',
+      barWidth: 2,
+      barSpacing: 2,
+      animationSpeed: 1.0
+    };
+
+    const visualizerThemes = {
+      default: {
+        name: 'Default',
+        description: 'Original futuristic design with cyan gradients',
+        renderFunction: drawSoundbarDefault,
+        settings: {
+          primaryColor: '#00cfff',
+          secondaryColor: '#0066ff',
+          accentColor: '#001a33',
+          barWidth: 2,
+          barSpacing: 2,
+          glowIntensity: 10
+        }
+      },
+      minimal: {
+        name: 'Minimal',
+        description: 'Clean, subtle lines with soft fade effects',
+        renderFunction: drawSoundbarMinimal,
+        settings: {
+          primaryColor: '#ffffff',
+          secondaryColor: '#e0e0e0',
+          accentColor: '#cccccc',
+          barWidth: 1,
+          barSpacing: 3,
+          glowIntensity: 2
+        }
             },
             futuristic: {
                 name: 'Futuristic',
@@ -1577,20 +1587,25 @@ document.addEventListener('DOMContentLoaded', function() {
         /**
          * Log a comprehensive summary of the language detection process
          * Useful for debugging and monitoring language detection accuracy
+         * 
+         * @param {string} finalLanguage The final selected language 
+         * @param {string|null} detectedCountry The detected country code
          */
         function logLanguageDetectionSummary(finalLanguage, detectedCountry) {
-            const supportedLanguages = getSupportedLanguages();
-            const countryMapping = getCountryToLanguageMapping();
-            
-            console.group('🌍 Language Detection Summary');
-            console.log('📍 Detected Country:', detectedCountry || 'Not detected');
-            console.log('🗣️ Final Language:', finalLanguage);
-            console.log('💾 Supported Languages:', supportedLanguages.length, 'languages');
-            console.log('🔗 Country Mapping Available:', detectedCountry && countryMapping[detectedCountry] ? 'Yes' : 'No');
-            console.log('📦 System Prompts Available:', Object.keys(systemPrompts).filter(lang => systemPrompts[lang] && systemPrompts[lang].trim() !== ''));
-            console.log('💬 Welcome Messages Available:', Object.keys(welcomeMessages).filter(lang => welcomeMessages[lang] && welcomeMessages[lang].trim() !== ''));
-            console.log('⚡ Detection Method:', detectedCountry ? 'IP-based' : 'Browser/Timezone-based');
-            console.groupEnd();
+          if (!DEBUG) return;
+          
+          const supportedLanguages = getSupportedLanguages();
+          const countryMapping = getCountryToLanguageMapping();
+
+          console.group('🌍 Language Detection Summary');
+          console.log('📍 Detected Country:', detectedCountry || 'Not detected');
+          console.log('🗣️ Final Language:', finalLanguage);
+          console.log('💾 Supported Languages:', supportedLanguages.length, 'languages');
+          console.log('🔗 Country Mapping Available:', detectedCountry && countryMapping[detectedCountry] ? 'Yes' : 'No');
+          console.log('📦 System Prompts Available:', Object.keys(systemPrompts).filter(lang => systemPrompts[lang] && systemPrompts[lang].trim() !== ''));
+          console.log('💬 Welcome Messages Available:', Object.keys(welcomeMessages).filter(lang => welcomeMessages[lang] && welcomeMessages[lang].trim() !== ''));
+          console.log('⚡ Detection Method:', detectedCountry ? 'IP-based' : 'Browser/Timezone-based');
+          console.groupEnd();
         }
 
         /**
@@ -3170,14 +3185,19 @@ if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' |
             return window.aiWidgetData;
         }
     };
-    console.log('🛠️ Debug functions available in aiWidgetDebugExport:', Object.keys(window.aiWidgetDebugExport));
+    
+    // Only log debug info in development environments
+    if (window.location.hostname === 'localhost' || window.location.hostname.includes('rorich')) {
+      console.log('🛠️ Debug functions available in aiWidgetDebugExport:', Object.keys(window.aiWidgetDebugExport));
+    }
 }
 
-console.log('🎉 AI Interview Widget v1.9.4 Enhanced Language Detection fully loaded at', new Date().toISOString());
-console.log('🌍 Enhanced multi-language detection with comprehensive IP-based country mapping');
-console.log('🗣️ Support for 20 languages with automatic fallback to English');
-console.log('🎤 Voice Features: TTS/STT with ElevenLabs and browser fallback - FIXED');
-console.log('📱 Responsive design for mobile, tablet, and desktop');
-console.log('👤 Initialized for user: EricRorich');
-console.log('🕐 Current Time:', new Date().toISOString());
-console.log('✅ Enhanced language detection system active with robust fallback logic!');
+// Protected development logging
+if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname.includes('rorich'))) {
+  console.log('🎉 AI Interview Widget v1.9.4 Enhanced Language Detection fully loaded at', new Date().toISOString());
+  console.log('🌍 Enhanced multi-language detection with comprehensive IP-based country mapping');
+  console.log('🗣️ Support for 20 languages with automatic fallback to English');
+  console.log('🎤 Voice Features: TTS/STT with ElevenLabs and browser fallback');
+  console.log('📱 Responsive design for mobile, tablet, and desktop');
+  console.log('✅ Enhanced language detection system active with robust fallback logic!');
+}

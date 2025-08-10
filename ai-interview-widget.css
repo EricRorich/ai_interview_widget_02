@@ -8,14 +8,6 @@
     --aiw-shadow-intensity: 20; /* Default canvas shadow intensity */
     --play-button-pulse-speed: 1.0; /* Default pulse speed multiplier */
     --play-button-disable-pulse: false; /* Default pulse state */
-    
-    /* Legacy Play Button Design Variables */
-    --aiw-legacy-btn-size: 80px; /* Legacy button size */
-    --aiw-legacy-btn-bg: linear-gradient(135deg, #4a90e2, #357abd); /* Legacy background */
-    --aiw-legacy-btn-bg-hover: linear-gradient(135deg, #5ba3f5, #4a90e2); /* Legacy hover background */
-    --aiw-legacy-btn-icon-color: #ffffff; /* Legacy icon color */
-    --aiw-legacy-btn-shadow: 0 4px 15px rgba(74, 144, 226, 0.4); /* Legacy shadow */
-    --aiw-legacy-btn-border: 2px solid #ffffff; /* Legacy border */
 }
 
 /* WordPress Theme Independence - Override all potential theme interference */
@@ -766,346 +758,84 @@
     }
 }
 
-/* Legacy canvas pulse effects removed - now handled by play button overlay */
-
-/* === PLAY BUTTON OVERLAY === */
-.canvas-container {
-    position: relative !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    width: 100% !important;
+/* === PLAY BUTTON PULSE ANIMATIONS - RESTRICTED SCOPE === */
+/* Create a virtual overlay for play button pulse that doesn't affect canvas shadow */
+#soundbar::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    z-index: 1;
+    opacity: 0;
+    transition: opacity 0.3s ease;
 }
 
-.play-button-overlay {
-    position: absolute !important;
-    top: 50% !important;
-    left: 50% !important;
-    transform: translate(-50%, -50%) !important;
-    z-index: 30 !important;
-    pointer-events: auto !important;
-    transition: opacity 0.3s ease !important;
+/* Only show pulse overlay when play button is visible and pulse is enabled */
+#soundbar.show-play-button:not([data-disable-pulse="true"])::before {
+    opacity: 1;
 }
 
-.play-button-overlay.hidden {
-    opacity: 0 !important;
-    pointer-events: none !important;
-}
-
-.play-button {
-    background: none !important;
-    border: none !important;
-    cursor: pointer !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    outline: none !important;
-    font-family: inherit !important;
-    width: var(--play-button-size, 100px) !important;
-    height: var(--play-button-size, 100px) !important;
-    border-radius: 50% !important;
-    position: relative !important;
-    transition: transform 0.3s ease !important;
-}
-
-.play-button:focus {
-    outline: 2px solid #00cfff !important;
-    outline-offset: 4px !important;
-}
-
-.play-button:hover {
-    transform: scale(1.05) !important;
-}
-
-.play-button:active {
-    transform: scale(0.95) !important;
-}
-
-.play-button-inner {
-    width: 100% !important;
-    height: 100% !important;
-    border-radius: 50% !important;
-    position: relative !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    overflow: hidden !important;
-}
-
-/* Classic Design */
-.play-button[data-design="classic"] .play-button-inner {
-    background: radial-gradient(
-        circle at center,
-        var(--play-button-gradient-start, #00ffff) 0%,
-        var(--play-button-color, #00ffff) 50%,
-        var(--play-button-gradient-end, #001a33) 100%
-    ) !important;
-    box-shadow: 
-        0 0 var(--play-button-shadow-intensity, 40px) var(--play-button-color, #00ffff),
-        inset 0 0 0 2px rgba(255, 255, 255, 0.1),
-        inset 0 0 0 4px rgba(0, 207, 255, 0.3) !important;
-}
-
-/* Minimalist Design */
-.play-button[data-design="minimalist"] .play-button-inner {
-    background: var(--play-button-color, #00cfff) !important;
-    box-shadow: 
-        0 4px var(--play-button-shadow-intensity, 20px) var(--play-button-color, #00cfff),
-        inset 0 0 0 2px rgba(0, 0, 0, 0.1) !important;
-}
-
-/* Futuristic Design */
-.play-button[data-design="futuristic"] .play-button-inner {
-    background: rgba(0, 0, 0, 0.7) !important;
-    border: 4px solid var(--play-button-border-color, #00cfff) !important;
-    box-shadow: 
-        0 0 var(--play-button-neon-intensity, 30px) var(--play-button-border-color, #00cfff),
-        inset 0 0 0 2px rgba(0, 207, 255, 0.5) !important;
-}
-
-.play-button[data-design="futuristic"]::before {
-    content: '' !important;
-    position: absolute !important;
-    top: -8px !important;
-    left: -8px !important;
-    right: -8px !important;
-    bottom: -8px !important;
-    border: 2px solid var(--play-button-border-color, #00cfff) !important;
-    border-radius: 50% !important;
-    opacity: 0.3 !important;
-    animation: futuristic-ring 2s infinite ease-in-out !important;
-    pointer-events: none !important;
-}
-
-.play-button[data-design="futuristic"]::after {
-    content: '' !important;
-    position: absolute !important;
-    top: -16px !important;
-    left: -16px !important;
-    right: -16px !important;
-    bottom: -16px !important;
-    border: 1px solid var(--play-button-border-color, #00cfff) !important;
-    border-radius: 50% !important;
-    opacity: 0.2 !important;
-    animation: futuristic-ring 2s infinite ease-in-out 0.5s !important;
-    pointer-events: none !important;
-}
-
-/* Legacy Design */
-.play-button[data-design="legacy"] {
-    width: var(--aiw-legacy-btn-size, 80px) !important;
-    height: var(--aiw-legacy-btn-size, 80px) !important;
-}
-
-.play-button[data-design="legacy"] .play-button-inner {
-    background: var(--aiw-legacy-btn-bg, linear-gradient(135deg, #4a90e2, #357abd)) !important;
-    border: var(--aiw-legacy-btn-border, 2px solid #ffffff) !important;
-    box-shadow: var(--aiw-legacy-btn-shadow, 0 4px 15px rgba(74, 144, 226, 0.4)) !important;
-    transition: all 0.3s ease !important;
-}
-
-.play-button[data-design="legacy"]:hover .play-button-inner {
-    background: var(--aiw-legacy-btn-bg-hover, linear-gradient(135deg, #5ba3f5, #4a90e2)) !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 
-        var(--aiw-legacy-btn-shadow, 0 4px 15px rgba(74, 144, 226, 0.4)),
-        0 8px 25px rgba(74, 144, 226, 0.3) !important;
-}
-
-.play-button[data-design="legacy"]:active .play-button-inner {
-    transform: translateY(0px) !important;
-    box-shadow: var(--aiw-legacy-btn-shadow, 0 4px 15px rgba(74, 144, 226, 0.4)) !important;
-}
-
-/* Legacy design uses SVG icon instead of CSS triangle */
-.play-button[data-design="legacy"] .play-triangle {
-    display: none !important;
-}
-
-.play-button[data-design="legacy"] .play-svg-icon {
-    width: calc(var(--aiw-legacy-btn-size, 80px) * 0.3) !important;
-    height: calc(var(--aiw-legacy-btn-size, 80px) * 0.3) !important;
-    fill: var(--aiw-legacy-btn-icon-color, #ffffff) !important;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3)) !important;
-    margin-left: calc(var(--aiw-legacy-btn-size, 80px) * 0.03) !important;
-}
-
-/* Legacy single pulse animation on first load */
-.play-button[data-design="legacy"]:not([data-disable-pulse="true"]) {
-    animation: none !important; /* Remove continuous pulse */
-}
-
-.play-button[data-design="legacy"].initial-pulse:not([data-disable-pulse="true"]) {
-    animation: legacy-initial-pulse 1.5s ease-out !important;
-}
-
-.play-button[data-design="legacy"].initial-pulse:not([data-disable-pulse="true"])::before {
-    content: '' !important;
-    position: absolute !important;
-    top: -10px !important;
-    left: -10px !important;
-    right: -10px !important;
-    bottom: -10px !important;
-    border: 3px solid var(--aiw-legacy-btn-icon-color, #ffffff) !important;
-    border-radius: 50% !important;
-    opacity: 0 !important;
-    animation: legacy-pulse-ring 1.5s ease-out !important;
-    pointer-events: none !important;
-}
-
-@keyframes legacy-initial-pulse {
-    0% { 
-        transform: scale(1); 
-    }
-    30% { 
-        transform: scale(1.1); 
-    }
-    100% { 
-        transform: scale(1); 
-    }
-}
-
-@keyframes legacy-pulse-ring {
-    0% {
-        transform: scale(1);
-        opacity: 0.7;
-    }
-    100% {
-        transform: scale(1.4);
-        opacity: 0;
-    }
-}
-
-.play-triangle {
-    width: 0 !important;
-    height: 0 !important;
-    border-left: calc(var(--play-button-size, 100px) * 0.25) solid var(--play-button-icon-color, #ffffff) !important;
-    border-top: calc(var(--play-button-size, 100px) * 0.15) solid transparent !important;
-    border-bottom: calc(var(--play-button-size, 100px) * 0.15) solid transparent !important;
-    margin-left: calc(var(--play-button-size, 100px) * 0.05) !important;
-    filter: drop-shadow(0 0 10px var(--play-button-icon-color, #ffffff)) !important;
-}
-
-/* Pulse Animation */
-.play-button:not([data-disable-pulse="true"]) {
-    animation: 
-        play-button-breathing calc(2.0s / var(--play-button-pulse-speed, 1)) infinite ease-in-out,
-        play-button-glow calc(1.8s / var(--play-button-pulse-speed, 1)) infinite ease-in-out !important;
-}
-
-@keyframes play-button-breathing {
+/* Breathing-Pulse Animation - Smooth scale breathing effect */
+@keyframes breathing-pulse {
     0%, 100% { 
         transform: scale(1); 
+        opacity: 1;
     }
     50% { 
         transform: scale(1.08); 
+        opacity: 0.9;
     }
 }
 
-@keyframes play-button-glow {
+/* Dot-Pulse Animation - Subtle pulsing with glow effect */
+@keyframes dots-pulse {
     0%, 100% { 
-        box-shadow: 0 0 20px var(--play-button-color, #00cfff);
+        transform: scale(1);
+        box-shadow: 0 0 20px var(--aiw-shadow-color);
     }
     25% { 
-        box-shadow: 0 0 25px var(--play-button-color, #00cfff);
+        transform: scale(1.02);
+        box-shadow: 0 0 25px var(--aiw-shadow-color);
     }
     50% { 
-        box-shadow: 0 0 30px var(--play-button-color, #00cfff);
+        transform: scale(1.05);
+        box-shadow: 0 0 30px var(--aiw-shadow-color);
     }
     75% { 
-        box-shadow: 0 0 25px var(--play-button-color, #00cfff);
+        transform: scale(1.02);
+        box-shadow: 0 0 25px var(--aiw-shadow-color);
     }
 }
 
-@keyframes futuristic-ring {
-    0%, 100% {
-        transform: scale(1);
-        opacity: 0.3;
-    }
-    50% {
-        transform: scale(1.1);
-        opacity: 0.1;
-    }
+/* Apply pulse animations only to the pseudo-element overlay, not the canvas itself */
+#soundbar.pulse-breathing.show-play-button:not([data-disable-pulse="true"])::before {
+    animation: breathing-pulse calc(2.0s / var(--play-button-pulse-speed, 1)) infinite ease-in-out;
 }
 
-/* Responsive sizing */
-@media screen and (max-width: 1024px) and (min-width: 768px) {
-    .play-button {
-        width: calc(var(--play-button-size, 100px) * 0.8) !important;
-        height: calc(var(--play-button-size, 100px) * 0.8) !important;
-    }
-    
-    .play-button[data-design="legacy"] {
-        width: calc(var(--aiw-legacy-btn-size, 80px) * 0.8) !important;
-        height: calc(var(--aiw-legacy-btn-size, 80px) * 0.8) !important;
-    }
-    
-    .play-triangle {
-        border-left-width: calc(var(--play-button-size, 100px) * 0.2) !important;
-        border-top-width: calc(var(--play-button-size, 100px) * 0.12) !important;
-        border-bottom-width: calc(var(--play-button-size, 100px) * 0.12) !important;
-        margin-left: calc(var(--play-button-size, 100px) * 0.04) !important;
-    }
-    
-    .play-button[data-design="legacy"] .play-svg-icon {
-        width: calc(var(--aiw-legacy-btn-size, 80px) * 0.8 * 0.3) !important;
-        height: calc(var(--aiw-legacy-btn-size, 80px) * 0.8 * 0.3) !important;
-    }
+#soundbar.pulse-dots.show-play-button:not([data-disable-pulse="true"])::before {
+    animation: dots-pulse calc(1.8s / var(--play-button-pulse-speed, 1)) infinite ease-in-out;
 }
 
-/* Mobile touch optimization */
-@media screen and (max-width: 767px) {
-    .play-button {
-        width: calc(var(--play-button-size, 100px) * 0.6) !important;
-        height: calc(var(--play-button-size, 100px) * 0.6) !important;
-        /* Larger touch target for mobile */
-        min-width: 60px !important;
-        min-height: 60px !important;
-    }
-    
-    .play-button[data-design="legacy"] {
-        width: calc(var(--aiw-legacy-btn-size, 80px) * 0.6) !important;
-        height: calc(var(--aiw-legacy-btn-size, 80px) * 0.6) !important;
-        min-width: 48px !important;
-        min-height: 48px !important;
-    }
-    
-    .play-triangle {
-        border-left-width: calc(var(--play-button-size, 100px) * 0.15) !important;
-        border-top-width: calc(var(--play-button-size, 100px) * 0.09) !important;
-        border-bottom-width: calc(var(--play-button-size, 100px) * 0.09) !important;
-        margin-left: calc(var(--play-button-size, 100px) * 0.03) !important;
-    }
-    
-    .play-button[data-design="legacy"] .play-svg-icon {
-        width: calc(var(--aiw-legacy-btn-size, 80px) * 0.6 * 0.3) !important;
-        height: calc(var(--aiw-legacy-btn-size, 80px) * 0.6 * 0.3) !important;
-    }
-    
-    /* Increase touch area for better mobile experience */
-    .play-button::before {
-        content: '' !important;
-        position: absolute !important;
-        top: -20px !important;
-        left: -20px !important;
-        right: -20px !important;
-        bottom: -20px !important;
-        z-index: -1 !important;
-    }
+#soundbar.pulse-breathing.pulse-dots.show-play-button:not([data-disable-pulse="true"])::before {
+    animation: breathing-pulse calc(2.0s / var(--play-button-pulse-speed, 1)) infinite ease-in-out, 
+               dots-pulse calc(1.8s / var(--play-button-pulse-speed, 1)) infinite ease-in-out;
 }
 
-/* Accessibility */
-@media (prefers-reduced-motion: reduce) {
-    .play-button,
-    .play-button[data-design="futuristic"]::before,
-    .play-button[data-design="futuristic"]::after,
-    .play-button[data-design="legacy"].initial-pulse,
-    .play-button[data-design="legacy"].initial-pulse::before {
-        animation: none !important;
-    }
-    
-    .play-button[data-design="legacy"]:hover .play-button-inner {
-        transform: none !important;
-    }
+/* Ensure the main canvas never pulses - only the overlay */
+#soundbar.pulse-breathing,
+#soundbar.pulse-dots,
+#soundbar.pulse-effect {
+    animation: none !important;
+    transform: translateZ(0) !important;
+}
+
+/* Legacy support - convert old pulse classes to new overlay system */
+.pulse-effect {
+    /* Legacy class - now handled by ::before pseudo-element */
 }
 
 /* === ELEMENTOR COMPATIBILITY === */
@@ -1503,42 +1233,6 @@
         animation: none !important;
         opacity: 0 !important;
     }
-}
-
-/* === IMAGE ERROR HANDLING === */
-.aiw-image--error {
-    border: 2px dashed #666 !important;
-    border-radius: 4px !important;
-    opacity: 0.7 !important;
-    filter: grayscale(1) !important;
-}
-
-/* Graceful fallbacks for missing images */
-.ai-interview-container .aiw-image--error {
-    background-color: rgba(255, 255, 255, 0.1) !important;
-    min-height: 50px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-}
-
-.ai-interview-container .aiw-image--error::after {
-    content: "🖼️ Image unavailable" !important;
-    color: #999 !important;
-    font-size: 12px !important;
-    text-align: center !important;
-}
-
-/* Mixed content fallback fonts */
-@font-face {
-    font-family: 'Inter-Fallback';
-    src: local('system-ui'), local('-apple-system'), local('BlinkMacSystemFont'), local('Segoe UI'), local('Helvetica'), local('Arial'), sans-serif;
-    font-display: swap;
-}
-
-/* Protocol-relative font loading */
-.ai-interview-container {
-    font-family: 'Inter', 'Inter-Fallback', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
 }
 
 /* High contrast mode support */

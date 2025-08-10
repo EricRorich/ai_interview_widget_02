@@ -118,25 +118,8 @@ document.addEventListener('DOMContentLoaded', function() {
         let chatInterfaceInitialized = false;
 
         function debug(message, ...args) {
-            // Only log in development mode or when explicitly enabled
-            if (DEBUG || (typeof window !== 'undefined' && window.aiWidgetDebugMode === true)) {
+            if (DEBUG) {
                 console.log(`[AI Widget] ${message}`, ...args);
-            }
-        }
-        
-        function debugError(message, ...args) {
-            // Always log errors, but less verbosely in production
-            if (DEBUG) {
-                console.error(`[AI Widget Error] ${message}`, ...args);
-            } else {
-                console.error(`[AI Widget] ${message}`);
-            }
-        }
-        
-        function debugWarn(message, ...args) {
-            // Log warnings only in development
-            if (DEBUG) {
-                console.warn(`[AI Widget Warning] ${message}`, ...args);
             }
         }
 
@@ -372,95 +355,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const chatInterface = document.getElementById('chatInterface');
         const pauseBtnContainer = pauseBtn ? pauseBtn.closest('.ai-interview-controls') : null;
 
-        // Initialize play button overlay
-        function initializePlayButtonOverlay() {
-            playButtonOverlay = document.getElementById('playButtonOverlay');
-            playButton = document.getElementById('playButton');
-            
-            if (!playButtonOverlay || !playButton) {
-                debug("Play button overlay elements not found");
-                return;
-            }
-            
-            // Set initial design based on CSS variable
-            const design = getCSSVariable('--play-button-design', 'classic').replace(/['"]/g, '');
-            playButton.setAttribute('data-design', design);
-            
-            // Set pulse disable state
-            const disablePulse = getCSSVariable('--play-button-disable-pulse', 'false').toLowerCase() === 'true';
-            playButton.setAttribute('data-disable-pulse', disablePulse.toString());
-            
-            // Update design to handle icon visibility and effects
-            updatePlayButtonDesign();
-            
-            // Add click event listener
-            playButton.addEventListener('click', handlePlayButtonClick);
-            
-            // Show the overlay initially
-            showPlayButtonOverlay();
-            
-            debug("Play button overlay initialized", { design, disablePulse });
-        }
-        
-        function showPlayButtonOverlay() {
-            if (playButtonOverlay) {
-                playButtonOverlay.classList.remove('hidden');
-                showPlayButton = true;
-                debug("Play button overlay shown");
-            }
-        }
-        
-        function hidePlayButtonOverlay() {
-            if (playButtonOverlay) {
-                playButtonOverlay.classList.add('hidden');
-                showPlayButton = false;
-                debug("Play button overlay hidden");
-            }
-        }
-        
-        function updatePlayButtonDesign() {
-            if (!playButton) return;
-            
-            const design = getCSSVariable('--play-button-design', 'classic').replace(/['"]/g, '');
-            playButton.setAttribute('data-design', design);
-            
-            const disablePulse = getCSSVariable('--play-button-disable-pulse', 'false').toLowerCase() === 'true';
-            playButton.setAttribute('data-disable-pulse', disablePulse.toString());
-            
-            // Handle icon visibility based on design
-            const triangleIcon = playButton.querySelector('.play-triangle');
-            const svgIcon = playButton.querySelector('.play-svg-icon');
-            
-            if (design === 'legacy') {
-                // Legacy design uses SVG icon
-                if (triangleIcon) triangleIcon.style.display = 'none';
-                if (svgIcon) svgIcon.style.display = 'block';
-                
-                // Add initial pulse effect for legacy design
-                if (!disablePulse) {
-                    playButton.classList.add('initial-pulse');
-                    // Remove the class after animation completes
-                    setTimeout(() => {
-                        playButton.classList.remove('initial-pulse');
-                    }, 1500);
-                }
-            } else {
-                // Other designs use CSS triangle
-                if (triangleIcon) triangleIcon.style.display = 'block';
-                if (svgIcon) svgIcon.style.display = 'none';
-            }
-            
-            debug("Play button design updated", { design, disablePulse });
-        }
-
         debug("Elements found:", {
             canvas: !!canvas, 
             audio: !!audio, 
             pauseBtn: !!pauseBtn,
             skipBtn: !!skipBtn,
-            chatInterface: !!chatInterface,
-            playButtonOverlay: !!document.getElementById('playButtonOverlay'),
-            playButton: !!document.getElementById('playButton')
+            chatInterface: !!chatInterface
         });
 
         if (!canvas || !audio || !pauseBtn || !skipBtn || !chatInterface) {
@@ -470,9 +370,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 audio: !audio,
                 pauseBtn: !pauseBtn,
                 skipBtn: !skipBtn,
-                chatInterface: !chatInterface,
-                playButtonOverlay: !document.getElementById('playButtonOverlay'),
-                playButton: !document.getElementById('playButton')
+                chatInterface: !chatInterface
             });
             // Don't return, try to continue with what we have
         }
@@ -511,55 +409,6 @@ document.addEventListener('DOMContentLoaded', function() {
             
             debug("Canvas sized to:", canvas.width, "x", canvas.height, "for device type:", {isMobile, isTablet});
         }
-        
-        // Add image error handler for missing thumbnails and background images
-        function addImageErrorHandlers() {
-            // Handle background images that fail to load
-            const elementsWithBgImages = document.querySelectorAll('[style*="background-image"]');
-            elementsWithBgImages.forEach(element => {
-                const bgImage = getComputedStyle(element).backgroundImage;
-                if (bgImage && bgImage !== 'none') {
-                    const imageUrl = bgImage.slice(5, -2); // Remove url(" and ")
-                    if (imageUrl) {
-                        // Test if image loads
-                        const testImg = new Image();
-                        testImg.onerror = function() {
-                            if (DEBUG) {
-                                debugWarn(`Background image failed to load: ${imageUrl}`);
-                            }
-                            // Set fallback gradient
-                            element.style.backgroundImage = 'linear-gradient(135deg, #0f0c29, #302b63, #24243e)';
-                            element.classList.add('aiw-image--error');
-                        };
-                        testImg.src = imageUrl;
-                    }
-                }
-            });
-            
-            // Handle regular images that fail to load
-            const images = document.querySelectorAll('img');
-            images.forEach(img => {
-                if (!img.hasAttribute('data-error-handled')) {
-                    img.onerror = function() {
-                        if (DEBUG) {
-                            debugWarn(`Image failed to load: ${this.src}`);
-                        }
-                        // Create SVG fallback
-                        const svgPlaceholder = 'data:image/svg+xml;base64,' + btoa(`
-                            <svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
-                                <rect width="200" height="200" fill="#f0f0f0"/>
-                                <circle cx="100" cy="80" r="30" fill="#ccc"/>
-                                <path d="M60 140 Q100 120 140 140" stroke="#ccc" stroke-width="3" fill="none"/>
-                                <text x="100" y="170" text-anchor="middle" font-family="Arial" font-size="12" fill="#999">Image unavailable</text>
-                            </svg>
-                        `);
-                        this.src = svgPlaceholder;
-                        this.classList.add('aiw-image--error');
-                        this.setAttribute('data-error-handled', 'true');
-                    };
-                }
-            });
-        }
 
         // Only update canvas size if canvas exists
         if (canvas) {
@@ -574,7 +423,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (canvas) {
                     updateCanvasSize();
                     if (showPlayButton && !fadingOut) {
-                        updatePlayButtonDesign(); // Update overlay instead of redrawing
+                        drawPlayButton();
                     }
                 }
             }, 250);
@@ -602,12 +451,28 @@ document.addEventListener('DOMContentLoaded', function() {
         let audioSourceSet = false;
         let currentAudioSrc = '';
 
-        // Play button overlay variables
+        // Play button variables with responsive sizing and CSS variable support
         let showPlayButton = true;
         let fadingOut = false;
         let fadeAlpha = 1;
-        let playButtonOverlay = null;
-        let playButton = null;
+
+        // Get button size from CSS custom property with fallback to responsive defaults
+        function getButtonSize() {
+            const cssSize = getCSSVariable('--aiw-btn-size', '');
+            if (cssSize && !isNaN(parseFloat(cssSize))) {
+                return parseFloat(cssSize);
+            }
+            // Fallback to responsive defaults
+            return isMobile ? 60 : isTablet ? 80 : 100;
+        }
+
+        // Use function call instead of const to get dynamic sizing
+        let buttonRadius = getButtonSize();
+        const buttonPulseMin = 1.0;
+        const buttonPulseMax = isMobile ? 1.1 : 1.15;
+        let pulseDirection = true;
+        let pulseScale = buttonPulseMin;
+        let lastPulseTime = performance.now();
 
         // Chat elements
         const chatHistory = document.getElementById('chatHistory');
@@ -1565,72 +1430,86 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         /**
-         * Privacy-conscious geolocation detection with graceful fallbacks
-         * Uses single reliable service with proper error handling and makes feature optional
+         * Enhanced IP-based country detection with multiple fallback services
+         * Robust error handling and timeout management for production use
          */
         async function detectCountryAutomatically() {
-            // Check if geolocation is disabled in settings or by user preference
-            if (widgetData.disable_geolocation || typeof window.aiWidgetDisableGeolocation !== 'undefined' && window.aiWidgetDisableGeolocation) {
-                debug("Geolocation disabled by configuration");
-                return null;
-            }
+            debug("Starting automatic country detection...");
             
-            debug("Starting optional country detection...");
-            
-            // Use single, reliable service to avoid rate limiting and CORS issues
-            // CloudFlare's trace service is reliable and doesn't require CORS
-            try {
-                debug("Attempting CloudFlare trace service for country detection");
-                
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 3000); // Shorter timeout for better UX
-                
-                // CloudFlare trace service - reliable and CORS-friendly
-                const response = await fetch('https://www.cloudflare.com/cdn-cgi/trace', {
-                    method: 'GET',
-                    signal: controller.signal,
-                    headers: {
-                        'Accept': 'text/plain'
-                    }
-                });
-                
-                clearTimeout(timeoutId);
-                
-                if (!response.ok) {
-                    debug(`CloudFlare trace service responded with status: ${response.status}`);
-                    return null;
+            // Multiple reliable IP geolocation services (free tier)
+            // Ordered by reliability and response speed
+            const ipServices = [
+                {
+                    url: 'https://ip-api.com/json/',
+                    extractCountry: (data) => data.countryCode || data.country
+                },
+                {
+                    url: 'https://ipapi.co/json/',
+                    extractCountry: (data) => data.country_code || data.country
+                },
+                {
+                    url: 'https://api.country.is/',
+                    extractCountry: (data) => data.country
+                },
+                {
+                    url: 'https://get.geojs.io/v1/ip/country.json',
+                    extractCountry: (data) => data.country
+                },
+                {
+                    url: 'https://freegeoip.app/json/',
+                    extractCountry: (data) => data.country_code
                 }
-                
-                const traceText = await response.text();
-                debug(`CloudFlare trace response received`);
-                
-                // Parse the trace response to extract country code
-                const lines = traceText.split('\n');
-                for (const line of lines) {
-                    if (line.startsWith('loc=')) {
-                        const country = line.split('=')[1].trim();
-                        if (country && country.length === 2) {
-                            debug(`Successfully detected country: ${country} via CloudFlare trace`);
-                            return country.toUpperCase();
+            ];
+            
+            // Try each service with timeout and proper error handling
+            for (const service of ipServices) {
+                try {
+                    debug(`Trying IP service: ${service.url}`);
+                    
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout - increased for reliability
+                    
+                    const response = await fetch(service.url, {
+                        method: 'GET',
+                        signal: controller.signal,
+                        headers: {
+                            'Accept': 'application/json',
+                            'User-Agent': 'Mozilla/5.0 (compatible; AI-Widget/1.0)'
                         }
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    
+                    if (!response.ok) {
+                        debug(`Service responded with status: ${response.status}`);
+                        continue;
                     }
-                }
-                
-                debug("No country found in CloudFlare trace response");
-                return null;
-                
-            } catch (error) {
-                // Silently handle errors in production to avoid console noise
-                if (DEBUG) {
-                    debug(`Country detection failed gracefully:`, error.message);
+                    
+                    const data = await response.json();
+                    debug(`Service response:`, data);
+                    
+                    const country = service.extractCountry(data);
+                    if (country && typeof country === 'string' && country.length >= 2) {
+                        debug(`Successfully detected country: ${country} from ${service.url}`);
+                        return country.toUpperCase();
+                    }
+                    
+                } catch (error) {
+                    debug(`Service ${service.url} failed:`, error.message);
+                    // Log specific error types for better debugging
                     if (error.name === 'AbortError') {
-                        debug(`Request timed out - continuing without geolocation`);
+                        debug(`Request to ${service.url} timed out`);
                     } else if (error.name === 'TypeError') {
-                        debug(`Network error - possibly offline or blocked`);
+                        debug(`Network error accessing ${service.url} - possibly blocked or offline`);
+                    } else {
+                        debug(`Unexpected error with ${service.url}:`, error);
                     }
+                    continue;
                 }
-                return null;
             }
+            
+            debug("All IP detection services failed or returned invalid data");
+            return null;
         }
 
         /**
@@ -1935,20 +1814,339 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        // Legacy function - now handled by CSS overlay
-        function drawProgressBar() {
+        function drawPlayButton() {
             if (!ctx || !canvas) return;
-            // Progress bar is no longer needed for play button
+
+            ctx.fillStyle = getCanvasBackgroundColor();
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            drawProgressBar();
+
+            const now = performance.now();
+            const dt = (now - lastPulseTime) / 1000;
+            lastPulseTime = now;
+
+            // Get customization settings from CSS variables with robust fallback
+            const design = getCSSVariable('--play-button-design', 'classic').replace(/['"]/g, '');
+            
+            // Get dynamic button size - check both old and new variable names for compatibility
+            let customSize = parseInt(getCSSVariable('--aiw-btn-size', '')) || 
+                            parseInt(getCSSVariable('--play-button-size', '')) || 
+                            getButtonSize();
+            
+            const pulseSpeedMultiplier = parseFloat(getCSSVariable('--play-button-pulse-speed', '1.0')) || 1.0;
+            const disablePulse = getCSSVariable('--play-button-disable-pulse', 'false').toLowerCase() === 'true';
+            
+            // Debug logging for pulse effect and button size (only in development)
+            if (DEBUG) {
+                console.log('Play Button Debug:', {
+                    design,
+                    customSize,
+                    originalButtonRadius: buttonRadius,
+                    pulseSpeedMultiplier,
+                    disablePulse,
+                    cssVarBtnSize: getCSSVariable('--aiw-btn-size', 'NOT_SET'),
+                    cssVarPlayBtnSize: getCSSVariable('--play-button-size', 'NOT_SET'),
+                    pulseScale,
+                    cssVarPulseSpeed: getCSSVariable('--play-button-pulse-speed', 'NOT_SET'),
+                    cssVarDisablePulse: getCSSVariable('--play-button-disable-pulse', 'NOT_SET')
+                });
+            }
+            
+            // Use the custom size as current button radius
+            const currentButtonRadius = customSize;
+
+            // Update pulse animation - ensure it works by default
+            if (!disablePulse) {
+                const pulseSpeed = 0.15 * pulseSpeedMultiplier;
+                if (pulseDirection) {
+                    pulseScale += dt * pulseSpeed;
+                    if (pulseScale > buttonPulseMax) pulseDirection = false;
+                } else {
+                    pulseScale -= dt * pulseSpeed;
+                    if (pulseScale < buttonPulseMin) pulseDirection = true;
+                }
+                pulseScale = Math.max(buttonPulseMin, Math.min(buttonPulseMax, pulseScale));
+            } else {
+                pulseScale = 1.0; // Static button
+            }
+            
+            // Ensure pulse effect is always visible - force enable if variables aren't properly set
+            if (pulseSpeedMultiplier === 1.0 && !disablePulse && Math.abs(pulseScale - 1.0) < 0.01) {
+                // Force restart pulse animation if it seems stuck
+                pulseScale = buttonPulseMin;
+                pulseDirection = true;
+                if (DEBUG) {
+                    console.log('Pulse effect restarted due to potential CSS variable loading issue');
+                }
+            }
+
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+
+            // Draw based on selected design
+            switch (design) {
+                case 'minimalist':
+                    drawMinimalistButton(centerX, centerY, currentButtonRadius, pulseScale, dt);
+                    break;
+                case 'futuristic':
+                    drawFuturisticButton(centerX, centerY, currentButtonRadius, pulseScale, dt);
+                    break;
+                case 'classic':
+                default:
+                    drawClassicButton(centerX, centerY, currentButtonRadius, pulseScale, dt);
+                    break;
+            }
+
+            if (fadingOut) {
+                fadeAlpha -= dt / 0.7;
+                if (fadeAlpha <= 0) {
+                    fadeAlpha = 0;
+                    showPlayButton = false;
+                    if (canvas) {
+                        canvas.style.cursor = "default";
+                        // Only remove pulse effect classes when button is clicked/disappearing
+                        removePulseEffects();
+                    }
+                    
+                    handlePlayButtonClick();
+                    return;
+                }
+            }
+
+            if (showPlayButton) {
+                ensurePlayButtonPulse(); // Ensure pulse classes are always active
+                requestAnimationFrame(drawPlayButton);
+            }
         }
 
-        // Legacy canvas-based button drawing functions removed
-        // Play button is now handled by CSS overlay
+        // Classic Design - Original radial gradient with particles
+        function drawClassicButton(centerX, centerY, buttonRadius, pulseScale, dt) {
+            const customColor = getComputedStyle(document.documentElement).getPropertyValue('--play-button-color') || "#00ffff";
+            const gradientStart = getComputedStyle(document.documentElement).getPropertyValue('--play-button-gradient-start') || "#00ffff";
+            const gradientEnd = getComputedStyle(document.documentElement).getPropertyValue('--play-button-gradient-end') || "#001a33";
+            const shadowIntensity = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--play-button-shadow-intensity')) || 40;
+            const iconColor = getComputedStyle(document.documentElement).getPropertyValue('--play-button-icon-color') || "#ffffff";
+
+            const innerRadius = Math.max(1, buttonRadius * 0.3 * pulseScale);
+            const outerRadius = Math.max(1, buttonRadius * pulseScale);
+
+            try {
+                const grad = ctx.createRadialGradient(
+                    centerX, centerY, innerRadius,
+                    centerX, centerY, outerRadius
+                );
+                grad.addColorStop(0, gradientStart);
+                grad.addColorStop(0.5, customColor);
+                grad.addColorStop(1, gradientEnd);
+
+                ctx.save();
+                ctx.globalAlpha = fadeAlpha;
+                ctx.shadowColor = customColor;
+                ctx.shadowBlur = isMobile ? shadowIntensity * 0.5 : isTablet ? shadowIntensity * 0.75 : shadowIntensity;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, outerRadius, 0, 2 * Math.PI);
+                ctx.fillStyle = grad;
+                ctx.fill();
+                ctx.closePath();
+
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, Math.max(1, buttonRadius * 0.7 * pulseScale), 0, 2 * Math.PI);
+                ctx.strokeStyle = "rgba(255,255,255,0.1)";
+                ctx.lineWidth = isMobile ? 1 : 2;
+                ctx.stroke();
+                ctx.closePath();
+
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, Math.max(1, outerRadius - (isMobile ? 3 : 5)), 0, 2 * Math.PI);
+                ctx.strokeStyle = customColor + "4D"; // 30% opacity
+                ctx.lineWidth = isMobile ? 1 : 2;
+                ctx.stroke();
+                ctx.closePath();
+                ctx.restore();
+
+                // Draw play triangle
+                drawPlayTriangle(centerX, centerY, buttonRadius, iconColor);
+
+                if (showPlayButton && !fadingOut) {
+                    drawParticles(centerX, centerY, outerRadius);
+                }
+            } catch (err) {
+                console.error("Error drawing classic play button:", err);
+            }
+        }
+
+        // Minimalist Design - Solid color with subtle shadow
+        function drawMinimalistButton(centerX, centerY, buttonRadius, pulseScale, dt) {
+            const customColor = getComputedStyle(document.documentElement).getPropertyValue('--play-button-color') || "#00cfff";
+            const shadowIntensity = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--play-button-shadow-intensity')) || 20;
+            const iconColor = getComputedStyle(document.documentElement).getPropertyValue('--play-button-icon-color') || "#ffffff";
+
+            const outerRadius = Math.max(1, buttonRadius * pulseScale);
+
+            try {
+                ctx.save();
+                ctx.globalAlpha = fadeAlpha;
+                
+                // Subtle shadow
+                ctx.shadowColor = customColor;
+                ctx.shadowBlur = shadowIntensity;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 4;
+
+                // Main circle - solid color
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, outerRadius, 0, 2 * Math.PI);
+                ctx.fillStyle = customColor;
+                ctx.fill();
+                ctx.closePath();
+
+                // Inner circle - slightly darker
+                ctx.shadowColor = 'transparent';
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, outerRadius * 0.85, 0, 2 * Math.PI);
+                ctx.strokeStyle = "rgba(0,0,0,0.1)";
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.closePath();
+
+                ctx.restore();
+
+                // Draw play triangle
+                drawPlayTriangle(centerX, centerY, buttonRadius, iconColor);
+
+                if (showPlayButton && !fadingOut) {
+                    drawParticles(centerX, centerY, outerRadius);
+                }
+            } catch (err) {
+                console.error("Error drawing minimalist play button:", err);
+            }
+        }
+
+        // Futuristic Design - Glowing neon border with center icon
+        function drawFuturisticButton(centerX, centerY, buttonRadius, pulseScale, dt) {
+            const borderColor = getComputedStyle(document.documentElement).getPropertyValue('--play-button-border-color') || "#00cfff";
+            const neonIntensity = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--play-button-neon-intensity')) || 30;
+            const iconColor = getComputedStyle(document.documentElement).getPropertyValue('--play-button-icon-color') || "#ffffff";
+
+            const outerRadius = Math.max(1, buttonRadius * pulseScale);
+            const time = Date.now() / 1000;
+
+            try {
+                ctx.save();
+                ctx.globalAlpha = fadeAlpha;
+
+                // Outer glow rings
+                for (let i = 0; i < 3; i++) {
+                    const glowRadius = outerRadius + (i * 15);
+                    const glowAlpha = (0.3 - i * 0.1) * (0.7 + Math.sin(time * 2 + i) * 0.3);
+                    
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, glowRadius, 0, 2 * Math.PI);
+                    ctx.strokeStyle = borderColor + Math.floor(glowAlpha * 255).toString(16).padStart(2, '0');
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    ctx.closePath();
+                }
+
+                // Main neon border
+                ctx.shadowColor = borderColor;
+                ctx.shadowBlur = neonIntensity;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, outerRadius, 0, 2 * Math.PI);
+                ctx.strokeStyle = borderColor;
+                ctx.lineWidth = 4;
+                ctx.stroke();
+                ctx.closePath();
+
+                // Inner border
+                ctx.shadowBlur = neonIntensity * 0.5;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, outerRadius * 0.8, 0, 2 * Math.PI);
+                ctx.strokeStyle = borderColor + "80"; // 50% opacity
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.closePath();
+
+                // Center fill - dark with slight glow
+                ctx.shadowColor = 'transparent';
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, outerRadius * 0.75, 0, 2 * Math.PI);
+                ctx.fillStyle = "rgba(0,0,0,0.7)";
+                ctx.fill();
+                ctx.closePath();
+
+                ctx.restore();
+
+                // Draw play triangle with futuristic style
+                drawFuturisticTriangle(centerX, centerY, buttonRadius, iconColor, borderColor);
+
+                if (showPlayButton && !fadingOut) {
+                    drawParticles(centerX, centerY, outerRadius);
+                }
+            } catch (err) {
+                console.error("Error drawing futuristic play button:", err);
+            }
+        }
+
+        // Helper function to draw play triangle
+        function drawPlayTriangle(centerX, centerY, buttonRadius, iconColor) {
+            ctx.save();
+            ctx.globalAlpha = fadeAlpha;
+            ctx.shadowColor = iconColor;
+            ctx.shadowBlur = isMobile ? 10 : isTablet ? 15 : 20;
+            const triSize = isMobile ? 35 : isTablet ? 45 : Math.min(60, buttonRadius * 0.6);
+            const height = triSize * Math.sqrt(3) / 2;
+            ctx.beginPath();
+            ctx.moveTo(centerX - height/3, centerY - triSize/2);
+            ctx.lineTo(centerX - height/3, centerY + triSize/2);
+            ctx.lineTo(centerX + height*2/3, centerY);
+            ctx.closePath();
+
+            const triGrad = ctx.createLinearGradient(
+                centerX - height/3, centerY - triSize/2,
+                centerX + height*2/3, centerY
+            );
+            triGrad.addColorStop(0, iconColor + "E6"); // 90% opacity
+            triGrad.addColorStop(1, iconColor + "B3"); // 70% opacity
+            ctx.fillStyle = triGrad;
+            ctx.fill();
+            ctx.lineWidth = isMobile ? 1 : 2;
+            ctx.strokeStyle = iconColor + "CC"; // 80% opacity
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // Helper function to draw futuristic triangle
+        function drawFuturisticTriangle(centerX, centerY, buttonRadius, iconColor, borderColor) {
+            ctx.save();
+            ctx.globalAlpha = fadeAlpha;
+            
+            const triSize = isMobile ? 35 : isTablet ? 45 : Math.min(60, buttonRadius * 0.6);
+            const height = triSize * Math.sqrt(3) / 2;
+            
+            // Outer glow
+            ctx.shadowColor = borderColor;
+            ctx.shadowBlur = 15;
+            ctx.beginPath();
+            ctx.moveTo(centerX - height/3, centerY - triSize/2);
+            ctx.lineTo(centerX - height/3, centerY + triSize/2);
+            ctx.lineTo(centerX + height*2/3, centerY);
+            ctx.closePath();
+            ctx.strokeStyle = borderColor;
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Inner fill
+            ctx.shadowColor = 'transparent';
+            ctx.fillStyle = iconColor + "DD"; // 87% opacity
+            ctx.fill();
+            
+            ctx.restore();
+        }
 
         async function handlePlayButtonClick() {
-            debug("Play button clicked");
-            
-            // Hide the overlay button immediately
-            hidePlayButtonOverlay();
+            debug("Play button clicked, audioReady:", audioReady, "audioSourceSet:", audioSourceSet, "currentAudioSrc:", currentAudioSrc);
             
             // If audio is not ready, try to determine and load source now
             if (!audioReady || !audioSourceSet) {
@@ -2080,8 +2278,46 @@ document.addEventListener('DOMContentLoaded', function() {
             requestAnimationFrame(frame);
         }
 
-        // Initialize play button overlay instead of canvas-based button
-        initializePlayButtonOverlay();
+        // --- TOUCH/CLICK HANDLER WITH IMPROVED MOBILE SUPPORT ---
+        function handleCanvasInteraction(e) {
+            if (!showPlayButton || fadingOut || !canvas) return;
+            
+            let x, y;
+            if (e.type === 'touchstart' || e.type === 'touchend') {
+                e.preventDefault();
+                const touch = e.changedTouches[0];
+                const rect = canvas.getBoundingClientRect();
+                x = touch.clientX - rect.left;
+                y = touch.clientY - rect.top;
+            } else {
+                const rect = canvas.getBoundingClientRect();
+                x = e.clientX - rect.left;
+                y = e.clientY - rect.top;
+            }
+            
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const dist = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
+
+            if (dist < buttonRadius * pulseScale) {
+                debug("Play button clicked/touched");
+                fadingOut = true;
+                // Temporarily pause the pulse effect during transition
+                pausePulseEffects();
+            }
+        }
+
+        // Add both touch and click event listeners
+        if (canvas) {
+            if (isTouch) {
+                canvas.addEventListener('touchend', handleCanvasInteraction, { passive: false });
+                // Prevent scrolling when touching the canvas
+                canvas.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
+                canvas.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+            } else {
+                canvas.addEventListener('click', handleCanvasInteraction);
+            }
+        }
 
         // --- AUDIO CONTEXT SETUP ---
         function setupAudioContext() {
@@ -2563,8 +2799,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     debug("Greeting audio ended but TTS audio still playing - keeping visualization active");
                 }
                 
-                // Hide the play button overlay permanently after audio ends
-                hidePlayButtonOverlay();
+                showPlayButton = false;
 
                 // HIDE the Pause/Resume button after audio finishes
                 if (pauseBtnContainer) {
@@ -2618,9 +2853,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Stop audio visualization
                 audioVisualizationActive = false;
-                
-                // Hide the play button overlay
-                hidePlayButtonOverlay();
+                showPlayButton = false;
 
                 // Hide the pause/skip button container
                 if (pauseBtnContainer) {
@@ -2911,53 +3144,111 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
 
-        // Legacy pulse effect functions - now handled by CSS
+        // Helper function to manage pulse effects properly with new overlay system
         function applyPulseEffects() {
-            // Pulse effects now handled by CSS classes on overlay button
-            debug("Pulse effects now handled by CSS overlay");
+            if (!canvas || !showPlayButton || fadingOut) return;
+            
+            const disablePulse = getCSSVariable('--play-button-disable-pulse', 'false').toLowerCase() === 'true';
+            
+            // Respect prefers-reduced-motion preference
+            const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            
+            if (disablePulse || prefersReducedMotion) {
+                removePulseEffects();
+                return;
+            }
+            
+            // Add class to show play button overlay and enable pulse
+            canvas.classList.add('show-play-button');
+            canvas.classList.add('pulse-breathing');
+            canvas.classList.add('pulse-dots');
+            
+            // Set data attribute for CSS control
+            canvas.setAttribute('data-disable-pulse', 'false');
+            
+            debug("Play button pulse overlay activated");
         }
         
+        // Helper function to remove pulse effects permanently (for customizer disable setting)
         function removePulseEffects() {
-            // Pulse effects now handled by CSS classes on overlay button
-            debug("Pulse effects now handled by CSS overlay");
+            if (!canvas) return;
+            
+            canvas.classList.remove('show-play-button');
+            canvas.classList.remove('pulse-breathing');
+            canvas.classList.remove('pulse-dots');
+            canvas.classList.remove('pulse-effect');
+            
+            // Set data attribute to disable pulse
+            canvas.setAttribute('data-disable-pulse', 'true');
+            
+            debug("Play button pulse overlay deactivated");
         }
         
+        // Helper function to temporarily pause pulse effects (for transitions)
         function pausePulseEffects() {
-            // Pulse effects now handled by CSS classes on overlay button
-            debug("Pulse effects now handled by CSS overlay");
+            if (!canvas) return;
+            
+            // Remove the show-play-button class to hide overlay during transition
+            canvas.classList.remove('show-play-button');
+            
+            debug("Play button pulse overlay hidden for transition");
         }
         
+        // Helper function to resume pulse effects after temporary pause
         function resumePulseEffects() {
-            // Pulse effects now handled by CSS classes on overlay button
-            debug("Pulse effects now handled by CSS overlay");
+            if (!canvas || !showPlayButton || fadingOut) return;
+            
+            const disablePulse = getCSSVariable('--play-button-disable-pulse', 'false').toLowerCase() === 'true';
+            const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            
+            if (!disablePulse && !prefersReducedMotion) {
+                // Re-add the show-play-button class to show overlay
+                canvas.classList.add('show-play-button');
+                debug("Play button pulse overlay restored");
+            }
         }
         
+        // Helper function to reset play button to initial pulsing state
         function resetPlayButtonState() {
-            showPlayButtonOverlay();
-            debug("Play button state reset to initial overlay state");
-        }
-        
-        function ensurePlayButtonPulse() {
-            // Pulse effects now handled by CSS classes on overlay button
-            debug("Pulse effects now handled by CSS overlay");
-        }
-        
-        function initializePlayButtonPulse() {
-            initializePlayButtonOverlay();
-            debug("Play button pulse initialized via overlay");
+            if (!canvas) return;
+            
+            showPlayButton = true;
+            fadingOut = false;
+            fadeAlpha = 1;
+            
+            // Apply pulse effects if not disabled by customizer
+            const disablePulse = getCSSVariable('--play-button-disable-pulse', 'false').toLowerCase() === 'true';
+            if (!disablePulse) {
+                applyPulseEffects();
+            }
+            
+            debug("Play button state reset to initial pulsing state");
         }
 
-        // Enhanced initialization with overlay button
-        debug("Initializing play button overlay");
+        // Enhanced initialization with better error handling
+        debug("Drawing initial play button");
         if (canvas) {
+            canvas.style.cursor = "pointer";
+            
+            // Ensure CSS variables are set for consistent pulse animation
+            const root = document.documentElement;
+            if (!root.style.getPropertyValue('--play-button-pulse-speed')) {
+                root.style.setProperty('--play-button-pulse-speed', '1.0');
+            }
+            if (!root.style.getPropertyValue('--play-button-disable-pulse')) {
+                root.style.setProperty('--play-button-disable-pulse', 'false');
+            }
+            
             // Initialize canvas shadow based on current CSS variables
             updateCanvasShadowFromIntensity();
             
-            // Initialize play button overlay for this page load
+            // Initialize play button pulse state for this page load
             setTimeout(() => {
-                initializePlayButtonOverlay();
-                debug("Play button overlay initialized and ready");
+                initializePlayButtonPulse();
+                debug("Initial pulse effects applied and will persist until clicked");
             }, 100);
+            
+            drawPlayButton();
         }
 
         // Pre-load audio in background for better performance
@@ -2982,8 +3273,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         function updateProgressBarWhenIdle() {
             if (showPlayButton) {
-                // Ensure play button overlay is visible when button should be visible
-                updatePlayButtonDesign();
+                // Ensure pulse effects are active when button is visible
+                ensurePlayButtonPulse();
+                drawPlayButton();
             }
         }
         
@@ -3056,15 +3348,10 @@ document.addEventListener('DOMContentLoaded', function() {
             debug("Voice controls hidden - voice features disabled");
         }
 
-        // Initialize image error handlers to prevent 404 errors
-        addImageErrorHandlers();
-        
         debug("Widget initialization complete", {
             voiceEnabled: voiceEnabled,
             hasElevenLabsKey: hasElevenLabsKey,
-            detectedLanguage: detectedLanguage,
-            geolocationDisabled: widgetData.disable_geolocation,
-            productionMode: widgetData.production_mode
+            detectedLanguage: detectedLanguage
         });
 
         // Debug functions for console testing
@@ -3123,10 +3410,10 @@ document.addEventListener('DOMContentLoaded', function() {
             setButtonSize: (size) => {
                 // Allow manual button size setting for testing
                 const root = document.documentElement;
-                root.style.setProperty('--play-button-size', size.toString());
-                // Update overlay to apply new size
+                root.style.setProperty('--aiw-btn-size', size.toString());
+                // Force redraw to apply new size
                 if (showPlayButton && !fadingOut) {
-                    updatePlayButtonDesign();
+                    drawPlayButton();
                 }
                 debug("Button size set to:", size);
             },
@@ -3147,65 +3434,35 @@ document.addEventListener('DOMContentLoaded', function() {
             getButtonInfo: () => {
                 // Get current button information for debugging
                 return {
+                    currentSize: getButtonSize(),
                     showPlayButton: showPlayButton,
                     fadingOut: fadingOut,
-                    hasOverlay: !!playButtonOverlay,
-                    hasButton: !!playButton,
-                    overlayVisible: playButtonOverlay ? !playButtonOverlay.classList.contains('hidden') : false,
-                    buttonDesign: playButton ? playButton.getAttribute('data-design') : 'NOT_SET',
-                    cssVarBtnSize: getCSSVariable('--play-button-size', 'NOT_SET'),
+                    pulseScale: pulseScale,
+                    cssVarBtnSize: getCSSVariable('--aiw-btn-size', 'NOT_SET'),
                     cssVarShadowColor: getCSSVariable('--aiw-shadow-color', 'NOT_SET'),
                     cssVarShadowIntensity: getCSSVariable('--aiw-shadow-intensity', 'NOT_SET'),
-                    cssVarPulseDisabled: getCSSVariable('--play-button-disable-pulse', 'NOT_SET')
+                    canvasHasPulseClasses: canvas ? {
+                        showPlayButton: canvas.classList.contains('show-play-button'),
+                        pulseBreathing: canvas.classList.contains('pulse-breathing'),
+                        pulseDots: canvas.classList.contains('pulse-dots')
+                    } : 'canvas not found'
                 };
             }
         };
     }
 });
 
-// Global error handler with production-friendly logging
+// Global error handler
 window.addEventListener('error', function(e) {
     if (e.filename && e.filename.includes('ai-interview-widget')) {
-        // Check if we're in debug mode
-        const isDebugMode = typeof window.aiWidgetData !== 'undefined' && window.aiWidgetData.debug;
-        
-        if (isDebugMode) {
-            console.error('🚨 AI Interview Widget Error:', e.error);
-            console.error('Error details:', {
-                message: e.message,
-                filename: e.filename,
-                lineno: e.lineno,
-                colno: e.colno,
-                timestamp: new Date().toISOString()
-            });
-        } else {
-            // In production, log minimal error information
-            console.error('AI Widget: An error occurred. Enable debug mode for details.');
-        }
-        
-        // Attempt graceful recovery for known issues
-        if (e.message.includes('geolocation') || e.message.includes('fetch')) {
-            // Geolocation or network errors - widget should continue working
-            if (isDebugMode) {
-                console.warn('AI Widget: Recovering from network/geolocation error');
-            }
-        }
-    }
-});
-
-// Handle unhandled promise rejections
-window.addEventListener('unhandledrejection', function(e) {
-    if (e.reason && e.reason.message && e.reason.message.includes('ai-interview-widget')) {
-        const isDebugMode = typeof window.aiWidgetData !== 'undefined' && window.aiWidgetData.debug;
-        
-        if (isDebugMode) {
-            console.error('🚨 AI Interview Widget Promise Rejection:', e.reason);
-        } else {
-            console.error('AI Widget: Promise rejection occurred.');
-        }
-        
-        // Prevent unhandled rejection from breaking the page
-        e.preventDefault();
+        console.error('🚨 AI Interview Widget Error:', e.error);
+        console.error('Error details:', {
+            message: e.message,
+            filename: e.filename,
+            lineno: e.lineno,
+            colno: e.colno,
+            timestamp: new Date().toISOString()
+        });
     }
 });
 

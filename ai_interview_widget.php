@@ -48,12 +48,6 @@ class AIInterviewWidget {
         add_filter('upload_mimes', array($this, 'add_mp3_mime_type'));
         add_filter('wp_check_filetype_and_ext', array($this, 'fix_mp3_mime_type'), 10, 4);
         
-        // Fix mixed content issues with stylesheets
-        add_filter('style_loader_src', array($this, 'fix_stylesheet_protocol'), 10, 2);
-        
-        // Fix Elementor Google Fonts mixed content
-        add_filter('elementor/frontend/print_google_fonts', array($this, 'fix_elementor_fonts_protocol'), 10, 1);
-        
         // Add rewrite rule for direct MP3 access
         add_action('init', array($this, 'add_audio_rewrite_rules'));
         add_filter('query_vars', array($this, 'add_audio_query_vars'));
@@ -662,17 +656,6 @@ class AIInterviewWidget {
                 'default' => json_encode(array('en' => 'English', 'de' => 'German'))
             )
         );
-        
-        // Privacy and Security Settings
-        register_setting(
-            $settings_group,
-            'ai_interview_widget_disable_geolocation',
-            array(
-                'type' => 'boolean',
-                'sanitize_callback' => 'rest_sanitize_boolean',
-                'default' => false
-            )
-        );
 
         // Settings sections
         add_settings_section(
@@ -844,14 +827,6 @@ class AIInterviewWidget {
             'supported_languages',
             'Supported Languages',
             array($this, 'supported_languages_field_callback'),
-            'ai-interview-widget',
-            'ai_interview_widget_language_section'
-        );
-        
-        add_settings_field(
-            'disable_geolocation',
-            'Disable Geolocation',
-            array($this, 'disable_geolocation_field_callback'),
             'ai-interview-widget',
             'ai_interview_widget_language_section'
         );
@@ -1867,14 +1842,6 @@ class AIInterviewWidget {
         $canvasShadowIntensity = isset($style_data['canvas_shadow_intensity']) ? intval($style_data['canvas_shadow_intensity']) : 20;
         $css .= "    --aiw-shadow-intensity: {$canvasShadowIntensity};\n";
         
-        // Legacy Play Button Design Variables (for legacy design option)
-        $css .= "    --aiw-legacy-btn-size: 80px;\n";
-        $css .= "    --aiw-legacy-btn-bg: linear-gradient(135deg, #4a90e2, #357abd);\n";
-        $css .= "    --aiw-legacy-btn-bg-hover: linear-gradient(135deg, #5ba3f5, #4a90e2);\n";
-        $css .= "    --aiw-legacy-btn-icon-color: #ffffff;\n";
-        $css .= "    --aiw-legacy-btn-shadow: 0 4px 15px rgba(74, 144, 226, 0.4);\n";
-        $css .= "    --aiw-legacy-btn-border: 2px solid #ffffff;\n";
-        
         $css .= "}\n\n";
         
         if (isset($style_data['voice_btn_text_color'])) {
@@ -2185,13 +2152,6 @@ class AIInterviewWidget {
             $default_css .= "    --aiw-btn-size: 100;\n";
             $default_css .= "    --aiw-shadow-color: rgba(0, 207, 255, 0.5);\n";
             $default_css .= "    --aiw-shadow-intensity: 20;\n";
-            // Legacy Play Button Design Variables
-            $default_css .= "    --aiw-legacy-btn-size: 80px;\n";
-            $default_css .= "    --aiw-legacy-btn-bg: linear-gradient(135deg, #4a90e2, #357abd);\n";
-            $default_css .= "    --aiw-legacy-btn-bg-hover: linear-gradient(135deg, #5ba3f5, #4a90e2);\n";
-            $default_css .= "    --aiw-legacy-btn-icon-color: #ffffff;\n";
-            $default_css .= "    --aiw-legacy-btn-shadow: 0 4px 15px rgba(74, 144, 226, 0.4);\n";
-            $default_css .= "    --aiw-legacy-btn-border: 2px solid #ffffff;\n";
             $default_css .= "}\n";
             
             echo "\n<!-- AI Interview Widget Default CSS Variables -->\n";
@@ -3132,7 +3092,6 @@ class AIInterviewWidget {
                         <option value="classic" <?php selected($style_settings['play_button_design'], 'classic'); ?>>Classic (Current) - Radial gradient with pulse</option>
                         <option value="minimalist" <?php selected($style_settings['play_button_design'], 'minimalist'); ?>>Minimalist - Solid color with subtle shadow</option>
                         <option value="futuristic" <?php selected($style_settings['play_button_design'], 'futuristic'); ?>>Futuristic - Glowing neon border</option>
-                        <option value="legacy" <?php selected($style_settings['play_button_design'], 'legacy'); ?>>Legacy - Old design with single pulse</option>
                     </select>
                 </div>
                 
@@ -3189,32 +3148,6 @@ class AIInterviewWidget {
                                 <div class="slider-track-fill" style="position: absolute; top: 50%; left: 0; height: 8px; background: #00cfff; border-radius: 5px; pointer-events: none; transform: translateY(-50%); width: <?php echo (($style_settings['play_button_neon_intensity']-10)/70)*100; ?>%; transition: width 0.2s ease;"></div>
                             </div>
                             <button type="button" class="button button-small reset-button" data-setting="play_button_neon_intensity" data-default="30" style="padding: 5px 10px;">Reset</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Legacy Design Settings -->
-                <div id="play_button_legacy_group" style="<?php echo $style_settings['play_button_design'] !== 'legacy' ? 'display: none;' : ''; ?>">
-                    <div class="control-group" style="margin-bottom: 15px;">
-                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">Legacy Background:</label>
-                        <select id="legacy_bg_type" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 10px;">
-                            <option value="blue_gradient">Blue Gradient (Default)</option>
-                            <option value="green_gradient">Green Gradient</option>
-                            <option value="purple_gradient">Purple Gradient</option>
-                            <option value="custom">Custom Colors</option>
-                        </select>
-                    </div>
-                    <div class="control-group" style="margin-bottom: 15px;">
-                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">Legacy Size: <span id="legacy_size_value">80px</span></label>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <div style="flex: 1; position: relative;">
-                                <input type="range" id="legacy_size_slider" 
-                                       min="60" max="120" value="80" 
-                                       class="modern-slider" 
-                                       oninput="updateLegacySize(this.value)" 
-                                       style="width: 100%; height: 8px; border-radius: 5px; background: linear-gradient(to right, #4a90e2 0%, #4a90e2 33%, #ddd 33%, #ddd 100%); outline: none; -webkit-appearance: none;">
-                            </div>
-                            <button type="button" class="button button-small reset-button" onclick="resetLegacySize()" style="padding: 5px 10px;">Reset</button>
                         </div>
                     </div>
                 </div>
@@ -4528,93 +4461,12 @@ jQuery(document).ready(function($) {
         }
     };
 
-    // Legacy design functions
-    window.updateLegacySize = function(value) {
-        document.getElementById('legacy_size_value').textContent = value + 'px';
-        updateCSSVariable('aiw-legacy-btn-size', value + 'px');
-        
-        // Update the slider background
-        const slider = document.getElementById('legacy_size_slider');
-        const percentage = ((value - 60) / (120 - 60)) * 100;
-        slider.style.background = 
-            'linear-gradient(to right, #4a90e2 0%, #4a90e2 ' + percentage + '%, #ddd ' + percentage + '%, #ddd 100%)';
-    };
-    
-    window.resetLegacySize = function() {
-        updateLegacySize(80);
-        document.getElementById('legacy_size_slider').value = 80;
-    };
-    
-    // Handle play button design changes
-    function handlePlayButtonDesignChange() {
-        const design = document.getElementById('play_button_design').value;
-        
-        // Show/hide design-specific groups
-        const classicGroup = document.getElementById('play_button_gradient_group');
-        const futuristicGroup = document.getElementById('play_button_neon_group');
-        const legacyGroup = document.getElementById('play_button_legacy_group');
-        
-        // Hide all groups first
-        if (classicGroup) classicGroup.style.display = 'none';
-        if (futuristicGroup) futuristicGroup.style.display = 'none';
-        if (legacyGroup) legacyGroup.style.display = 'none';
-        
-        // Show relevant group
-        if (design === 'classic' && classicGroup) {
-            classicGroup.style.display = 'block';
-        } else if (design === 'futuristic' && futuristicGroup) {
-            futuristicGroup.style.display = 'block';
-        } else if (design === 'legacy' && legacyGroup) {
-            legacyGroup.style.display = 'block';
-        }
-        
-        // Update the preview if possible
-        updateCSSVariable('play-button-design', "'" + design + "'");
-        
-        console.log('Play button design changed to:', design);
-    }
-    
-    // Handle legacy background type changes
-    function handleLegacyBackgroundChange() {
-        const type = document.getElementById('legacy_bg_type').value;
-        let bgValue = '';
-        
-        switch(type) {
-            case 'blue_gradient':
-                bgValue = 'linear-gradient(135deg, #4a90e2, #357abd)';
-                break;
-            case 'green_gradient':
-                bgValue = 'linear-gradient(135deg, #46b450, #357a35)';
-                break;
-            case 'purple_gradient':
-                bgValue = 'linear-gradient(135deg, #9b59b6, #7a4a7a)';
-                break;
-            case 'custom':
-                bgValue = 'linear-gradient(135deg, #666666, #333333)';
-                break;
-        }
-        
-        updateCSSVariable('aiw-legacy-btn-bg', bgValue);
-        console.log('Legacy background changed to:', type);
-    }
-
     // Initialize all controls
     initializeColorPickers();
     initializeSliders();
     initializeTabs();
     initializeSaveHandlers();
     initializeOtherControls();
-    
-    // Add event listeners for legacy design
-    const playButtonDesign = document.getElementById('play_button_design');
-    if (playButtonDesign) {
-        playButtonDesign.addEventListener('change', handlePlayButtonDesignChange);
-    }
-    
-    const legacyBgType = document.getElementById('legacy_bg_type');
-    if (legacyBgType) {
-        legacyBgType.addEventListener('change', handleLegacyBackgroundChange);
-    }
     
     console.log('✅ Enhanced Widget Customizer fully initialized');
     console.log('🎉 Enhanced Widget Customizer script loaded successfully');
@@ -5422,92 +5274,76 @@ private function get_custom_api_response($user_message, $system_prompt = '') {
 
 // ENHANCED SCRIPT ENQUEUING - FIXED DATA PASSING
 public function enqueue_scripts() {
-    $plugin_url = plugin_dir_url(__FILE__);
+$plugin_url = plugin_dir_url(__FILE__);
+
+if (!wp_script_is('ai-interview-widget', 'enqueued')) {
+wp_enqueue_style('ai-interview-widget', $plugin_url . 'ai-interview-widget.css', array(), '1.9.3');
+wp_enqueue_script('ai-interview-widget', $plugin_url . 'ai-interview-widget.js', array('jquery'), '1.9.3', true);
+}
+
+$valid_audio_files = $this->validate_audio_files();
+$nonce = wp_create_nonce('ai_interview_nonce');
+
+// Get content settings for dynamic prompts and messages
+$content_settings = get_option('ai_interview_widget_content_settings', '');
+$content_data = json_decode($content_settings, true);
+
+// Get supported languages to dynamically create content defaults
+$supported_langs = json_decode(get_option('ai_interview_widget_supported_languages', ''), true);
+if (!$supported_langs) $supported_langs = array('en' => 'English', 'de' => 'German');
+
+$content_defaults = array(
+    'headline_text' => 'Ask Eric',
+    'headline_font_size' => 18,
+    'headline_font_family' => 'inherit',
+    'headline_color' => '#ffffff'
+);
+
+// Dynamically add welcome messages and system prompts for each supported language
+foreach ($supported_langs as $lang_code => $lang_name) {
+    $content_defaults['welcome_message_' . $lang_code] = ($lang_code === 'en') ? "Hello! Talk to me!" : 
+                                                          (($lang_code === 'de') ? "Hallo! Sprich mit mir!" : 
+                                                           "Hello! Talk to me! (Please configure in Admin Settings)");
     
-    // Force HTTPS for secure sites to prevent mixed content warnings
-    if (is_ssl() && strpos($plugin_url, 'http://') === 0) {
-        $plugin_url = set_url_scheme($plugin_url, 'https');
-    }
+    // Use placeholder system for system prompts
+    $content_defaults['Systemprompts_Placeholder_' . $lang_code] = $this->get_default_system_prompt($lang_code);
+}
+// Merge with current settings
+$content_settings_merged = array_merge($content_defaults, $content_data ?: array());
 
-    if (!wp_script_is('ai-interview-widget', 'enqueued')) {
-        // Add cache busting for development, version for production
-        $version = defined('WP_DEBUG') && WP_DEBUG ? filemtime(plugin_dir_path(__FILE__) . 'ai-interview-widget.css') : '1.9.4';
-        $js_version = defined('WP_DEBUG') && WP_DEBUG ? filemtime(plugin_dir_path(__FILE__) . 'ai-interview-widget.js') : '1.9.4';
-        
-        wp_enqueue_style('ai-interview-widget', $plugin_url . 'ai-interview-widget.css', array(), $version);
-        wp_enqueue_script('ai-interview-widget', $plugin_url . 'ai-interview-widget.js', array('jquery'), $js_version, true);
-        
-        // Add integrity checking in development
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('AI Interview Widget: Enqueued assets with cache busting');
-            error_log('CSS: ' . $plugin_url . 'ai-interview-widget.css?ver=' . $version);
-            error_log('JS: ' . $plugin_url . 'ai-interview-widget.js?ver=' . $js_version);
-        }
-    }
+// Get style settings for visualizer and other customizations
+$style_settings = get_option('ai_interview_widget_style_settings', '');
+$style_data = json_decode($style_settings, true);
+$style_defaults = array(
+    // Audio Visualizer Settings
+    'visualizer_theme' => 'default',
+    'visualizer_primary_color' => '#00cfff',
+    'visualizer_secondary_color' => '#0066ff',
+    'visualizer_accent_color' => '#001a33',
+    'visualizer_bar_width' => 2,
+    'visualizer_bar_spacing' => 2,
+    'visualizer_glow_intensity' => 10,
+    'visualizer_animation_speed' => 1.0
+);
+// Merge with current settings
+$style_settings_merged = array_merge($style_defaults, $style_data ?: array());
 
-    $valid_audio_files = $this->validate_audio_files();
-    $nonce = wp_create_nonce('ai_interview_nonce');
+// COMPLETE widget data with ALL required properties for voice features
+$widget_data = array(
+// Core AJAX settings
+'ajaxurl' => admin_url('admin-ajax.php'),
+'nonce' => $nonce,
+'debug' => defined('WP_DEBUG') && WP_DEBUG,
 
-    // Get content settings for dynamic prompts and messages
-    $content_settings = get_option('ai_interview_widget_content_settings', '');
-    $content_data = json_decode($content_settings, true);
+// Audio file settings
+'greeting_en' => isset($valid_audio_files['greeting_en.mp3']) ? $valid_audio_files['greeting_en.mp3'] : '',
+'greeting_de' => isset($valid_audio_files['greeting_de.mp3']) ? $valid_audio_files['greeting_de.mp3'] : '',
+'greeting_en_alt' => isset($valid_audio_files['greeting_en.mp3_alt']) ? $valid_audio_files['greeting_en.mp3_alt'] : '',
+'greeting_de_alt' => isset($valid_audio_files['greeting_de.mp3_alt']) ? $valid_audio_files['greeting_de.mp3_alt'] : '',
+'audio_files_available' => !empty($valid_audio_files),
 
-    // Get supported languages to dynamically create content defaults
-    $supported_langs = json_decode(get_option('ai_interview_widget_supported_languages', ''), true);
-    if (!$supported_langs) $supported_langs = array('en' => 'English', 'de' => 'German');
-
-    $content_defaults = array(
-        'headline_text' => 'Ask Eric',
-        'headline_font_size' => 18,
-        'headline_font_family' => 'inherit',
-        'headline_color' => '#ffffff'
-    );
-
-    // Dynamically add welcome messages and system prompts for each supported language
-    foreach ($supported_langs as $lang_code => $lang_name) {
-        $content_defaults['welcome_message_' . $lang_code] = ($lang_code === 'en') ? "Hello! Talk to me!" : 
-                                                              (($lang_code === 'de') ? "Hallo! Sprich mit mir!" : 
-                                                               "Hello! Talk to me! (Please configure in Admin Settings)");
-        
-        // Use placeholder system for system prompts
-        $content_defaults['Systemprompts_Placeholder_' . $lang_code] = $this->get_default_system_prompt($lang_code);
-    }
-    // Merge with current settings
-    $content_settings_merged = array_merge($content_defaults, $content_data ?: array());
-
-    // Get style settings for visualizer and other customizations
-    $style_settings = get_option('ai_interview_widget_style_settings', '');
-    $style_data = json_decode($style_settings, true);
-    $style_defaults = array(
-        // Audio Visualizer Settings
-        'visualizer_theme' => 'default',
-        'visualizer_primary_color' => '#00cfff',
-        'visualizer_secondary_color' => '#0066ff',
-        'visualizer_accent_color' => '#001a33',
-        'visualizer_bar_width' => 2,
-        'visualizer_bar_spacing' => 2,
-        'visualizer_glow_intensity' => 10,
-        'visualizer_animation_speed' => 1.0
-    );
-    // Merge with current settings
-    $style_settings_merged = array_merge($style_defaults, $style_data ?: array());
-
-    // COMPLETE widget data with ALL required properties for voice features
-    $widget_data = array(
-    // Core AJAX settings - ensure HTTPS for secure sites
-    'ajaxurl' => is_ssl() ? set_url_scheme(admin_url('admin-ajax.php'), 'https') : admin_url('admin-ajax.php'),
-    'nonce' => $nonce,
-    'debug' => defined('WP_DEBUG') && WP_DEBUG,
-
-    // Audio file settings - force HTTPS for secure sites
-    'greeting_en' => isset($valid_audio_files['greeting_en.mp3']) ? (is_ssl() ? set_url_scheme($valid_audio_files['greeting_en.mp3'], 'https') : $valid_audio_files['greeting_en.mp3']) : '',
-    'greeting_de' => isset($valid_audio_files['greeting_de.mp3']) ? (is_ssl() ? set_url_scheme($valid_audio_files['greeting_de.mp3'], 'https') : $valid_audio_files['greeting_de.mp3']) : '',
-    'greeting_en_alt' => isset($valid_audio_files['greeting_en.mp3_alt']) ? (is_ssl() ? set_url_scheme($valid_audio_files['greeting_en.mp3_alt'], 'https') : $valid_audio_files['greeting_en.mp3_alt']) : '',
-    'greeting_de_alt' => isset($valid_audio_files['greeting_de.mp3_alt']) ? (is_ssl() ? set_url_scheme($valid_audio_files['greeting_de.mp3_alt'], 'https') : $valid_audio_files['greeting_de.mp3_alt']) : '',
-    'audio_files_available' => !empty($valid_audio_files),
-
-    // Content settings (now dynamic instead of FIXED)
-    );
+// Content settings (now dynamic instead of FIXED)
+);
 
 // Dynamically add content settings for each supported language
 foreach ($supported_langs as $lang_code => $lang_name) {
@@ -5557,11 +5393,7 @@ $widget_data = array_merge($widget_data, array(
 
 // Browser detection helpers
 'https_enabled' => is_ssl(),
-'user_agent' => isset($_SERVER['HTTP_USER_AGENT']) ? sanitize_text_field($_SERVER['HTTP_USER_AGENT']) : '',
-
-// Privacy and feature controls
-'disable_geolocation' => get_option('ai_interview_widget_disable_geolocation', false),
-'production_mode' => !defined('WP_DEBUG') || !WP_DEBUG
+'user_agent' => isset($_SERVER['HTTP_USER_AGENT']) ? sanitize_text_field($_SERVER['HTTP_USER_AGENT']) : ''
 ));
 
 // DEBUG: Log the data being passed
@@ -5767,21 +5599,8 @@ if ($canvas_shadow_color) {
 <div class="ai-interview-container">
 <div class="ai-interview-inner-container">
 <?php if (!$chatbox_only && !$disable_audio_viz): ?>
-<div class="canvas-container">
 <canvas id="soundbar" width="800" height="500"></canvas>
 <canvas id="audio-visualizer" width="800" height="500" style="display:none;"></canvas>
-<!-- Play Button Overlay -->
-<div id="playButtonOverlay" class="play-button-overlay">
-    <button id="playButton" class="play-button" aria-label="Play audio">
-        <div class="play-button-inner">
-            <div class="play-triangle"></div>
-            <svg class="play-svg-icon" viewBox="0 0 24 24" style="display: none;">
-                <path d="M8 5v14l11-7z"/>
-            </svg>
-        </div>
-    </button>
-</div>
-</div>
 <?php endif; ?>
 <?php if (!$disable_greeting): ?>
 <audio id="aiEricGreeting" controls preload="auto" style="visibility:hidden; margin-top:16px; display:block;"></audio>
@@ -6770,23 +6589,6 @@ public function supported_languages_field_callback() {
         });
     });
     </script>
-    <?php
-}
-
-public function disable_geolocation_field_callback() {
-    $disable_geolocation = get_option('ai_interview_widget_disable_geolocation', false);
-    ?>
-    <label>
-        <input type="checkbox" 
-               name="ai_interview_widget_disable_geolocation" 
-               value="1" 
-               <?php checked($disable_geolocation, true); ?> />
-        Disable automatic country detection for language selection
-    </label>
-    <p class="description">
-        When enabled, this disables automatic IP-based country detection to improve privacy and prevent CORS/rate limiting issues. 
-        The widget will use browser language preferences only.
-    </p>
     <?php
 }
 
@@ -8057,74 +7859,6 @@ public function documentation_page() {
 </div>
 <?php
 }
-
-/**
- * Fix mixed content issues by forcing HTTPS for stylesheets on secure sites
- */
-public function fix_stylesheet_protocol($src, $handle) {
-    // Only fix URLs for secure sites and if URL uses HTTP
-    if (is_ssl() && strpos($src, 'http://') === 0) {
-        $src = set_url_scheme($src, 'https');
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('AI Interview Widget: Fixed mixed content for stylesheet: ' . $handle);
-        }
-    }
-    return $src;
-}
-
-/**
- * Fix Elementor Google Fonts mixed content issues
- */
-public function fix_elementor_fonts_protocol($google_fonts_url) {
-    if (is_ssl() && strpos($google_fonts_url, 'http://') === 0) {
-        $google_fonts_url = set_url_scheme($google_fonts_url, 'https');
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('AI Interview Widget: Fixed mixed content for Elementor Google Fonts');
-        }
-    }
-    return $google_fonts_url;
-}
-
-/**
- * Improved audio file validation with better error handling
- */
-private function validate_audio_files_safe() {
-    $plugin_dir = plugin_dir_path(__FILE__);
-    $plugin_url = plugin_dir_url(__FILE__);
-    
-    // Force HTTPS for secure sites
-    if (is_ssl()) {
-        $plugin_url = set_url_scheme($plugin_url, 'https');
-    }
-    
-    $files = ['greeting_en.mp3', 'greeting_de.mp3'];
-    $valid_files = [];
-
-    foreach ($files as $file) {
-        $file_path = $plugin_dir . $file;
-        $file_url = $plugin_url . $file;
-
-        if (file_exists($file_path) && is_readable($file_path)) {
-            $file_size = filesize($file_path);
-            
-            // Only log in debug mode to prevent log spam
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('AI Interview Widget: Audio file validated: ' . $file . ' (Size: ' . $file_size . ' bytes)');
-            }
-
-            $valid_files[$file] = $file_url;
-            $valid_files[$file . '_alt'] = home_url('/ai-widget-audio/' . $file);
-        } else {
-            // Only log missing files in debug mode
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('AI Interview Widget: Missing audio file: ' . $file . ' at path: ' . $file_path);
-            }
-        }
-    }
-
-    return $valid_files;
-}
-
 }
 
 // Initialize the plugin

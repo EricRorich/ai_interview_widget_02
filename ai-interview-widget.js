@@ -1430,86 +1430,81 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         /**
-         * Enhanced IP-based country detection with multiple fallback services
-         * Robust error handling and timeout management for production use
+         * Enhanced IP-based country detection using AIWGeo module
+         * Privacy-conscious single provider approach with caching
          */
         async function detectCountryAutomatically() {
-            debug("Starting automatic country detection...");
+            debug("Starting country detection using AIWGeo module...");
             
-            // Multiple reliable IP geolocation services (free tier)
-            // Ordered by reliability and response speed
-            const ipServices = [
-                {
-                    url: 'https://ip-api.com/json/',
-                    extractCountry: (data) => data.countryCode || data.country
-                },
-                {
-                    url: 'https://ipapi.co/json/',
-                    extractCountry: (data) => data.country_code || data.country
-                },
-                {
-                    url: 'https://api.country.is/',
-                    extractCountry: (data) => data.country
-                },
-                {
-                    url: 'https://get.geojs.io/v1/ip/country.json',
-                    extractCountry: (data) => data.country
-                },
-                {
-                    url: 'https://freegeoip.app/json/',
-                    extractCountry: (data) => data.country_code
-                }
-            ];
-            
-            // Try each service with timeout and proper error handling
-            for (const service of ipServices) {
-                try {
-                    debug(`Trying IP service: ${service.url}`);
+            try {
+                // Configure AIWGeo based on widget settings
+                const geoConfig = {
+                    enabled: widgetData.geolocation_enabled || true,
+                    useCache: true,
+                    cacheTimeoutMs: widgetData.geolocation_cache_timeout || (24 * 60 * 60 * 1000), // 24 hours default
+                    networkTimeoutMs: 8000,
+                    debugMode: widgetData.geolocation_debug_mode || DEBUG,
+                    privacy: {
+                        requireConsent: widgetData.geolocation_require_consent || false,
+                        consentStorageKey: 'aiw_geo_consent'
+                    },
+                    fallbackToTimezone: true,
+                    silentErrors: !DEBUG, // Silent in production unless debug enabled
+                    serverCountry: null // Could be set by server-side detection in future
+                };
+                
+                // Update AIWGeo configuration
+                if (window.AIWGeo) {
+                    window.AIWGeo.updateConfig(geoConfig);
+                    const country = await window.AIWGeo.getCountry();
                     
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout - increased for reliability
-                    
-                    const response = await fetch(service.url, {
-                        method: 'GET',
-                        signal: controller.signal,
-                        headers: {
-                            'Accept': 'application/json',
-                            'User-Agent': 'Mozilla/5.0 (compatible; AI-Widget/1.0)'
-                        }
-                    });
-                    
-                    clearTimeout(timeoutId);
-                    
-                    if (!response.ok) {
-                        debug(`Service responded with status: ${response.status}`);
-                        continue;
-                    }
-                    
-                    const data = await response.json();
-                    debug(`Service response:`, data);
-                    
-                    const country = service.extractCountry(data);
-                    if (country && typeof country === 'string' && country.length >= 2) {
-                        debug(`Successfully detected country: ${country} from ${service.url}`);
-                        return country.toUpperCase();
-                    }
-                    
-                } catch (error) {
-                    debug(`Service ${service.url} failed:`, error.message);
-                    // Log specific error types for better debugging
-                    if (error.name === 'AbortError') {
-                        debug(`Request to ${service.url} timed out`);
-                    } else if (error.name === 'TypeError') {
-                        debug(`Network error accessing ${service.url} - possibly blocked or offline`);
+                    if (country) {
+                        debug(`Successfully detected country: ${country} using AIWGeo`);
+                        return country;
                     } else {
-                        debug(`Unexpected error with ${service.url}:`, error);
+                        debug("AIWGeo returned null - geolocation disabled or failed");
+                        return null;
                     }
-                    continue;
+                } else {
+                    debug("AIWGeo module not available, falling back to timezone detection");
+                    return detectCountryFromTimezone();
                 }
+                
+            } catch (error) {
+                debug("AIWGeo country detection failed:", error.message);
+                return null;
             }
-            
-            debug("All IP detection services failed or returned invalid data");
-            return null;
+        }
+        
+        /**
+         * Fallback country detection from timezone (privacy-friendly)
+         */
+        function detectCountryFromTimezone() {
+            try {
+                const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                debug('Detected timezone:', timezone);
+                
+                const timezoneCountryMap = {
+                    'Europe/Berlin': 'DE',
+                    'Europe/Vienna': 'DE',
+                    'Europe/Zurich': 'DE',
+                    'America/New_York': 'US',
+                    'America/Los_Angeles': 'US',
+                    'America/Chicago': 'US',
+                    'Europe/London': 'GB',
+                    'Europe/Paris': 'FR',
+                    'Europe/Madrid': 'ES',
+                    'Europe/Rome': 'IT',
+                    'Asia/Tokyo': 'JP',
+                    'Asia/Shanghai': 'CN',
+                    'Australia/Sydney': 'AU'
+                };
+                
+                return timezoneCountryMap[timezone] || null;
+            } catch (error) {
+                debug('Timezone detection failed:', error.message);
+                return null;
+            }
         }
 
         /**

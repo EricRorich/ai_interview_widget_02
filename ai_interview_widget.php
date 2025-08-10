@@ -1842,6 +1842,14 @@ class AIInterviewWidget {
         $canvasShadowIntensity = isset($style_data['canvas_shadow_intensity']) ? intval($style_data['canvas_shadow_intensity']) : 20;
         $css .= "    --aiw-shadow-intensity: {$canvasShadowIntensity};\n";
         
+        // Legacy Play Button Design Variables (for legacy design option)
+        $css .= "    --aiw-legacy-btn-size: 80px;\n";
+        $css .= "    --aiw-legacy-btn-bg: linear-gradient(135deg, #4a90e2, #357abd);\n";
+        $css .= "    --aiw-legacy-btn-bg-hover: linear-gradient(135deg, #5ba3f5, #4a90e2);\n";
+        $css .= "    --aiw-legacy-btn-icon-color: #ffffff;\n";
+        $css .= "    --aiw-legacy-btn-shadow: 0 4px 15px rgba(74, 144, 226, 0.4);\n";
+        $css .= "    --aiw-legacy-btn-border: 2px solid #ffffff;\n";
+        
         $css .= "}\n\n";
         
         if (isset($style_data['voice_btn_text_color'])) {
@@ -2152,6 +2160,13 @@ class AIInterviewWidget {
             $default_css .= "    --aiw-btn-size: 100;\n";
             $default_css .= "    --aiw-shadow-color: rgba(0, 207, 255, 0.5);\n";
             $default_css .= "    --aiw-shadow-intensity: 20;\n";
+            // Legacy Play Button Design Variables
+            $default_css .= "    --aiw-legacy-btn-size: 80px;\n";
+            $default_css .= "    --aiw-legacy-btn-bg: linear-gradient(135deg, #4a90e2, #357abd);\n";
+            $default_css .= "    --aiw-legacy-btn-bg-hover: linear-gradient(135deg, #5ba3f5, #4a90e2);\n";
+            $default_css .= "    --aiw-legacy-btn-icon-color: #ffffff;\n";
+            $default_css .= "    --aiw-legacy-btn-shadow: 0 4px 15px rgba(74, 144, 226, 0.4);\n";
+            $default_css .= "    --aiw-legacy-btn-border: 2px solid #ffffff;\n";
             $default_css .= "}\n";
             
             echo "\n<!-- AI Interview Widget Default CSS Variables -->\n";

@@ -16,12 +16,12 @@
 
         // Helper function to get play button element
         function getPlayButton() {
-            return document.querySelector('.play-button');
+            return document.querySelector('.play-button') || document.querySelector('#playButton');
         }
 
         // Helper function to get play button container
         function getPlayButtonContainer() {
-            return document.querySelector('.play-button-container');
+            return document.querySelector('.play-button-container') || document.querySelector('#playButtonContainer');
         }
 
         // Button Size

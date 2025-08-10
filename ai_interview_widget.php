@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: AI Interview Widget
- * Description: Interactive AI widget for Eric Rorich's portfolio with voice capabilities. Displays greeting and handles chat interactions with speech-to-text and text-to-speech features.
+ * Description: Interactive AI widget for Eric Rorich's portfolio with voice capabilities. Displays greeting and handles chat interactions with speech-to-text and text-to-speech features. Now includes WordPress Customizer integration for play button designs.
  * Version: 1.9.4
  * Author: Eric Rorich
  * Updated: 2025-08-03 18:37:12
@@ -2271,6 +2271,14 @@ class AIInterviewWidget {
 
     // Generate CSS from WordPress Customizer settings
     private function get_wp_customizer_css() {
+        // Use caching for performance
+        $cache_key = 'ai_interview_wp_customizer_css_' . md5(serialize($_GET));
+        $cached_css = wp_cache_get($cache_key, 'ai_interview_widget');
+        
+        if ($cached_css !== false) {
+            return $cached_css;
+        }
+        
         $css = '';
         
         // Get WordPress Customizer settings
@@ -2293,22 +2301,31 @@ class AIInterviewWidget {
                                    get_theme_mod('ai_play_button_pulse_enabled') !== null;
         
         if (!$has_customizer_settings) {
+            wp_cache_set($cache_key, $css, 'ai_interview_widget', 3600); // Cache for 1 hour
             return $css;
         }
         
         $css .= ":root {\n";
         
-        // Button size
+        // Button size with validation
+        $button_size = max(40, min(120, intval($button_size)));
         $css .= "    --play-button-size: {$button_size}px;\n";
         $css .= "    --aiw-btn-size: {$button_size};\n";
         
-        // Button shape (border-radius)
+        // Button shape (border-radius) with validation
         $border_radius = '50%'; // circle default
         if ($button_shape === 'rounded') {
             $border_radius = '15px';
         } elseif ($button_shape === 'square') {
             $border_radius = '0px';
         }
+        
+        // Sanitize colors
+        $button_color = sanitize_hex_color($button_color) ?: '#00cfff';
+        $button_gradient_end = sanitize_hex_color($button_gradient_end);
+        $icon_color = sanitize_hex_color($icon_color) ?: '#ffffff';
+        $pulse_color = sanitize_hex_color($pulse_color) ?: '#00cfff';
+        $focus_color = sanitize_hex_color($focus_color) ?: '#00cfff';
         
         // Button colors
         if (!empty($button_gradient_end)) {
@@ -2322,7 +2339,10 @@ class AIInterviewWidget {
         $css .= "    --play-button-icon-color: {$icon_color};\n";
         $css .= "    --play-button-border-color: {$pulse_color};\n";
         
-        // Pulse settings
+        // Pulse settings with validation
+        $pulse_duration = max(0.8, min(3.5, floatval($pulse_duration)));
+        $pulse_spread = max(8, min(40, intval($pulse_spread)));
+        
         $css .= "    --play-button-disable-pulse: " . ($pulse_enabled ? 'false' : 'true') . ";\n";
         $css .= "    --play-button-pulse-speed: " . (2.0 / $pulse_duration) . ";\n";
         $css .= "    --play-button-shadow-intensity: {$pulse_spread}px;\n";
@@ -2344,7 +2364,12 @@ class AIInterviewWidget {
         $css .= "    border-color: {$pulse_color} !important;\n";
         $css .= "}\n\n";
         
-        // Hover effects
+        // Hover effects with validation
+        $allowed_hover_styles = array('scale', 'glow', 'none');
+        if (!in_array($hover_style, $allowed_hover_styles)) {
+            $hover_style = 'scale';
+        }
+        
         if ($hover_style === 'scale') {
             $css .= ".play-button:hover {\n";
             $css .= "    transform: scale(1.1) !important;\n";
@@ -2366,7 +2391,12 @@ class AIInterviewWidget {
         $css .= "    outline-offset: 4px !important;\n";
         $css .= "}\n\n";
         
-        // Icon style variations
+        // Icon style variations with validation
+        $allowed_icon_styles = array('triangle', 'triangle_border', 'minimal');
+        if (!in_array($icon_style, $allowed_icon_styles)) {
+            $icon_style = 'triangle';
+        }
+        
         if ($icon_style === 'triangle_border') {
             $css .= ".play-button .play-icon {\n";
             $css .= "    border: 2px solid {$icon_color};\n";
@@ -2394,6 +2424,9 @@ class AIInterviewWidget {
             $css .= "    }\n";
             $css .= "}\n\n";
         }
+        
+        // Cache the generated CSS for performance
+        wp_cache_set($cache_key, $css, 'ai_interview_widget', 3600); // Cache for 1 hour
         
         return $css;
     }

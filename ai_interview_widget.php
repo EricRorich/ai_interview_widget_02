@@ -7959,6 +7959,7 @@ public function sanitize_hover_style($style) {
 
 public function sanitize_canvas_shadow_intensity($intensity) {
     $intensity = absint($intensity);
+    if ($intensity < 0) $intensity = 0; // Handle edge case for negative values
     return max(0, min(100, $intensity));
 }
 

@@ -4416,6 +4416,14 @@ class AIInterviewWidget {
 
 <script>
 jQuery(document).ready(function($) {
+    // Ensure we have the necessary global variables
+    if (typeof ajaxurl === 'undefined') {
+        console.error('❌ ajaxurl is not defined - WordPress AJAX may not work properly');
+        aiwTranslationDebug && aiwTranslationDebug.pushLog('ERROR', 'ajaxurl not defined - WordPress AJAX setup issue');
+    } else {
+        console.log('✅ ajaxurl available:', ajaxurl);
+    }
+    
     /*
      * Enhanced Widget Customizer - FULLY FUNCTIONAL VERSION
      * All controls working: tabs, color pickers, sliders, save functionality
@@ -4994,6 +5002,12 @@ jQuery(document).ready(function($) {
         const $content = $('#translation-debug-content');
         const $toggleText = $('#debug-panel-toggle-text');
         
+        if ($content.length === 0) {
+            console.error('❌ #translation-debug-content element not found');
+            aiwTranslationDebug.pushLog('ERROR', 'Debug panel content element not found in DOM');
+            return;
+        }
+        
         if ($content.is(':visible')) {
             $content.slideUp();
             $toggleText.text('Show Debug Info');
@@ -5009,6 +5023,10 @@ jQuery(document).ready(function($) {
     // Clear debug log
     $('#clear-debug-log').on('click', function() {
         console.log('🗑️ Clear debug log button clicked');
+        if (typeof aiwTranslationDebug === 'undefined') {
+            console.error('❌ aiwTranslationDebug object not available');
+            return;
+        }
         aiwTranslationDebug.clear();
         aiwTranslationDebug.pushLog('INFO', 'Debug log cleared by user');
     });
@@ -5016,6 +5034,10 @@ jQuery(document).ready(function($) {
     // Export debug log
     $('#export-debug-log').on('click', function() {
         console.log('📥 Export debug log button clicked');
+        if (typeof aiwTranslationDebug === 'undefined') {
+            console.error('❌ aiwTranslationDebug object not available');
+            return;
+        }
         aiwTranslationDebug.export();
         aiwTranslationDebug.pushLog('INFO', 'Debug log exported by user');
     });
@@ -5302,6 +5324,17 @@ jQuery(document).ready(function($) {
     }
     
     aiwTranslationDebug.pushLog('SUCCESS', 'Enhanced translation debug system loaded');
+    
+    // Log debug info for troubleshooting
+    console.log('🔧 Debug System Status Check:');
+    console.log('  - Translation buttons found:', $('.translate-prompt-btn').length);
+    console.log('  - Debug toggle button found:', $('#toggle-debug-panel').length);
+    console.log('  - Debug clear button found:', $('#clear-debug-log').length);  
+    console.log('  - Debug export button found:', $('#export-debug-log').length);
+    console.log('  - Debug content panel found:', $('#translation-debug-content').length);
+    console.log('  - Debug log container found:', $('#translation-debug-log').length);
+    console.log('  - ajaxurl available:', typeof ajaxurl !== 'undefined' ? ajaxurl : 'NOT DEFINED');
+    console.log('  - aiwTranslationDebug object:', typeof aiwTranslationDebug !== 'undefined' ? 'AVAILABLE' : 'NOT AVAILABLE');
 });
 </script>
 <?php

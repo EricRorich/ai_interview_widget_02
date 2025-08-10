@@ -657,6 +657,47 @@ class AIInterviewWidget {
             )
         );
 
+        // Geolocation Settings
+        register_setting(
+            $settings_group,
+            'ai_interview_widget_enable_geolocation',
+            array(
+                'type' => 'boolean',
+                'sanitize_callback' => 'rest_sanitize_boolean',
+                'default' => true
+            )
+        );
+        
+        register_setting(
+            $settings_group,
+            'ai_interview_widget_geolocation_cache_timeout',
+            array(
+                'type' => 'integer',
+                'sanitize_callback' => 'absint',
+                'default' => 24 // hours
+            )
+        );
+        
+        register_setting(
+            $settings_group,
+            'ai_interview_widget_geolocation_debug_mode',
+            array(
+                'type' => 'boolean',
+                'sanitize_callback' => 'rest_sanitize_boolean',
+                'default' => false
+            )
+        );
+        
+        register_setting(
+            $settings_group,
+            'ai_interview_widget_geolocation_require_consent',
+            array(
+                'type' => 'boolean',
+                'sanitize_callback' => 'rest_sanitize_boolean',
+                'default' => false
+            )
+        );
+
         // Settings sections
         add_settings_section(
             'ai_interview_widget_provider_section',
@@ -829,6 +870,46 @@ class AIInterviewWidget {
             array($this, 'supported_languages_field_callback'),
             'ai-interview-widget',
             'ai_interview_widget_language_section'
+        );
+        
+        // Geolocation Section
+        add_settings_section(
+            'ai_interview_widget_geolocation_section',
+            'Geolocation & Privacy',
+            array($this, 'geolocation_section_callback'),
+            'ai-interview-widget'
+        );
+        
+        add_settings_field(
+            'enable_geolocation',
+            'Enable Geolocation',
+            array($this, 'enable_geolocation_field_callback'),
+            'ai-interview-widget',
+            'ai_interview_widget_geolocation_section'
+        );
+        
+        add_settings_field(
+            'geolocation_cache_timeout',
+            'Cache Timeout (hours)',
+            array($this, 'geolocation_cache_timeout_field_callback'),
+            'ai-interview-widget',
+            'ai_interview_widget_geolocation_section'
+        );
+        
+        add_settings_field(
+            'geolocation_require_consent',
+            'Require User Consent',
+            array($this, 'geolocation_require_consent_field_callback'),
+            'ai-interview-widget',
+            'ai_interview_widget_geolocation_section'
+        );
+        
+        add_settings_field(
+            'geolocation_debug_mode',
+            'Debug Mode',
+            array($this, 'geolocation_debug_mode_field_callback'),
+            'ai-interview-widget',
+            'ai_interview_widget_geolocation_section'
         );
     }
 
@@ -5277,8 +5358,11 @@ public function enqueue_scripts() {
 $plugin_url = plugin_dir_url(__FILE__);
 
 if (!wp_script_is('ai-interview-widget', 'enqueued')) {
-wp_enqueue_style('ai-interview-widget', $plugin_url . 'ai-interview-widget.css', array(), '1.9.3');
-wp_enqueue_script('ai-interview-widget', $plugin_url . 'ai-interview-widget.js', array('jquery'), '1.9.3', true);
+wp_enqueue_style('ai-interview-widget', $plugin_url . 'ai-interview-widget.css', array(), '1.9.4');
+// Enqueue the geolocation module first
+wp_enqueue_script('aiw-geo', $plugin_url . 'aiw-geo.js', array(), '1.9.4', true);
+// Then the main widget script with dependency on geolocation module
+wp_enqueue_script('ai-interview-widget', $plugin_url . 'ai-interview-widget.js', array('jquery', 'aiw-geo'), '1.9.4', true);
 }
 
 $valid_audio_files = $this->validate_audio_files();
@@ -5393,7 +5477,13 @@ $widget_data = array_merge($widget_data, array(
 
 // Browser detection helpers
 'https_enabled' => is_ssl(),
-'user_agent' => isset($_SERVER['HTTP_USER_AGENT']) ? sanitize_text_field($_SERVER['HTTP_USER_AGENT']) : ''
+'user_agent' => isset($_SERVER['HTTP_USER_AGENT']) ? sanitize_text_field($_SERVER['HTTP_USER_AGENT']) : '',
+
+// Geolocation configuration
+'geolocation_enabled' => get_option('ai_interview_widget_enable_geolocation', true),
+'geolocation_cache_timeout' => get_option('ai_interview_widget_geolocation_cache_timeout', 24) * 60 * 60 * 1000, // Convert hours to milliseconds
+'geolocation_require_consent' => get_option('ai_interview_widget_geolocation_require_consent', false),
+'geolocation_debug_mode' => get_option('ai_interview_widget_geolocation_debug_mode', false)
 ));
 
 // DEBUG: Log the data being passed
@@ -6303,6 +6393,13 @@ public function language_section_callback() {
     echo '<p>Configure language support for the AI chat widget. The widget supports multiple languages for greetings, system prompts, and voice responses.</p>';
 }
 
+public function geolocation_section_callback() {
+    echo '<p>Configure geolocation settings for automatic language detection. This helps the widget choose the appropriate language based on the user\'s location while respecting privacy.</p>';
+    echo '<div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 12px; margin: 10px 0;">';
+    echo '<strong>Privacy Notice:</strong> When enabled, the widget may request the user\'s country information from a single, privacy-focused IP geolocation service to provide better language defaults. No personally identifiable information is stored or transmitted.';
+    echo '</div>';
+}
+
 public function default_language_field_callback() {
     $default_lang = get_option('ai_interview_widget_default_language', 'en');
     $supported_langs = json_decode(get_option('ai_interview_widget_supported_languages', ''), true);
@@ -6589,6 +6686,43 @@ public function supported_languages_field_callback() {
         });
     });
     </script>
+    <?php
+}
+
+// Geolocation callback functions
+public function enable_geolocation_field_callback() {
+    $enabled = get_option('ai_interview_widget_enable_geolocation', true);
+    ?>
+    <input type="checkbox" id="enable_geolocation" name="ai_interview_widget_enable_geolocation" value="1" <?php checked(1, $enabled); ?>>
+    <label for="enable_geolocation">Enable automatic country detection for language selection</label>
+    <p class="description">When enabled, the widget will attempt to detect the user's country via a single privacy-focused service to provide better language defaults. When disabled, only browser language and timezone detection will be used.</p>
+    <?php
+}
+
+public function geolocation_cache_timeout_field_callback() {
+    $timeout = get_option('ai_interview_widget_geolocation_cache_timeout', 24);
+    ?>
+    <input type="number" id="geolocation_cache_timeout" name="ai_interview_widget_geolocation_cache_timeout" 
+           value="<?php echo esc_attr($timeout); ?>" min="1" max="168" class="small-text">
+    <p class="description">How long to cache geolocation results (1-168 hours). Longer values reduce network requests but may be less accurate for traveling users.</p>
+    <?php
+}
+
+public function geolocation_require_consent_field_callback() {
+    $require_consent = get_option('ai_interview_widget_geolocation_require_consent', false);
+    ?>
+    <input type="checkbox" id="geolocation_require_consent" name="ai_interview_widget_geolocation_require_consent" value="1" <?php checked(1, $require_consent); ?>>
+    <label for="geolocation_require_consent">Require explicit user consent before geolocation attempts</label>
+    <p class="description">When enabled, users must actively consent to geolocation. When disabled, geolocation happens automatically (but can still be blocked by browser settings).</p>
+    <?php
+}
+
+public function geolocation_debug_mode_field_callback() {
+    $debug_mode = get_option('ai_interview_widget_geolocation_debug_mode', false);
+    ?>
+    <input type="checkbox" id="geolocation_debug_mode" name="ai_interview_widget_geolocation_debug_mode" value="1" <?php checked(1, $debug_mode); ?>>
+    <label for="geolocation_debug_mode">Enable debug logging for geolocation</label>
+    <p class="description">Shows detailed geolocation information in browser console. Only enable for troubleshooting.</p>
     <?php
 }
 

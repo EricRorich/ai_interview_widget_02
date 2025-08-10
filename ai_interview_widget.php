@@ -73,6 +73,7 @@ class AIInterviewWidget {
         // Add WordPress Customizer integration
         add_action('customize_register', array($this, 'register_customizer_controls'));
         add_action('customize_preview_init', array($this, 'enqueue_customizer_preview_script'));
+        add_action('customize_save_after', array($this, 'sync_customizer_to_plugin_settings'));
 
         // AJAX handlers for customizer
         add_action('wp_ajax_ai_interview_save_styles', array($this, 'save_custom_styles'));
@@ -2295,10 +2296,16 @@ class AIInterviewWidget {
         $hover_style = get_theme_mod('ai_play_button_hover_style', 'scale');
         $focus_color = get_theme_mod('ai_play_button_focus_color', '#00cfff');
         
+        // Canvas Shadow settings
+        $canvas_shadow_color = get_theme_mod('ai_canvas_shadow_color', '#00cfff');
+        $canvas_shadow_intensity = get_theme_mod('ai_canvas_shadow_intensity', 30);
+        
         // Only generate CSS if at least one Customizer setting exists
         $has_customizer_settings = get_theme_mod('ai_play_button_size') !== null || 
                                    get_theme_mod('ai_play_button_color') !== null ||
-                                   get_theme_mod('ai_play_button_pulse_enabled') !== null;
+                                   get_theme_mod('ai_play_button_pulse_enabled') !== null ||
+                                   get_theme_mod('ai_canvas_shadow_color') !== null ||
+                                   get_theme_mod('ai_canvas_shadow_intensity') !== null;
         
         if (!$has_customizer_settings) {
             wp_cache_set($cache_key, $css, 'ai_interview_widget', 3600); // Cache for 1 hour
@@ -2326,6 +2333,10 @@ class AIInterviewWidget {
         $icon_color = sanitize_hex_color($icon_color) ?: '#ffffff';
         $pulse_color = sanitize_hex_color($pulse_color) ?: '#00cfff';
         $focus_color = sanitize_hex_color($focus_color) ?: '#00cfff';
+        $canvas_shadow_color = sanitize_hex_color($canvas_shadow_color) ?: '#00cfff';
+        
+        // Validate and sanitize canvas shadow intensity
+        $canvas_shadow_intensity = max(0, min(100, intval($canvas_shadow_intensity)));
         
         // Button colors
         if (!empty($button_gradient_end)) {
@@ -2338,6 +2349,29 @@ class AIInterviewWidget {
         
         $css .= "    --play-button-icon-color: {$icon_color};\n";
         $css .= "    --play-button-border-color: {$pulse_color};\n";
+        
+        // Canvas shadow CSS variables
+        $css .= "    --aiw-shadow-color: {$canvas_shadow_color};\n";
+        $css .= "    --aiw-shadow-intensity: {$canvas_shadow_intensity};\n";
+        
+        // Generate canvas box-shadow property based on color and intensity
+        if ($canvas_shadow_intensity > 0) {
+            // Convert hex to RGB for shadow calculation
+            $hex = ltrim($canvas_shadow_color, '#');
+            $r = hexdec(substr($hex, 0, 2));
+            $g = hexdec(substr($hex, 2, 2));
+            $b = hexdec(substr($hex, 4, 2));
+            
+            // Calculate glow layers based on intensity
+            $glow1 = round($canvas_shadow_intensity * 0.33);
+            $glow2 = round($canvas_shadow_intensity * 0.66);
+            
+            // Create layered shadow effect
+            $canvas_box_shadow = "0 0 {$canvas_shadow_intensity}px {$glow1}px rgba({$r}, {$g}, {$b}, 0.5), 0 0 {$canvas_shadow_intensity}px {$glow2}px rgba({$r}, {$g}, {$b}, 0.3)";
+        } else {
+            $canvas_box_shadow = "none";
+        }
+        $css .= "    --canvas-box-shadow: {$canvas_box_shadow};\n";
         
         // Pulse settings with validation
         $pulse_duration = max(0.8, min(3.5, floatval($pulse_duration)));
@@ -7648,6 +7682,14 @@ public function register_customizer_controls($wp_customize) {
         'priority' => 160,
     ));
 
+    // Add Canvas/Background section
+    $wp_customize->add_section('ai_interview_canvas', array(
+        'title' => __('Canvas & Background', 'ai-interview-widget'),
+        'description' => __('Customize the widget canvas appearance, shadow effects, and background styling', 'ai-interview-widget'),
+        'panel' => 'ai_interview_widget',
+        'priority' => 5,
+    ));
+
     // Add Play-Button Designs section
     $wp_customize->add_section('ai_interview_play_button', array(
         'title' => __('Play-Button Designs', 'ai-interview-widget'),
@@ -7841,6 +7883,36 @@ public function register_customizer_controls($wp_customize) {
         'description' => __('Color of the accessibility focus outline', 'ai-interview-widget'),
         'section' => 'ai_interview_play_button',
     )));
+
+    // Canvas Shadow Color Control
+    $wp_customize->add_setting('ai_canvas_shadow_color', array(
+        'default' => isset($style_data['canvas_shadow_color']) ? $style_data['canvas_shadow_color'] : '#00cfff',
+        'sanitize_callback' => 'sanitize_hex_color',
+        'transport' => 'postMessage',
+    ));
+    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'ai_canvas_shadow_color', array(
+        'label' => __('Canvas Shadow Color', 'ai-interview-widget'),
+        'description' => __('Color of the canvas glow/shadow effect', 'ai-interview-widget'),
+        'section' => 'ai_interview_canvas',
+    )));
+
+    // Canvas Shadow Intensity Control
+    $wp_customize->add_setting('ai_canvas_shadow_intensity', array(
+        'default' => isset($style_data['canvas_shadow_intensity']) ? $style_data['canvas_shadow_intensity'] : 30,
+        'sanitize_callback' => array($this, 'sanitize_canvas_shadow_intensity'),
+        'transport' => 'postMessage',
+    ));
+    $wp_customize->add_control('ai_canvas_shadow_intensity', array(
+        'label' => __('Canvas Shadow Intensity', 'ai-interview-widget'),
+        'description' => __('Controls the strength/opacity of the canvas shadow effect (0 = no shadow, 100 = maximum)', 'ai-interview-widget'),
+        'section' => 'ai_interview_canvas',
+        'type' => 'range',
+        'input_attrs' => array(
+            'min' => 0,
+            'max' => 100,
+            'step' => 1,
+        ),
+    ));
 }
 
 // Enqueue Customizer live preview script
@@ -7883,6 +7955,73 @@ public function sanitize_pulse_spread($spread) {
 public function sanitize_hover_style($style) {
     $allowed_styles = array('scale', 'glow', 'none');
     return in_array($style, $allowed_styles) ? $style : 'scale';
+}
+
+public function sanitize_canvas_shadow_intensity($intensity) {
+    $intensity = absint($intensity);
+    if ($intensity < 0) $intensity = 0; // Handle edge case for negative values
+    return max(0, min(100, $intensity));
+}
+
+// Sync WordPress Customizer settings to plugin internal settings
+public function sync_customizer_to_plugin_settings() {
+    // Get current plugin style settings
+    $style_settings_json = get_option('ai_interview_widget_style_settings', '');
+    $style_settings = json_decode($style_settings_json, true);
+    if (!$style_settings) $style_settings = array();
+    
+    // Map WordPress Customizer settings to plugin settings
+    $customizer_to_plugin_map = array(
+        'ai_canvas_shadow_color' => 'canvas_shadow_color',
+        'ai_canvas_shadow_intensity' => 'canvas_shadow_intensity',
+        'ai_play_button_size' => 'play_button_size',
+        'ai_play_button_color' => 'play_button_color',
+        'ai_play_button_gradient_end' => 'play_button_gradient_end',
+        'ai_play_button_icon_color' => 'play_button_icon_color',
+        'ai_play_button_icon_style' => 'play_button_icon_style',
+        'ai_play_button_pulse_enabled' => 'play_button_disable_pulse', // Note: inverted logic
+        'ai_play_button_pulse_color' => 'play_button_border_color',
+        'ai_play_button_pulse_duration' => 'play_button_pulse_speed', // Note: needs conversion
+        'ai_play_button_pulse_spread' => 'play_button_shadow_intensity',
+        'ai_play_button_hover_style' => 'play_button_hover_style',
+        'ai_play_button_focus_color' => 'play_button_focus_color',
+        'ai_play_button_shape' => 'play_button_shape',
+    );
+    
+    $settings_updated = false;
+    
+    foreach ($customizer_to_plugin_map as $customizer_key => $plugin_key) {
+        $customizer_value = get_theme_mod($customizer_key);
+        
+        if ($customizer_value !== false && $customizer_value !== null) {
+            // Handle special conversions
+            if ($plugin_key === 'play_button_disable_pulse') {
+                // Invert boolean logic: pulse_enabled -> disable_pulse
+                $style_settings[$plugin_key] = !$customizer_value;
+            } elseif ($plugin_key === 'play_button_pulse_speed') {
+                // Convert duration to speed: speed = 2.0 / duration
+                $duration = floatval($customizer_value);
+                if ($duration > 0) {
+                    $style_settings[$plugin_key] = 2.0 / $duration;
+                }
+            } else {
+                // Direct mapping
+                $style_settings[$plugin_key] = $customizer_value;
+            }
+            $settings_updated = true;
+        }
+    }
+    
+    // Save updated settings if any changes were made
+    if ($settings_updated) {
+        $updated_json = json_encode($style_settings);
+        update_option('ai_interview_widget_style_settings', $updated_json);
+        
+        // Log for debugging
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('AI Interview Widget: Synced WordPress Customizer settings to plugin settings');
+        }
+    }
 }
 
 // TESTING PAGE - COMPLETE VERSION

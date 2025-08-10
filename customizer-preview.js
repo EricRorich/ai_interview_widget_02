@@ -189,6 +189,64 @@
             });
         });
 
+        // Canvas Shadow Color
+        wp.customize('ai_canvas_shadow_color', function(value) {
+            value.bind(function(newval) {
+                updateCSSProperty('--aiw-shadow-color', newval);
+                
+                // Update the canvas shadow immediately
+                const canvas = document.querySelector('#soundbar');
+                if (canvas) {
+                    // Get current intensity to rebuild shadow
+                    const intensity = wp.customize.value('ai_canvas_shadow_intensity')() || 30;
+                    updateCanvasShadow(newval, intensity);
+                }
+            });
+        });
+
+        // Canvas Shadow Intensity
+        wp.customize('ai_canvas_shadow_intensity', function(value) {
+            value.bind(function(newval) {
+                updateCSSProperty('--aiw-shadow-intensity', newval);
+                
+                // Update the canvas shadow immediately
+                const canvas = document.querySelector('#soundbar');
+                if (canvas) {
+                    // Get current color to rebuild shadow
+                    const color = wp.customize.value('ai_canvas_shadow_color')() || '#00cfff';
+                    updateCanvasShadow(color, newval);
+                }
+            });
+        });
+
+        // Helper function to update canvas shadow
+        function updateCanvasShadow(color, intensity) {
+            const canvas = document.querySelector('#soundbar');
+            if (!canvas) return;
+            
+            if (intensity === 0) {
+                // No shadow
+                canvas.style.boxShadow = 'none';
+                updateCSSProperty('--canvas-box-shadow', 'none');
+            } else {
+                // Convert hex to RGB for shadow calculation
+                const hex = color.replace('#', '');
+                const r = parseInt(hex.substr(0, 2), 16);
+                const g = parseInt(hex.substr(2, 2), 16);
+                const b = parseInt(hex.substr(4, 2), 16);
+                
+                // Calculate glow layers based on intensity
+                const glow1 = Math.round(intensity * 0.33);
+                const glow2 = Math.round(intensity * 0.66);
+                
+                // Create layered shadow effect
+                const shadowEffect = `0 0 ${intensity}px ${glow1}px rgba(${r}, ${g}, ${b}, 0.5), 0 0 ${intensity}px ${glow2}px rgba(${r}, ${g}, ${b}, 0.3)`;
+                
+                canvas.style.boxShadow = shadowEffect;
+                updateCSSProperty('--canvas-box-shadow', shadowEffect);
+            }
+        }
+
         // Icon Style
         wp.customize('ai_play_button_icon_style', function(value) {
             value.bind(function(newval) {

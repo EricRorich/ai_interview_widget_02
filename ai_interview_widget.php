@@ -9,73 +9,77 @@
 
 defined('ABSPATH') or die('No script kiddies please!');
 
+/**
+ * Main AI Interview Widget plugin class
+ * 
+ * Handles the complete functionality of the AI Interview Widget including:
+ * - Audio playback and visualization
+ * - Chat interface with AI backends
+ * - Voice input/output capabilities  
+ * - WordPress Customizer integration
+ * - Settings management and admin interface
+ * 
+ * @since 1.0.0
+ */
 class AIInterviewWidget {
-    
+
+    /**
+     * Plugin constructor - initialize hooks and actions
+     * 
+     * Sets up all WordPress hooks, shortcodes, AJAX handlers,
+     * and plugin initialization routines.
+     * 
+     * @since 1.0.0
+     */
     public function __construct() {
+        // Frontend scripts and shortcodes
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
         add_shortcode('ai_interview_widget', array($this, 'render_widget'));
 
-        // ==========================================
-        // 🔒 CRITICAL API HOOKS - FIXED VERSION
-        // Last working: 2025-08-03 18:37:12 by EricRorich
-        // ==========================================
+        // AJAX handlers for chat and voice functionality
         add_action('wp_ajax_ai_interview_chat', array($this, 'handle_ai_chat'));
         add_action('wp_ajax_nopriv_ai_interview_chat', array($this, 'handle_ai_chat'));
-        
-        // FIXED: Add missing TTS endpoints
         add_action('wp_ajax_ai_interview_tts', array($this, 'handle_tts_request'));
         add_action('wp_ajax_nopriv_ai_interview_tts', array($this, 'handle_tts_request'));
-        
-        // Test AJAX endpoint for debugging
         add_action('wp_ajax_ai_interview_test', array($this, 'handle_ajax_test'));
         add_action('wp_ajax_nopriv_ai_interview_test', array($this, 'handle_ajax_test'));
-        
-        // New voice TTS endpoint
         add_action('wp_ajax_ai_interview_voice_tts', array($this, 'handle_voice_tts'));
         add_action('wp_ajax_nopriv_ai_interview_voice_tts', array($this, 'handle_voice_tts'));
 
-        // Add action to ensure nonce is available
+        // Nonce and security
         add_action('wp_footer', array($this, 'add_nonce_to_footer'));
-        // ==========================================
 
-        // FIXED: Ensure model setting is valid on initialization
+        // Plugin initialization hooks
         add_action('init', array($this, 'validate_model_setting'));
-
-        // Enable error logging
         add_action('init', array($this, 'enable_error_logging'));
-        
-        // Add MIME type support for MP3 files
+        // File handling and MIME types
         add_filter('upload_mimes', array($this, 'add_mp3_mime_type'));
         add_filter('wp_check_filetype_and_ext', array($this, 'fix_mp3_mime_type'), 10, 4);
-        
-        // Add rewrite rule for direct MP3 access
+
+        // URL rewriting for audio files
         add_action('init', array($this, 'add_audio_rewrite_rules'));
         add_filter('query_vars', array($this, 'add_audio_query_vars'));
         add_action('template_redirect', array($this, 'handle_audio_requests'));
 
-        // Add main admin menu
+        // Admin interface
         add_action('admin_menu', array($this, 'add_admin_menu'), 9);
         add_action('admin_init', array($this, 'register_settings'));
-        
-        // Add settings link to plugin page
         add_filter('plugin_action_links_' . plugin_basename(__FILE__), array($this, 'add_settings_link'));
-        
-        // Remove any old submenu hooks if they exist
         add_action('admin_init', array($this, 'remove_old_menu_hooks'));
-        
-        // Add activation hook to flush rewrite rules
+
+        // Plugin lifecycle hooks
         register_activation_hook(__FILE__, array($this, 'plugin_activation'));
         register_deactivation_hook(__FILE__, array($this, 'plugin_deactivation'));
 
-        // Add custom CSS to frontend
+        // Frontend customization
         add_action('wp_head', array($this, 'output_custom_css'));
 
-        // Add WordPress Customizer integration
+        // WordPress Customizer integration
         add_action('customize_register', array($this, 'register_customizer_controls'));
         add_action('customize_preview_init', array($this, 'enqueue_customizer_preview_script'));
         add_action('customize_save_after', array($this, 'sync_customizer_to_plugin_settings'));
 
-        // AJAX handlers for customizer
+        // AJAX handlers for customizer functionality
         add_action('wp_ajax_ai_interview_save_styles', array($this, 'save_custom_styles'));
         add_action('wp_ajax_ai_interview_save_content', array($this, 'save_custom_content'));
         add_action('wp_ajax_ai_interview_reset_styles', array($this, 'reset_custom_styles'));
@@ -83,8 +87,8 @@ class AIInterviewWidget {
         add_action('wp_ajax_ai_interview_upload_audio', array($this, 'handle_audio_upload'));
         add_action('wp_ajax_ai_interview_remove_audio', array($this, 'handle_audio_removal'));
         add_action('wp_ajax_ai_interview_save_preset', array($this, 'save_design_preset'));
-        
-        // Language synchronization endpoints
+
+        // Language management AJAX handlers
         add_action('wp_ajax_ai_interview_update_language_sections', array($this, 'handle_update_language_sections'));
         add_action('wp_ajax_ai_interview_apply_languages', array($this, 'handle_apply_languages'));
         add_action('wp_ajax_ai_interview_cancel_pending_languages', array($this, 'handle_cancel_pending_languages'));
@@ -92,21 +96,27 @@ class AIInterviewWidget {
         add_action('wp_ajax_ai_interview_load_default_preset', array($this, 'load_default_preset'));
         add_action('wp_ajax_ai_interview_delete_preset', array($this, 'delete_design_preset'));
         add_action('wp_ajax_ai_interview_get_presets', array($this, 'get_design_presets'));
-        
+
         // Preview system AJAX handlers
         add_action('wp_ajax_ai_interview_render_preview', array($this, 'handle_preview_render'));
         add_action('wp_ajax_ai_interview_update_preview', array($this, 'handle_preview_update'));
-        
-        // Log successful AJAX handler registration
+
+        // Debug logging
         add_action('init', array($this, 'log_ajax_handlers_status'));
     }
 
     /**
      * Static method for plugin uninstall cleanup
+     * 
+     * Removes all plugin data including custom tables, options,
+     * and scheduled events when the plugin is uninstalled.
+     * 
+     * @since 1.0.0
+     * @static
      */
     public static function plugin_uninstall() {
         global $wpdb;
-        
+
         // Remove custom table
         $table_name = $wpdb->prefix . 'ai_interview_widget_analytics';
         $wpdb->query("DROP TABLE IF EXISTS $table_name");
@@ -142,7 +152,13 @@ class AIInterviewWidget {
     }
 
     /**
-     * Log the status of AJAX handlers to help debug missing handler issues
+     * Log the status of AJAX handlers for debugging
+     * 
+     * Outputs debug information about registered AJAX handlers
+     * to help troubleshoot missing endpoint issues. Only logs
+     * when WP_DEBUG is enabled.
+     * 
+     * @since 1.9.0
      */
     public function log_ajax_handlers_status() {
         if (defined('WP_DEBUG') && WP_DEBUG) {
@@ -155,11 +171,16 @@ class AIInterviewWidget {
     }
 
     /**
-     * Test AJAX endpoint - for debugging purposes
+     * AJAX handler for testing endpoint functionality
+     * 
+     * Provides a simple test endpoint to verify AJAX handlers
+     * are working correctly for debugging purposes.
+     * 
+     * @since 1.9.0
      */
     public function handle_ajax_test() {
         error_log('AI Interview Widget: Test AJAX endpoint called at 2025-08-03 18:37:12 UTC');
-        
+
         wp_send_json_success(array(
             'message' => 'AJAX endpoint working correctly!',
             'timestamp' => current_time('Y-m-d H:i:s'),
@@ -169,19 +190,41 @@ class AIInterviewWidget {
         ));
     }
 
-    // Helper function for PHP 7.4 compatibility
+    /**
+     * Helper function for PHP 7.4 compatibility
+     * 
+     * Checks if a string starts with a given substring.
+     * This provides compatibility for str_starts_with() on older PHP versions.
+     * 
+     * @since 1.0.0
+     * @param string $haystack The string to search in
+     * @param string $needle The substring to search for
+     * @return bool True if haystack starts with needle, false otherwise
+     */
     private function starts_with($haystack, $needle) {
         return substr($haystack, 0, strlen($needle)) === $needle;
     }
 
     /**
-     * FIXED: Validate model setting on plugin initialization
+     * Validate model setting on plugin initialization
+     * 
+     * Ensures that the selected AI model is valid and available.
+     * Called during plugin initialization to prevent configuration errors.
+     * 
+     * @since 1.9.0
      */
     public function validate_model_setting() {
         $this->ensure_valid_model_setting();
     }
 
-    // Enable error logging method
+    /**
+     * Enable error logging for debugging
+     * 
+     * Sets up error logging if WP_DEBUG_LOG is not already defined.
+     * Helps with troubleshooting plugin issues in production.
+     * 
+     * @since 1.0.0
+     */
     public function enable_error_logging() {
         if (!defined('WP_DEBUG_LOG')) {
             ini_set('log_errors', 1);
@@ -189,7 +232,14 @@ class AIInterviewWidget {
         }
     }
 
-    // Add audio rewrite rules
+    /**
+     * Add rewrite rules for audio file access
+     * 
+     * Creates clean URLs for audio files used by the widget,
+     * enabling direct access to greeting and TTS audio files.
+     * 
+     * @since 1.0.0
+     */
     public function add_audio_rewrite_rules() {
         add_rewrite_rule(
             '^ai-widget-audio/([^/]+)/?$',
@@ -198,13 +248,29 @@ class AIInterviewWidget {
         );
     }
 
-    // Add audio query vars
+    /**
+     * Add custom query variables for audio handling
+     * 
+     * Registers the ai_widget_audio query variable for use
+     * in audio file rewrite rules.
+     * 
+     * @since 1.0.0
+     * @param array $vars Existing query variables
+     * @return array Modified query variables array
+     */
     public function add_audio_query_vars($vars) {
         $vars[] = 'ai_widget_audio';
         return $vars;
     }
 
-    // Handle audio requests
+    /**
+     * Handle audio file requests
+     * 
+     * Processes requests for audio files through the custom URL structure,
+     * providing secure access to greeting and TTS audio files.
+     * 
+     * @since 1.0.0
+     */
     public function handle_audio_requests() {
         $audio_file = get_query_var('ai_widget_audio');
         if (!$audio_file) return;

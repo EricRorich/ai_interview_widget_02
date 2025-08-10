@@ -1,6 +1,13 @@
 /**
  * AI Interview Widget - WordPress Customizer Live Preview Script
- * This script enables live preview of play button changes in the WordPress Customizer
+ * 
+ * Enables real-time preview of play button and canvas customizations
+ * in the WordPress Customizer interface. Updates CSS properties and
+ * DOM elements dynamically as settings change.
+ * 
+ * @version 1.9.4
+ * @author Eric Rorich
+ * @since 1.0.0
  */
 
 (function($) {

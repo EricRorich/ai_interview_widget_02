@@ -66,19 +66,88 @@
     position: relative !important;
 }
 
-#soundbar {
+/* === CANVAS CONTAINER - STRUCTURAL SEPARATION === */
+.canvas-container {
+    position: relative !important;
     display: block !important;
     margin: 20px auto !important;
+    width: 100% !important;
+    max-width: 800px !important;
+    height: 500px !important;
+    z-index: 15 !important;
+}
+
+#soundbar {
+    display: block !important;
     background: var(--canvas-background-color, #0a0a1a) !important;
     border-radius: var(--canvas-border-radius, 8px) !important;
     box-shadow: var(--canvas-box-shadow, 0 0 30px 10px var(--aiw-shadow-color), 0 0 50px 20px rgba(0, 102, 255, 0.3));
     width: 100% !important;
-    max-width: 800px !important;
-    height: 500px !important;
+    height: 100% !important;
     visibility: visible !important;
-    z-index: 15 !important;
-    position: relative !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
     transform: translateZ(0) !important;
+}
+
+/* === DEDICATED PLAY BUTTON CONTAINER - STRUCTURALLY SEPARATED === */
+.play-button-container {
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    z-index: 20 !important;
+    pointer-events: all !important;
+    transition: opacity 0.3s ease, visibility 0.3s ease !important;
+}
+
+.play-button-container.hidden {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+/* === DEDICATED PLAY BUTTON STYLING === */
+.play-button {
+    width: var(--play-button-size, 100px) !important;
+    height: var(--play-button-size, 100px) !important;
+    border-radius: 50% !important;
+    background: var(--play-button-color, #00cfff) !important;
+    border: var(--play-button-border-width, 2px) solid var(--play-button-border-color, #00cfff) !important;
+    color: var(--play-button-icon-color, #ffffff) !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: calc(var(--play-button-size, 100px) * 0.4) !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 0 var(--play-button-shadow-intensity, 20px) var(--play-button-border-color, #00cfff) !important;
+    position: relative !important;
+    overflow: hidden !important;
+    backdrop-filter: blur(5px) !important;
+    outline: none !important;
+}
+
+.play-button:hover {
+    transform: scale(1.1) !important;
+    box-shadow: 0 0 calc(var(--play-button-shadow-intensity, 20px) * 1.5) var(--play-button-border-color, #00cfff) !important;
+}
+
+.play-button:active {
+    transform: scale(0.95) !important;
+}
+
+.play-button:focus {
+    outline: 2px solid var(--play-button-border-color, #00cfff) !important;
+    outline-offset: 4px !important;
+}
+
+/* Play button icon */
+.play-icon {
+    display: block !important;
+    line-height: 1 !important;
+    margin-left: 4px !important; /* Slight offset to center triangle visually */
 }
 
 .ai-interview-controls {
@@ -758,29 +827,11 @@
     }
 }
 
-/* === PLAY BUTTON PULSE ANIMATIONS - RESTRICTED SCOPE === */
-/* Create a virtual overlay for play button pulse that doesn't affect canvas shadow */
-#soundbar::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    pointer-events: none;
-    border-radius: inherit;
-    z-index: 1;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-/* Only show pulse overlay when play button is visible and pulse is enabled */
-#soundbar.show-play-button:not([data-disable-pulse="true"])::before {
-    opacity: 1;
-}
+/* === PLAY BUTTON PULSE ANIMATIONS - SEPARATED STRUCTURE === */
+/* Pulse animations now apply directly to the dedicated play button */
 
 /* Breathing-Pulse Animation - Smooth scale breathing effect */
-@keyframes breathing-pulse {
+@keyframes play-button-breathing-pulse {
     0%, 100% { 
         transform: scale(1); 
         opacity: 1;
@@ -791,51 +842,64 @@
     }
 }
 
-/* Dot-Pulse Animation - Subtle pulsing with glow effect */
-@keyframes dots-pulse {
+/* Dot-Pulse Animation - Pulsing glow effect */
+@keyframes play-button-dots-pulse {
     0%, 100% { 
-        transform: scale(1);
-        box-shadow: 0 0 20px var(--aiw-shadow-color);
+        box-shadow: 0 0 var(--play-button-shadow-intensity, 20px) var(--play-button-border-color, #00cfff);
     }
     25% { 
-        transform: scale(1.02);
-        box-shadow: 0 0 25px var(--aiw-shadow-color);
+        box-shadow: 0 0 calc(var(--play-button-shadow-intensity, 20px) * 1.25) var(--play-button-border-color, #00cfff);
     }
     50% { 
-        transform: scale(1.05);
-        box-shadow: 0 0 30px var(--aiw-shadow-color);
+        box-shadow: 0 0 calc(var(--play-button-shadow-intensity, 20px) * 1.5) var(--play-button-border-color, #00cfff);
     }
     75% { 
-        transform: scale(1.02);
-        box-shadow: 0 0 25px var(--aiw-shadow-color);
+        box-shadow: 0 0 calc(var(--play-button-shadow-intensity, 20px) * 1.25) var(--play-button-border-color, #00cfff);
     }
 }
 
-/* Apply pulse animations only to the pseudo-element overlay, not the canvas itself */
-#soundbar.pulse-breathing.show-play-button:not([data-disable-pulse="true"])::before {
-    animation: breathing-pulse calc(2.0s / var(--play-button-pulse-speed, 1)) infinite ease-in-out;
+/* Apply pulse animations to the dedicated play button when enabled */
+.play-button-container:not(.hidden) .play-button:not([data-disable-pulse="true"]) {
+    animation: play-button-breathing-pulse calc(2.0s / var(--play-button-pulse-speed, 1)) infinite ease-in-out,
+               play-button-dots-pulse calc(1.8s / var(--play-button-pulse-speed, 1)) infinite ease-in-out;
 }
 
-#soundbar.pulse-dots.show-play-button:not([data-disable-pulse="true"])::before {
-    animation: dots-pulse calc(1.8s / var(--play-button-pulse-speed, 1)) infinite ease-in-out;
-}
-
-#soundbar.pulse-breathing.pulse-dots.show-play-button:not([data-disable-pulse="true"])::before {
-    animation: breathing-pulse calc(2.0s / var(--play-button-pulse-speed, 1)) infinite ease-in-out, 
-               dots-pulse calc(1.8s / var(--play-button-pulse-speed, 1)) infinite ease-in-out;
-}
-
-/* Ensure the main canvas never pulses - only the overlay */
-#soundbar.pulse-breathing,
-#soundbar.pulse-dots,
-#soundbar.pulse-effect {
+/* Disable pulse animations when disabled by customizer or user preference */
+.play-button[data-disable-pulse="true"],
+.play-button-container[data-disable-pulse="true"] .play-button {
     animation: none !important;
-    transform: translateZ(0) !important;
 }
 
-/* Legacy support - convert old pulse classes to new overlay system */
-.pulse-effect {
-    /* Legacy class - now handled by ::before pseudo-element */
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+    .play-button {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+/* Legacy pulse system cleanup - remove old canvas-based pulse */
+#soundbar::before {
+    display: none !important;
+    opacity: 0 !important;
+}
+
+#soundbar.show-play-button::before,
+#soundbar.pulse-breathing::before,
+#soundbar.pulse-dots::before,
+#soundbar.pulse-effect::before {
+    display: none !important;
+    opacity: 0 !important;
+    animation: none !important;
+}
+
+/* Remove old breathing-pulse and dots-pulse animations from canvas */
+@keyframes breathing-pulse {
+    /* Legacy animation - now unused */
+}
+
+@keyframes dots-pulse {
+    /* Legacy animation - now unused */
 }
 
 /* === ELEMENTOR COMPATIBILITY === */
@@ -860,9 +924,19 @@
         min-height: 400px !important;
     }
     
-    #soundbar {
+    .canvas-container {
         height: 400px !important;
         margin: 15px auto !important;
+    }
+    
+    #soundbar {
+        height: 400px !important;
+    }
+    
+    .play-button {
+        width: calc(var(--play-button-size, 100px) * 0.8) !important;
+        height: calc(var(--play-button-size, 100px) * 0.8) !important;
+        font-size: calc(var(--play-button-size, 100px) * 0.32) !important;
     }
     
     #audio-visualizer {
@@ -947,11 +1021,21 @@
         max-width: 100% !important;
     }
     
-    #soundbar {
+    .canvas-container {
         height: 300px !important;
         margin: 10px auto !important;
+    }
+    
+    #soundbar {
+        height: 300px !important;
         border-radius: 6px !important;
         box-shadow: 0 0 20px 5px rgba(0, 207, 255, 0.4), 0 0 30px 10px rgba(0, 102, 255, 0.2) !important;
+    }
+    
+    .play-button {
+        width: calc(var(--play-button-size, 100px) * 0.6) !important;
+        height: calc(var(--play-button-size, 100px) * 0.6) !important;
+        font-size: calc(var(--play-button-size, 100px) * 0.24) !important;
     }
     
     #audio-visualizer {
@@ -1106,9 +1190,19 @@
         min-height: 300px !important;
     }
     
-    #soundbar {
+    .canvas-container {
         height: 250px !important;
         margin: 8px auto !important;
+    }
+    
+    #soundbar {
+        height: 250px !important;
+    }
+    
+    .play-button {
+        width: calc(var(--play-button-size, 100px) * 0.5) !important;
+        height: calc(var(--play-button-size, 100px) * 0.5) !important;
+        font-size: calc(var(--play-button-size, 100px) * 0.2) !important;
     }
     
     #audio-visualizer {

@@ -347,20 +347,26 @@ document.addEventListener('DOMContentLoaded', function() {
         
         debug("Voice features:", { voiceEnabled, hasElevenLabsKey });
 
-        // ELEMENT HOOKUP
+        // ELEMENT HOOKUP - UPDATED FOR STRUCTURAL SEPARATION
         const audio = document.getElementById('aiEricGreeting');
         const canvas = document.getElementById('soundbar');
         const pauseBtn = document.getElementById('pauseBtn');
         const skipBtn = document.getElementById('skipBtn');
         const chatInterface = document.getElementById('chatInterface');
         const pauseBtnContainer = pauseBtn ? pauseBtn.closest('.ai-interview-controls') : null;
+        
+        // NEW: Dedicated play button elements (structurally separated)
+        const playButtonContainer = document.getElementById('playButtonContainer');
+        const playButton = document.getElementById('playButton');
 
         debug("Elements found:", {
             canvas: !!canvas, 
             audio: !!audio, 
             pauseBtn: !!pauseBtn,
             skipBtn: !!skipBtn,
-            chatInterface: !!chatInterface
+            chatInterface: !!chatInterface,
+            playButtonContainer: !!playButtonContainer,
+            playButton: !!playButton
         });
 
         if (!canvas || !audio || !pauseBtn || !skipBtn || !chatInterface) {
@@ -373,6 +379,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 chatInterface: !chatInterface
             });
             // Don't return, try to continue with what we have
+        }
+        
+        if (!playButtonContainer || !playButton) {
+            console.warn("New separated play button elements not found - falling back to legacy mode");
+            debug("Play button elements:", {
+                playButtonContainer: !!playButtonContainer,
+                playButton: !!playButton
+            });
         }
 
         // Voice control elements (will be available after chat interface is shown)
@@ -422,10 +436,8 @@ document.addEventListener('DOMContentLoaded', function() {
             resizeTimeout = setTimeout(() => {
                 if (canvas) {
                     updateCanvasSize();
-                    if (showPlayButton && !fadingOut) {
-                        drawPlayButton();
-                    }
                 }
+                // Play button sizing is now handled by CSS variables, no manual redraw needed
             }, 250);
         }
         
@@ -451,28 +463,9 @@ document.addEventListener('DOMContentLoaded', function() {
         let audioSourceSet = false;
         let currentAudioSrc = '';
 
-        // Play button variables with responsive sizing and CSS variable support
+        // Play button state variables - UPDATED FOR STRUCTURAL SEPARATION
         let showPlayButton = true;
-        let fadingOut = false;
-        let fadeAlpha = 1;
-
-        // Get button size from CSS custom property with fallback to responsive defaults
-        function getButtonSize() {
-            const cssSize = getCSSVariable('--aiw-btn-size', '');
-            if (cssSize && !isNaN(parseFloat(cssSize))) {
-                return parseFloat(cssSize);
-            }
-            // Fallback to responsive defaults
-            return isMobile ? 60 : isTablet ? 80 : 100;
-        }
-
-        // Use function call instead of const to get dynamic sizing
-        let buttonRadius = getButtonSize();
-        const buttonPulseMin = 1.0;
-        const buttonPulseMax = isMobile ? 1.1 : 1.15;
-        let pulseDirection = true;
-        let pulseScale = buttonPulseMin;
-        let lastPulseTime = performance.now();
+        let playButtonEnabled = true; // Whether the play button functionality is active
 
         // Chat elements
         const chatHistory = document.getElementById('chatHistory');
@@ -1809,336 +1802,151 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        function drawPlayButton() {
-            if (!ctx || !canvas) return;
-
-            ctx.fillStyle = getCanvasBackgroundColor();
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            drawProgressBar();
-
-            const now = performance.now();
-            const dt = (now - lastPulseTime) / 1000;
-            lastPulseTime = now;
-
-            // Get customization settings from CSS variables with robust fallback
-            const design = getCSSVariable('--play-button-design', 'classic').replace(/['"]/g, '');
+        // --- SEPARATED PLAY BUTTON MANAGEMENT FUNCTIONS ---
+        
+        /**
+         * Initialize the separated play button with proper styling and event handling
+         */
+        function initializeSeparatedPlayButton() {
+            if (!playButton || !playButtonContainer) {
+                debug("Separated play button elements not found, skipping initialization");
+                return;
+            }
             
-            // Get dynamic button size - check both old and new variable names for compatibility
-            let customSize = parseInt(getCSSVariable('--aiw-btn-size', '')) || 
-                            parseInt(getCSSVariable('--play-button-size', '')) || 
-                            getButtonSize();
+            debug("Initializing separated play button");
             
-            const pulseSpeedMultiplier = parseFloat(getCSSVariable('--play-button-pulse-speed', '1.0')) || 1.0;
+            // Apply CSS custom properties to the play button
+            applyPlayButtonStyling();
+            
+            // Set up event listeners for the new play button
+            setupPlayButtonEvents();
+            
+            // Apply pulse effects if enabled
+            applyPlayButtonPulse();
+            
+            // Show the play button container
+            showSeparatedPlayButton();
+        }
+        
+        /**
+         * Apply styling from CSS custom properties to the play button
+         */
+        function applyPlayButtonStyling() {
+            if (!playButton) return;
+            
+            // Get disable pulse setting
             const disablePulse = getCSSVariable('--play-button-disable-pulse', 'false').toLowerCase() === 'true';
             
-            // Debug logging for pulse effect and button size (only in development)
-            if (DEBUG) {
-                console.log('Play Button Debug:', {
-                    design,
-                    customSize,
-                    originalButtonRadius: buttonRadius,
-                    pulseSpeedMultiplier,
-                    disablePulse,
-                    cssVarBtnSize: getCSSVariable('--aiw-btn-size', 'NOT_SET'),
-                    cssVarPlayBtnSize: getCSSVariable('--play-button-size', 'NOT_SET'),
-                    pulseScale,
-                    cssVarPulseSpeed: getCSSVariable('--play-button-pulse-speed', 'NOT_SET'),
-                    cssVarDisablePulse: getCSSVariable('--play-button-disable-pulse', 'NOT_SET')
-                });
+            // Set data attribute for CSS targeting
+            playButton.setAttribute('data-disable-pulse', disablePulse ? 'true' : 'false');
+            
+            debug("Applied play button styling:", { disablePulse });
+        }
+        
+        /**
+         * Set up event listeners for the separated play button
+         */
+        function setupPlayButtonEvents() {
+            if (!playButton) return;
+            
+            // Handle click events
+            playButton.addEventListener('click', handleSeparatedPlayButtonClick);
+            
+            // Handle keyboard accessibility
+            playButton.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    handleSeparatedPlayButtonClick();
+                }
+            });
+            
+            // Handle focus/blur for accessibility
+            playButton.addEventListener('focus', () => {
+                debug("Play button focused");
+            });
+            
+            playButton.addEventListener('blur', () => {
+                debug("Play button blurred");
+            });
+            
+            debug("Play button event listeners set up");
+        }
+        
+        /**
+         * Handle click on the separated play button
+         */
+        async function handleSeparatedPlayButtonClick() {
+            if (!playButtonEnabled) {
+                debug("Play button disabled, ignoring click");
+                return;
             }
             
-            // Use the custom size as current button radius
-            const currentButtonRadius = customSize;
-
-            // Update pulse animation - ensure it works by default
-            if (!disablePulse) {
-                const pulseSpeed = 0.15 * pulseSpeedMultiplier;
-                if (pulseDirection) {
-                    pulseScale += dt * pulseSpeed;
-                    if (pulseScale > buttonPulseMax) pulseDirection = false;
-                } else {
-                    pulseScale -= dt * pulseSpeed;
-                    if (pulseScale < buttonPulseMin) pulseDirection = true;
-                }
-                pulseScale = Math.max(buttonPulseMin, Math.min(buttonPulseMax, pulseScale));
+            debug("Separated play button clicked");
+            
+            // Disable the button to prevent multiple clicks
+            playButtonEnabled = false;
+            
+            // Hide the play button with smooth transition
+            hideSeparatedPlayButton();
+            
+            // Proceed with the existing audio logic
+            await handlePlayButtonClick();
+        }
+        
+        /**
+         * Show the separated play button
+         */
+        function showSeparatedPlayButton() {
+            if (!playButtonContainer) return;
+            
+            playButtonContainer.classList.remove('hidden');
+            showPlayButton = true;
+            playButtonEnabled = true;
+            
+            debug("Separated play button shown");
+        }
+        
+        /**
+         * Hide the separated play button
+         */
+        function hideSeparatedPlayButton() {
+            if (!playButtonContainer) return;
+            
+            playButtonContainer.classList.add('hidden');
+            showPlayButton = false;
+            playButtonEnabled = false;
+            
+            debug("Separated play button hidden");
+        }
+        
+        /**
+         * Apply pulse effects to the separated play button
+         */
+        function applyPlayButtonPulse() {
+            if (!playButton) return;
+            
+            const disablePulse = getCSSVariable('--play-button-disable-pulse', 'false').toLowerCase() === 'true';
+            const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            
+            if (disablePulse || prefersReducedMotion) {
+                playButton.setAttribute('data-disable-pulse', 'true');
+                debug("Play button pulse disabled");
             } else {
-                pulseScale = 1.0; // Static button
+                playButton.setAttribute('data-disable-pulse', 'false');
+                debug("Play button pulse enabled");
             }
-            
-            // Ensure pulse effect is always visible - force enable if variables aren't properly set
-            if (pulseSpeedMultiplier === 1.0 && !disablePulse && Math.abs(pulseScale - 1.0) < 0.01) {
-                // Force restart pulse animation if it seems stuck
-                pulseScale = buttonPulseMin;
-                pulseDirection = true;
-                if (DEBUG) {
-                    console.log('Pulse effect restarted due to potential CSS variable loading issue');
-                }
-            }
-
-            const centerX = canvas.width / 2;
-            const centerY = canvas.height / 2;
-
-            // Draw based on selected design
-            switch (design) {
-                case 'minimalist':
-                    drawMinimalistButton(centerX, centerY, currentButtonRadius, pulseScale, dt);
-                    break;
-                case 'futuristic':
-                    drawFuturisticButton(centerX, centerY, currentButtonRadius, pulseScale, dt);
-                    break;
-                case 'classic':
-                default:
-                    drawClassicButton(centerX, centerY, currentButtonRadius, pulseScale, dt);
-                    break;
-            }
-
-            if (fadingOut) {
-                fadeAlpha -= dt / 0.7;
-                if (fadeAlpha <= 0) {
-                    fadeAlpha = 0;
-                    showPlayButton = false;
-                    if (canvas) {
-                        canvas.style.cursor = "default";
-                        // Only remove pulse effect classes when button is clicked/disappearing
-                        removePulseEffects();
-                    }
-                    
-                    handlePlayButtonClick();
+        }
+        
+        /**
+         * Update play button styling based on current CSS variables
+         */
+        function updatePlayButtonStyling() {
+            applyPlayButtonStyling();
+            applyPlayButtonPulse();
+        }
                     return;
                 }
             }
-
-            if (showPlayButton) {
-                ensurePlayButtonPulse(); // Ensure pulse classes are always active
-                requestAnimationFrame(drawPlayButton);
-            }
-        }
-
-        // Classic Design - Original radial gradient with particles
-        function drawClassicButton(centerX, centerY, buttonRadius, pulseScale, dt) {
-            const customColor = getComputedStyle(document.documentElement).getPropertyValue('--play-button-color') || "#00ffff";
-            const gradientStart = getComputedStyle(document.documentElement).getPropertyValue('--play-button-gradient-start') || "#00ffff";
-            const gradientEnd = getComputedStyle(document.documentElement).getPropertyValue('--play-button-gradient-end') || "#001a33";
-            const shadowIntensity = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--play-button-shadow-intensity')) || 40;
-            const iconColor = getComputedStyle(document.documentElement).getPropertyValue('--play-button-icon-color') || "#ffffff";
-
-            const innerRadius = Math.max(1, buttonRadius * 0.3 * pulseScale);
-            const outerRadius = Math.max(1, buttonRadius * pulseScale);
-
-            try {
-                const grad = ctx.createRadialGradient(
-                    centerX, centerY, innerRadius,
-                    centerX, centerY, outerRadius
-                );
-                grad.addColorStop(0, gradientStart);
-                grad.addColorStop(0.5, customColor);
-                grad.addColorStop(1, gradientEnd);
-
-                ctx.save();
-                ctx.globalAlpha = fadeAlpha;
-                ctx.shadowColor = customColor;
-                ctx.shadowBlur = isMobile ? shadowIntensity * 0.5 : isTablet ? shadowIntensity * 0.75 : shadowIntensity;
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, outerRadius, 0, 2 * Math.PI);
-                ctx.fillStyle = grad;
-                ctx.fill();
-                ctx.closePath();
-
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, Math.max(1, buttonRadius * 0.7 * pulseScale), 0, 2 * Math.PI);
-                ctx.strokeStyle = "rgba(255,255,255,0.1)";
-                ctx.lineWidth = isMobile ? 1 : 2;
-                ctx.stroke();
-                ctx.closePath();
-
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, Math.max(1, outerRadius - (isMobile ? 3 : 5)), 0, 2 * Math.PI);
-                ctx.strokeStyle = customColor + "4D"; // 30% opacity
-                ctx.lineWidth = isMobile ? 1 : 2;
-                ctx.stroke();
-                ctx.closePath();
-                ctx.restore();
-
-                // Draw play triangle
-                drawPlayTriangle(centerX, centerY, buttonRadius, iconColor);
-
-                if (showPlayButton && !fadingOut) {
-                    drawParticles(centerX, centerY, outerRadius);
-                }
-            } catch (err) {
-                console.error("Error drawing classic play button:", err);
-            }
-        }
-
-        // Minimalist Design - Solid color with subtle shadow
-        function drawMinimalistButton(centerX, centerY, buttonRadius, pulseScale, dt) {
-            const customColor = getComputedStyle(document.documentElement).getPropertyValue('--play-button-color') || "#00cfff";
-            const shadowIntensity = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--play-button-shadow-intensity')) || 20;
-            const iconColor = getComputedStyle(document.documentElement).getPropertyValue('--play-button-icon-color') || "#ffffff";
-
-            const outerRadius = Math.max(1, buttonRadius * pulseScale);
-
-            try {
-                ctx.save();
-                ctx.globalAlpha = fadeAlpha;
-                
-                // Subtle shadow
-                ctx.shadowColor = customColor;
-                ctx.shadowBlur = shadowIntensity;
-                ctx.shadowOffsetX = 0;
-                ctx.shadowOffsetY = 4;
-
-                // Main circle - solid color
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, outerRadius, 0, 2 * Math.PI);
-                ctx.fillStyle = customColor;
-                ctx.fill();
-                ctx.closePath();
-
-                // Inner circle - slightly darker
-                ctx.shadowColor = 'transparent';
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, outerRadius * 0.85, 0, 2 * Math.PI);
-                ctx.strokeStyle = "rgba(0,0,0,0.1)";
-                ctx.lineWidth = 2;
-                ctx.stroke();
-                ctx.closePath();
-
-                ctx.restore();
-
-                // Draw play triangle
-                drawPlayTriangle(centerX, centerY, buttonRadius, iconColor);
-
-                if (showPlayButton && !fadingOut) {
-                    drawParticles(centerX, centerY, outerRadius);
-                }
-            } catch (err) {
-                console.error("Error drawing minimalist play button:", err);
-            }
-        }
-
-        // Futuristic Design - Glowing neon border with center icon
-        function drawFuturisticButton(centerX, centerY, buttonRadius, pulseScale, dt) {
-            const borderColor = getComputedStyle(document.documentElement).getPropertyValue('--play-button-border-color') || "#00cfff";
-            const neonIntensity = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--play-button-neon-intensity')) || 30;
-            const iconColor = getComputedStyle(document.documentElement).getPropertyValue('--play-button-icon-color') || "#ffffff";
-
-            const outerRadius = Math.max(1, buttonRadius * pulseScale);
-            const time = Date.now() / 1000;
-
-            try {
-                ctx.save();
-                ctx.globalAlpha = fadeAlpha;
-
-                // Outer glow rings
-                for (let i = 0; i < 3; i++) {
-                    const glowRadius = outerRadius + (i * 15);
-                    const glowAlpha = (0.3 - i * 0.1) * (0.7 + Math.sin(time * 2 + i) * 0.3);
-                    
-                    ctx.beginPath();
-                    ctx.arc(centerX, centerY, glowRadius, 0, 2 * Math.PI);
-                    ctx.strokeStyle = borderColor + Math.floor(glowAlpha * 255).toString(16).padStart(2, '0');
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
-                    ctx.closePath();
-                }
-
-                // Main neon border
-                ctx.shadowColor = borderColor;
-                ctx.shadowBlur = neonIntensity;
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, outerRadius, 0, 2 * Math.PI);
-                ctx.strokeStyle = borderColor;
-                ctx.lineWidth = 4;
-                ctx.stroke();
-                ctx.closePath();
-
-                // Inner border
-                ctx.shadowBlur = neonIntensity * 0.5;
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, outerRadius * 0.8, 0, 2 * Math.PI);
-                ctx.strokeStyle = borderColor + "80"; // 50% opacity
-                ctx.lineWidth = 2;
-                ctx.stroke();
-                ctx.closePath();
-
-                // Center fill - dark with slight glow
-                ctx.shadowColor = 'transparent';
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, outerRadius * 0.75, 0, 2 * Math.PI);
-                ctx.fillStyle = "rgba(0,0,0,0.7)";
-                ctx.fill();
-                ctx.closePath();
-
-                ctx.restore();
-
-                // Draw play triangle with futuristic style
-                drawFuturisticTriangle(centerX, centerY, buttonRadius, iconColor, borderColor);
-
-                if (showPlayButton && !fadingOut) {
-                    drawParticles(centerX, centerY, outerRadius);
-                }
-            } catch (err) {
-                console.error("Error drawing futuristic play button:", err);
-            }
-        }
-
-        // Helper function to draw play triangle
-        function drawPlayTriangle(centerX, centerY, buttonRadius, iconColor) {
-            ctx.save();
-            ctx.globalAlpha = fadeAlpha;
-            ctx.shadowColor = iconColor;
-            ctx.shadowBlur = isMobile ? 10 : isTablet ? 15 : 20;
-            const triSize = isMobile ? 35 : isTablet ? 45 : Math.min(60, buttonRadius * 0.6);
-            const height = triSize * Math.sqrt(3) / 2;
-            ctx.beginPath();
-            ctx.moveTo(centerX - height/3, centerY - triSize/2);
-            ctx.lineTo(centerX - height/3, centerY + triSize/2);
-            ctx.lineTo(centerX + height*2/3, centerY);
-            ctx.closePath();
-
-            const triGrad = ctx.createLinearGradient(
-                centerX - height/3, centerY - triSize/2,
-                centerX + height*2/3, centerY
-            );
-            triGrad.addColorStop(0, iconColor + "E6"); // 90% opacity
-            triGrad.addColorStop(1, iconColor + "B3"); // 70% opacity
-            ctx.fillStyle = triGrad;
-            ctx.fill();
-            ctx.lineWidth = isMobile ? 1 : 2;
-            ctx.strokeStyle = iconColor + "CC"; // 80% opacity
-            ctx.stroke();
-            ctx.restore();
-        }
-
-        // Helper function to draw futuristic triangle
-        function drawFuturisticTriangle(centerX, centerY, buttonRadius, iconColor, borderColor) {
-            ctx.save();
-            ctx.globalAlpha = fadeAlpha;
-            
-            const triSize = isMobile ? 35 : isTablet ? 45 : Math.min(60, buttonRadius * 0.6);
-            const height = triSize * Math.sqrt(3) / 2;
-            
-            // Outer glow
-            ctx.shadowColor = borderColor;
-            ctx.shadowBlur = 15;
-            ctx.beginPath();
-            ctx.moveTo(centerX - height/3, centerY - triSize/2);
-            ctx.lineTo(centerX - height/3, centerY + triSize/2);
-            ctx.lineTo(centerX + height*2/3, centerY);
-            ctx.closePath();
-            ctx.strokeStyle = borderColor;
-            ctx.lineWidth = 3;
-            ctx.stroke();
-
-            // Inner fill
-            ctx.shadowColor = 'transparent';
-            ctx.fillStyle = iconColor + "DD"; // 87% opacity
-            ctx.fill();
-            
-            ctx.restore();
-        }
 
         async function handlePlayButtonClick() {
             debug("Play button clicked, audioReady:", audioReady, "audioSourceSet:", audioSourceSet, "currentAudioSrc:", currentAudioSrc);
@@ -2273,45 +2081,13 @@ document.addEventListener('DOMContentLoaded', function() {
             requestAnimationFrame(frame);
         }
 
-        // --- TOUCH/CLICK HANDLER WITH IMPROVED MOBILE SUPPORT ---
-        function handleCanvasInteraction(e) {
-            if (!showPlayButton || fadingOut || !canvas) return;
-            
-            let x, y;
-            if (e.type === 'touchstart' || e.type === 'touchend') {
-                e.preventDefault();
-                const touch = e.changedTouches[0];
-                const rect = canvas.getBoundingClientRect();
-                x = touch.clientX - rect.left;
-                y = touch.clientY - rect.top;
-            } else {
-                const rect = canvas.getBoundingClientRect();
-                x = e.clientX - rect.left;
-                y = e.clientY - rect.top;
-            }
-            
-            const centerX = canvas.width / 2;
-            const centerY = canvas.height / 2;
-            const dist = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
-
-            if (dist < buttonRadius * pulseScale) {
-                debug("Play button clicked/touched");
-                fadingOut = true;
-                // Temporarily pause the pulse effect during transition
-                pausePulseEffects();
-            }
-        }
-
-        // Add both touch and click event listeners
-        if (canvas) {
-            if (isTouch) {
-                canvas.addEventListener('touchend', handleCanvasInteraction, { passive: false });
-                // Prevent scrolling when touching the canvas
-                canvas.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
-                canvas.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
-            } else {
-                canvas.addEventListener('click', handleCanvasInteraction);
-            }
+        // --- SEPARATED PLAY BUTTON INITIALIZATION ---
+        // Initialize the structurally separated play button instead of canvas-based interaction
+        if (playButton && playButtonContainer) {
+            initializeSeparatedPlayButton();
+            debug("Separated play button system initialized successfully");
+        } else {
+            console.warn("Separated play button elements not found - widget may not function properly");
         }
 
         // --- AUDIO CONTEXT SETUP ---
@@ -2794,7 +2570,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     debug("Greeting audio ended but TTS audio still playing - keeping visualization active");
                 }
                 
-                showPlayButton = false;
+                // Hide the separated play button since audio has finished
+                hideSeparatedPlayButton();
 
                 // HIDE the Pause/Resume button after audio finishes
                 if (pauseBtnContainer) {
@@ -2848,7 +2625,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Stop audio visualization
                 audioVisualizationActive = false;
-                showPlayButton = false;
+                
+                // Hide the separated play button since audio is being skipped
+                hideSeparatedPlayButton();
 
                 // Hide the pause/skip button container
                 if (pauseBtnContainer) {
@@ -3139,111 +2918,56 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
 
-        // Helper function to manage pulse effects properly with new overlay system
-        function applyPulseEffects() {
-            if (!canvas || !showPlayButton || fadingOut) return;
-            
-            const disablePulse = getCSSVariable('--play-button-disable-pulse', 'false').toLowerCase() === 'true';
-            
-            // Respect prefers-reduced-motion preference
-            const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-            
-            if (disablePulse || prefersReducedMotion) {
-                removePulseEffects();
-                return;
-            }
-            
-            // Add class to show play button overlay and enable pulse
-            canvas.classList.add('show-play-button');
-            canvas.classList.add('pulse-breathing');
-            canvas.classList.add('pulse-dots');
-            
-            // Set data attribute for CSS control
-            canvas.setAttribute('data-disable-pulse', 'false');
-            
-            debug("Play button pulse overlay activated");
-        }
+        // --- INITIALIZATION AND STATE MANAGEMENT ---
         
-        // Helper function to remove pulse effects permanently (for customizer disable setting)
-        function removePulseEffects() {
-            if (!canvas) return;
-            
-            canvas.classList.remove('show-play-button');
-            canvas.classList.remove('pulse-breathing');
-            canvas.classList.remove('pulse-dots');
-            canvas.classList.remove('pulse-effect');
-            
-            // Set data attribute to disable pulse
-            canvas.setAttribute('data-disable-pulse', 'true');
-            
-            debug("Play button pulse overlay deactivated");
-        }
-        
-        // Helper function to temporarily pause pulse effects (for transitions)
-        function pausePulseEffects() {
-            if (!canvas) return;
-            
-            // Remove the show-play-button class to hide overlay during transition
-            canvas.classList.remove('show-play-button');
-            
-            debug("Play button pulse overlay hidden for transition");
-        }
-        
-        // Helper function to resume pulse effects after temporary pause
-        function resumePulseEffects() {
-            if (!canvas || !showPlayButton || fadingOut) return;
-            
-            const disablePulse = getCSSVariable('--play-button-disable-pulse', 'false').toLowerCase() === 'true';
-            const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-            
-            if (!disablePulse && !prefersReducedMotion) {
-                // Re-add the show-play-button class to show overlay
-                canvas.classList.add('show-play-button');
-                debug("Play button pulse overlay restored");
-            }
-        }
-        
-        // Helper function to reset play button to initial pulsing state
+        /**
+         * Reset play button to initial state (for page reloads, etc.)
+         */
         function resetPlayButtonState() {
-            if (!canvas) return;
-            
-            showPlayButton = true;
-            fadingOut = false;
-            fadeAlpha = 1;
-            
-            // Apply pulse effects if not disabled by customizer
-            const disablePulse = getCSSVariable('--play-button-disable-pulse', 'false').toLowerCase() === 'true';
-            if (!disablePulse) {
-                applyPulseEffects();
+            if (playButtonContainer && playButton) {
+                showPlayButton = true;
+                playButtonEnabled = true;
+                showSeparatedPlayButton();
+                updatePlayButtonStyling();
+                debug("Play button state reset to initial separated state");
             }
-            
-            debug("Play button state reset to initial pulsing state");
         }
 
         // Enhanced initialization with better error handling
-        debug("Drawing initial play button");
+        debug("Initializing separated play button system");
+        
         if (canvas) {
-            canvas.style.cursor = "pointer";
-            
-            // Ensure CSS variables are set for consistent pulse animation
-            const root = document.documentElement;
-            if (!root.style.getPropertyValue('--play-button-pulse-speed')) {
-                root.style.setProperty('--play-button-pulse-speed', '1.0');
-            }
-            if (!root.style.getPropertyValue('--play-button-disable-pulse')) {
-                root.style.setProperty('--play-button-disable-pulse', 'false');
-            }
+            // Remove old canvas cursor style since play button is now separated
+            canvas.style.cursor = "default";
             
             // Initialize canvas shadow based on current CSS variables
             updateCanvasShadowFromIntensity();
             
-            // Initialize play button pulse state for this page load
+            // Initialize the separated play button system
             setTimeout(() => {
-                initializePlayButtonPulse();
-                debug("Initial pulse effects applied and will persist until clicked");
+                resetPlayButtonState();
+                debug("Separated play button system initialized and will persist until clicked");
             }, 100);
-            
-            drawPlayButton();
+        }
+
+        // Function to handle returning to play button state (page reload, etc.)
+        function initializePlayButtonPulse() {
+            if (playButtonContainer && playButton && showPlayButton) {
+                // Reset to initial state with pulse enabled
+                resetPlayButtonState();
+                debug("Separated play button pulse initialized for new page load");
+            }
+        }
+
+        function updateProgressBarWhenIdle() {
+            // Progress bar updates no longer need to redraw play button
+            // The separated play button handles its own state
+            if (showPlayButton && playButtonContainer) {
+                // Ensure the play button remains visible if it should be
+                if (playButtonContainer.classList.contains('hidden')) {
+                    showSeparatedPlayButton();
+                }
+            }
         }
 
         // Pre-load audio in background for better performance
@@ -3266,52 +2990,26 @@ document.addEventListener('DOMContentLoaded', function() {
         // Start preloading audio with automatic detection
         preloadAudio();
 
-        function updateProgressBarWhenIdle() {
-            if (showPlayButton) {
-                // Ensure pulse effects are active when button is visible
-                ensurePlayButtonPulse();
-                drawPlayButton();
-            }
-        }
-        
-        // Ensure pulse effects are properly managed - this persists until click
-        function ensurePlayButtonPulse() {
-            if (showPlayButton && canvas && !fadingOut) {
-                // Apply pulse effects when button should be pulsing
-                // This ensures pulse continues until the play button is actually clicked
-                applyPulseEffects();
-            }
-        }
-        
-        // Function to handle returning to play button state (page reload, etc.)
-        function initializePlayButtonPulse() {
-            if (canvas && showPlayButton) {
-                // Reset to initial state with pulse enabled
-                resetPlayButtonState();
-                debug("Play button pulse initialized for new page load");
-            }
-        }
-
         if (audio) {
             audio.addEventListener('timeupdate', updateProgressBarWhenIdle);
             audio.addEventListener('seeked', updateProgressBarWhenIdle);
             audio.addEventListener('loadedmetadata', updateProgressBarWhenIdle);
         }
 
-        // Window event listeners for proper pulse management across page lifecycle
+        // Window event listeners for proper separated play button management
         window.addEventListener('beforeunload', function() {
             // Clean up any animation states before page unload
-            if (canvas) {
-                canvas.style.animationPlayState = '';
+            if (playButton) {
+                playButton.style.animationPlayState = '';
             }
         });
         
         window.addEventListener('pageshow', function(event) {
-            // Re-initialize pulse when page is shown (including back/forward navigation)
-            if (event.persisted && canvas && showPlayButton) {
+            // Re-initialize separated play button when page is shown (including back/forward navigation)
+            if (event.persisted && playButton && showPlayButton) {
                 setTimeout(() => {
                     initializePlayButtonPulse();
-                    debug("Pulse re-initialized after page show event");
+                    debug("Separated play button re-initialized after page show event");
                 }, 100);
             }
         });
@@ -3319,18 +3017,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // Visibility API to handle tab switching - prevent unwanted pulse flashes
         document.addEventListener('visibilitychange', function() {
             // Only apply pulse effects if play button should actually be visible
-            if (!document.hidden && canvas && showPlayButton && !fadingOut) {
+            if (!document.hidden && playButton && showPlayButton && playButtonEnabled) {
                 // Add a small delay and check state again to prevent flash
                 setTimeout(() => {
                     // Double-check that we should still be pulsing
-                    if (showPlayButton && !fadingOut && !document.hidden) {
-                        const disablePulse = getCSSVariable('--play-button-disable-pulse', 'false').toLowerCase() === 'true';
-                        const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-                        
-                        if (!disablePulse && !prefersReducedMotion) {
-                            applyPulseEffects();
-                            debug("Play button pulse re-applied after tab switch (conditions verified)");
-                        }
+                    if (showPlayButton && playButtonEnabled && !document.hidden) {
+                        updatePlayButtonStyling();
+                        debug("Separated play button styling updated after tab switch");
                     }
                 }, 200); // Small delay to prevent flash
             }
@@ -3349,7 +3042,7 @@ document.addEventListener('DOMContentLoaded', function() {
             detectedLanguage: detectedLanguage
         });
 
-        // Debug functions for console testing
+        // Debug functions for console testing - UPDATED FOR SEPARATED STRUCTURE
         window.aiWidgetDebug = {
             showChat: () => showChatInterface(),
             testTTS: (text = 'This is a test') => playTTS(text),
@@ -3365,82 +3058,71 @@ document.addEventListener('DOMContentLoaded', function() {
                 location.reload();
             },
             refreshPulse: () => {
-                // Remove and reapply pulse effects to refresh animation
-                if (canvas) {
-                    removePulseEffects();
-                    setTimeout(() => {
-                        initializePlayButtonPulse();
-                    }, 100);
+                // Update pulse effects for separated play button
+                if (playButton) {
+                    updatePlayButtonStyling();
+                    debug("Separated play button pulse refreshed");
                 }
             },
             togglePulse: (disable) => {
                 // Allow manual pulse toggling for testing
                 const root = document.documentElement;
                 root.style.setProperty('--play-button-disable-pulse', disable ? 'true' : 'false');
-                if (disable) {
-                    removePulseEffects();
-                } else {
-                    initializePlayButtonPulse();
+                if (playButton) {
+                    updatePlayButtonStyling();
+                    debug("Separated play button pulse toggled:", !disable);
                 }
             },
             setPulseSpeed: (speed) => {
                 // Allow manual pulse speed setting for testing
                 const root = document.documentElement;
                 root.style.setProperty('--play-button-pulse-speed', speed.toString());
-                // Refresh pulse to apply new speed
-                window.aiWidgetDebug.refreshPulse();
+                debug("Pulse speed set to:", speed);
             },
             resetPlayButton: () => {
-                // Reset play button to initial pulsing state
+                // Reset separated play button to initial state
                 resetPlayButtonState();
             },
-            pausePulse: () => {
-                // Temporarily pause pulse
-                pausePulseEffects();
+            showPlayButton: () => {
+                // Show the separated play button
+                showSeparatedPlayButton();
             },
-            resumePulse: () => {
-                // Resume paused pulse
-                resumePulseEffects();
+            hidePlayButton: () => {
+                // Hide the separated play button
+                hideSeparatedPlayButton();
             },
             setButtonSize: (size) => {
                 // Allow manual button size setting for testing
                 const root = document.documentElement;
-                root.style.setProperty('--aiw-btn-size', size.toString());
-                // Force redraw to apply new size
-                if (showPlayButton && !fadingOut) {
-                    drawPlayButton();
-                }
+                root.style.setProperty('--play-button-size', size + 'px');
                 debug("Button size set to:", size);
             },
             setShadowColor: (color) => {
                 // Allow manual shadow color setting for testing
                 const root = document.documentElement;
                 root.style.setProperty('--aiw-shadow-color', color);
-                updateCanvasShadowFromIntensity(); // Update shadow with new color
+                updateCanvasShadowFromIntensity(); // Update canvas shadow
                 debug("Shadow color set to:", color);
             },
             setShadowIntensity: (intensity) => {
                 // Allow manual shadow intensity setting for testing and Customizer
                 const root = document.documentElement;
                 root.style.setProperty('--aiw-shadow-intensity', intensity.toString());
-                updateCanvasShadowFromIntensity(); // Update shadow with new intensity
+                updateCanvasShadowFromIntensity(); // Update canvas shadow
                 debug("Shadow intensity set to:", intensity);
             },
             getButtonInfo: () => {
-                // Get current button information for debugging
+                // Get current separated button information for debugging
                 return {
-                    currentSize: getButtonSize(),
                     showPlayButton: showPlayButton,
-                    fadingOut: fadingOut,
-                    pulseScale: pulseScale,
-                    cssVarBtnSize: getCSSVariable('--aiw-btn-size', 'NOT_SET'),
-                    cssVarShadowColor: getCSSVariable('--aiw-shadow-color', 'NOT_SET'),
-                    cssVarShadowIntensity: getCSSVariable('--aiw-shadow-intensity', 'NOT_SET'),
-                    canvasHasPulseClasses: canvas ? {
-                        showPlayButton: canvas.classList.contains('show-play-button'),
-                        pulseBreathing: canvas.classList.contains('pulse-breathing'),
-                        pulseDots: canvas.classList.contains('pulse-dots')
-                    } : 'canvas not found'
+                    playButtonEnabled: playButtonEnabled,
+                    playButtonVisible: playButtonContainer ? !playButtonContainer.classList.contains('hidden') : false,
+                    cssVarBtnSize: getCSSVariable('--play-button-size', 'NOT_SET'),
+                    cssVarDisablePulse: getCSSVariable('--play-button-disable-pulse', 'NOT_SET'),
+                    cssVarPulseSpeed: getCSSVariable('--play-button-pulse-speed', 'NOT_SET'),
+                    hasPlayButton: !!playButton,
+                    hasPlayButtonContainer: !!playButtonContainer,
+                    buttonDataDisablePulse: playButton ? playButton.getAttribute('data-disable-pulse') : 'N/A'
                 };
             }
         };

@@ -92,6 +92,7 @@ class AIInterviewWidget {
         add_action('wp_ajax_ai_interview_update_language_sections', array($this, 'handle_update_language_sections'));
         add_action('wp_ajax_ai_interview_apply_languages', array($this, 'handle_apply_languages'));
         add_action('wp_ajax_ai_interview_cancel_pending_languages', array($this, 'handle_cancel_pending_languages'));
+        add_action('wp_ajax_ai_interview_translate_prompt', array($this, 'handle_translate_prompt'));
         add_action('wp_ajax_ai_interview_load_preset', array($this, 'load_design_preset'));
         add_action('wp_ajax_ai_interview_load_default_preset', array($this, 'load_default_preset'));
         add_action('wp_ajax_ai_interview_delete_preset', array($this, 'delete_design_preset'));
@@ -5720,6 +5721,94 @@ private function get_custom_api_response($user_message, $system_prompt = '') {
     }
 }
 
+/**
+ * Translate text using the configured LLM provider
+ * 
+ * @param string $text Text to translate
+ * @param string $source_lang Source language code
+ * @param string $target_lang Target language code
+ * @return array|false Translation result or false on error
+ */
+private function aiw_llm_translate($text, $source_lang, $target_lang) {
+    try {
+        // Validate inputs
+        if (empty($text) || empty($source_lang) || empty($target_lang)) {
+            return array('error' => 'Invalid parameters for translation');
+        }
+        
+        if ($source_lang === $target_lang) {
+            return array('error' => 'Source and target languages cannot be the same');
+        }
+        
+        // Get language names for better translation context
+        $supported_langs = json_decode(get_option('ai_interview_widget_supported_languages', ''), true);
+        if (!$supported_langs) {
+            $supported_langs = array('en' => 'English', 'de' => 'German');
+        }
+        
+        $source_lang_name = isset($supported_langs[$source_lang]) ? $supported_langs[$source_lang] : $source_lang;
+        $target_lang_name = isset($supported_langs[$target_lang]) ? $supported_langs[$target_lang] : $target_lang;
+        
+        // Create a specific system prompt for translation
+        $translation_prompt = sprintf(
+            __('You are a professional translator. Translate the following text from %s to %s. Maintain the original tone, style, and meaning. Do not add explanations, comments, or additional text - provide only the direct translation. If the text contains technical terms, AI concepts, or specific jargon, preserve their meaning accurately in the target language.', 'ai-interview-widget'),
+            $source_lang_name,
+            $target_lang_name
+        );
+        
+        // Prepare the user message with the text to translate
+        $user_message = sprintf(
+            __('Please translate this text: %s', 'ai-interview-widget'),
+            $text
+        );
+        
+        // Get the current provider and call the appropriate function
+        $provider = get_option('ai_interview_widget_api_provider', 'openai');
+        
+        $response = null;
+        switch ($provider) {
+            case 'anthropic':
+                $response = $this->get_anthropic_response($user_message, $translation_prompt);
+                break;
+            case 'gemini':
+                $response = $this->get_gemini_response($user_message, $translation_prompt);
+                break;
+            case 'azure':
+                $response = $this->get_azure_response($user_message, $translation_prompt);
+                break;
+            case 'custom':
+                $response = $this->get_custom_api_response($user_message, $translation_prompt);
+                break;
+            case 'openai':
+            default:
+                $response = $this->get_openai_response($user_message, $translation_prompt);
+                break;
+        }
+        
+        // Check if response contains an error
+        if (is_array($response) && isset($response['error'])) {
+            return array('error' => $response['error']);
+        }
+        
+        // Check if we got a valid response
+        if (!is_array($response) || !isset($response['reply'])) {
+            return array('error' => 'No valid translation received from LLM');
+        }
+        
+        $translation = trim($response['reply']);
+        
+        if (empty($translation)) {
+            return array('error' => 'Empty translation received from LLM');
+        }
+        
+        return array('translation' => $translation);
+        
+    } catch (Exception $e) {
+        error_log('AI Interview Widget: Exception in aiw_llm_translate: ' . $e->getMessage());
+        return array('error' => 'Translation failed: ' . $e->getMessage());
+    }
+}
+
 // ENHANCED SCRIPT ENQUEUING - FIXED DATA PASSING
 public function enqueue_scripts() {
 $plugin_url = plugin_dir_url(__FILE__);
@@ -6384,10 +6473,27 @@ $content_settings = get_option('ai_interview_widget_content_settings', '');
                 $current_prompt = isset($content_data[$prompt_key]) ? $content_data[$prompt_key] : '';
             ?>
                 <div style="margin-bottom: 25px; padding: 20px; background: #f9f9f9; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                    <h4 style="margin: 0 0 15px 0; color: #333; display: flex; align-items: center;">
-                        <span style="margin-right: 8px;">🤖</span>
-                        <?php echo esc_html($lang_name); ?> (<?php echo esc_html($lang_code); ?>) System Prompt
+                    <h4 style="margin: 0 0 15px 0; color: #333; display: flex; align-items: center; justify-content: space-between;">
+                        <span style="display: flex; align-items: center;">
+                            <span style="margin-right: 8px;">🤖</span>
+                            <?php echo esc_html($lang_name); ?> (<?php echo esc_html($lang_code); ?>) System Prompt
+                        </span>
+                        <button type="button" 
+                                class="translate-prompt-btn button button-secondary" 
+                                data-source-lang="<?php echo esc_attr($lang_code); ?>"
+                                data-source-lang-name="<?php echo esc_attr($lang_name); ?>"
+                                title="<?php echo esc_attr(__('Translate this prompt to all other selected languages', 'ai-interview-widget')); ?>"
+                                style="font-size: 12px; padding: 4px 8px; margin-left: 10px;">
+                            🌐 <?php echo esc_html(__('Translate', 'ai-interview-widget')); ?>
+                        </button>
                     </h4>
+                    
+                    <!-- Translation warning banner (initially hidden) -->
+                    <div id="translation-warning-<?php echo esc_attr($lang_code); ?>" 
+                         class="translation-warning" 
+                         style="display: none; margin-bottom: 15px; padding: 10px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; color: #856404;">
+                        ⚠️ <?php echo esc_html(__('Automatic translation may contain mistakes. Please review before saving.', 'ai-interview-widget')); ?>
+                    </div>
                     
                     <!-- Responsive layout container -->
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start;">
@@ -6410,7 +6516,11 @@ $content_settings = get_option('ai_interview_widget_content_settings', '');
                             <form method="post" style="display: flex; flex-direction: column; gap: 10px;">
                                 <?php wp_nonce_field('ai_interview_direct_prompt_save', 'direct_prompt_nonce'); ?>
                                 <input type="hidden" name="language_code" value="<?php echo esc_attr($lang_code); ?>">
-                                <textarea name="direct_system_prompt" rows="6" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 12px; resize: vertical; box-sizing: border-box;" placeholder="Enter your system prompt here..."><?php echo esc_textarea($current_prompt); ?></textarea>
+                                <textarea name="direct_system_prompt" 
+                                          id="system-prompt-<?php echo esc_attr($lang_code); ?>" 
+                                          rows="6" 
+                                          style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 12px; resize: vertical; box-sizing: border-box;" 
+                                          placeholder="Enter your system prompt here..."><?php echo esc_textarea($current_prompt); ?></textarea>
                                 <input type="submit" name="save_direct_prompt" value="Save <?php echo esc_attr($lang_name); ?> Prompt" class="button button-primary" style="width: 100%; padding: 10px; text-align: center;">
                             </form>
                             <small style="color: #666; display: block; margin-top: 8px;">Type or paste your system prompt directly</small>
@@ -7608,10 +7718,27 @@ public function handle_update_language_sections() {
         $current_prompt = isset($content_data[$prompt_key]) ? $content_data[$prompt_key] : '';
     ?>
     <div style="margin-bottom: 25px; padding: 20px; background: #f9f9f9; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-        <h4 style="margin: 0 0 15px 0; color: #333; display: flex; align-items: center;">
-            <span style="margin-right: 8px;">🤖</span>
-            <?php echo esc_html($lang_name); ?> (<?php echo esc_html($lang_code); ?>) System Prompt
+        <h4 style="margin: 0 0 15px 0; color: #333; display: flex; align-items: center; justify-content: space-between;">
+            <span style="display: flex; align-items: center;">
+                <span style="margin-right: 8px;">🤖</span>
+                <?php echo esc_html($lang_name); ?> (<?php echo esc_html($lang_code); ?>) System Prompt
+            </span>
+            <button type="button" 
+                    class="translate-prompt-btn button button-secondary" 
+                    data-source-lang="<?php echo esc_attr($lang_code); ?>"
+                    data-source-lang-name="<?php echo esc_attr($lang_name); ?>"
+                    title="<?php echo esc_attr(__('Translate this prompt to all other selected languages', 'ai-interview-widget')); ?>"
+                    style="font-size: 12px; padding: 4px 8px; margin-left: 10px;">
+                🌐 <?php echo esc_html(__('Translate', 'ai-interview-widget')); ?>
+            </button>
         </h4>
+        
+        <!-- Translation warning banner (initially hidden) -->
+        <div id="translation-warning-<?php echo esc_attr($lang_code); ?>" 
+             class="translation-warning" 
+             style="display: none; margin-bottom: 15px; padding: 10px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; color: #856404;">
+            ⚠️ <?php echo esc_html(__('Automatic translation may contain mistakes. Please review before saving.', 'ai-interview-widget')); ?>
+        </div>
         
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
             <!-- Left side: File upload panel -->
@@ -7729,10 +7856,27 @@ public function handle_apply_languages() {
         $current_prompt = isset($content_data[$prompt_key]) ? $content_data[$prompt_key] : '';
     ?>
     <div style="margin-bottom: 25px; padding: 20px; background: #f9f9f9; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-        <h4 style="margin: 0 0 15px 0; color: #333; display: flex; align-items: center;">
-            <span style="margin-right: 8px;">🤖</span>
-            <?php echo esc_html($lang_name); ?> (<?php echo esc_html($lang_code); ?>) System Prompt
+        <h4 style="margin: 0 0 15px 0; color: #333; display: flex; align-items: center; justify-content: space-between;">
+            <span style="display: flex; align-items: center;">
+                <span style="margin-right: 8px;">🤖</span>
+                <?php echo esc_html($lang_name); ?> (<?php echo esc_html($lang_code); ?>) System Prompt
+            </span>
+            <button type="button" 
+                    class="translate-prompt-btn button button-secondary" 
+                    data-source-lang="<?php echo esc_attr($lang_code); ?>"
+                    data-source-lang-name="<?php echo esc_attr($lang_name); ?>"
+                    title="<?php echo esc_attr(__('Translate this prompt to all other selected languages', 'ai-interview-widget')); ?>"
+                    style="font-size: 12px; padding: 4px 8px; margin-left: 10px;">
+                🌐 <?php echo esc_html(__('Translate', 'ai-interview-widget')); ?>
+            </button>
         </h4>
+        
+        <!-- Translation warning banner (initially hidden) -->
+        <div id="translation-warning-<?php echo esc_attr($lang_code); ?>" 
+             class="translation-warning" 
+             style="display: none; margin-bottom: 15px; padding: 10px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; color: #856404;">
+            ⚠️ <?php echo esc_html(__('Automatic translation may contain mistakes. Please review before saving.', 'ai-interview-widget')); ?>
+        </div>
         
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
             <!-- Left side: File upload panel -->
@@ -7795,6 +7939,90 @@ public function handle_cancel_pending_languages() {
     wp_send_json_success(array(
         'message' => 'Pending languages cancelled'
     ));
+}
+
+// Handle system prompt translation
+public function handle_translate_prompt() {
+    // Check nonce for security
+    if (!check_ajax_referer('ai_interview_translate_prompt', 'nonce', false)) {
+        wp_send_json_error('Invalid security token');
+        return;
+    }
+    
+    // Check user capabilities
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    // Get and validate inputs
+    $source_lang = isset($_POST['source_lang']) ? sanitize_text_field($_POST['source_lang']) : '';
+    $source_text = isset($_POST['source_text']) ? sanitize_textarea_field($_POST['source_text']) : '';
+    $target_langs = isset($_POST['target_langs']) ? json_decode(stripslashes($_POST['target_langs']), true) : array();
+    
+    if (empty($source_lang) || empty($source_text)) {
+        wp_send_json_error('Missing source language or text');
+        return;
+    }
+    
+    if (empty($target_langs) || !is_array($target_langs)) {
+        wp_send_json_error('No target languages specified');
+        return;
+    }
+    
+    // Get supported languages for validation
+    $supported_langs = json_decode(get_option('ai_interview_widget_supported_languages', ''), true);
+    if (!$supported_langs) {
+        $supported_langs = array('en' => 'English', 'de' => 'German');
+    }
+    
+    // Validate source language
+    if (!isset($supported_langs[$source_lang])) {
+        wp_send_json_error('Invalid source language');
+        return;
+    }
+    
+    $translations = array();
+    $errors = array();
+    
+    // Translate to each target language
+    foreach ($target_langs as $target_lang) {
+        // Validate target language
+        if (!isset($supported_langs[$target_lang])) {
+            $errors[$target_lang] = 'Invalid target language';
+            continue;
+        }
+        
+        // Skip if same as source
+        if ($target_lang === $source_lang) {
+            continue;
+        }
+        
+        // Perform translation
+        $result = $this->aiw_llm_translate($source_text, $source_lang, $target_lang);
+        
+        if (is_array($result) && isset($result['error'])) {
+            $errors[$target_lang] = $result['error'];
+        } elseif (is_array($result) && isset($result['translation'])) {
+            $translations[$target_lang] = $result['translation'];
+        } else {
+            $errors[$target_lang] = 'Unknown translation error';
+        }
+    }
+    
+    // Return results
+    $response = array(
+        'translations' => $translations,
+        'errors' => $errors,
+        'source_lang' => $source_lang,
+        'source_lang_name' => $supported_langs[$source_lang]
+    );
+    
+    if (!empty($translations)) {
+        wp_send_json_success($response);
+    } else {
+        wp_send_json_error(array_merge($response, array('message' => 'No translations completed successfully')));
+    }
 }
 
 // Helper function to get flag emoji for language codes
@@ -8792,6 +9020,253 @@ public function documentation_page() {
         </div>
     </div>
 </div>
+
+<script>
+jQuery(document).ready(function($) {
+    let translationInProgress = false;
+    
+    // Handle translate button clicks
+    $('.translate-prompt-btn').on('click', function(e) {
+        e.preventDefault();
+        
+        if (translationInProgress) {
+            alert('<?php echo esc_js(__('Translation is already in progress. Please wait.', 'ai-interview-widget')); ?>');
+            return;
+        }
+        
+        const $button = $(this);
+        const sourceLang = $button.data('source-lang');
+        const sourceLangName = $button.data('source-lang-name');
+        const $sourceTextarea = $('#system-prompt-' + sourceLang);
+        const sourceText = $sourceTextarea.val().trim();
+        
+        if (!sourceText) {
+            alert('<?php echo esc_js(__('Please enter a system prompt before translating.', 'ai-interview-widget')); ?>');
+            return;
+        }
+        
+        // Get all supported languages from the page
+        const allLanguages = {};
+        $('.translate-prompt-btn').each(function() {
+            const lang = $(this).data('source-lang');
+            const langName = $(this).data('source-lang-name');
+            allLanguages[lang] = langName;
+        });
+        
+        // Determine target languages (all except source)
+        const targetLanguages = [];
+        const nonEmptyTargets = [];
+        
+        Object.keys(allLanguages).forEach(function(lang) {
+            if (lang !== sourceLang) {
+                targetLanguages.push(lang);
+                const $targetTextarea = $('#system-prompt-' + lang);
+                if ($targetTextarea.val().trim()) {
+                    nonEmptyTargets.push({
+                        code: lang,
+                        name: allLanguages[lang],
+                        textarea: $targetTextarea
+                    });
+                }
+            }
+        });
+        
+        if (targetLanguages.length === 0) {
+            alert('<?php echo esc_js(__('No target languages available for translation.', 'ai-interview-widget')); ?>');
+            return;
+        }
+        
+        // Show confirmation dialog if there are non-empty target fields
+        if (nonEmptyTargets.length > 0) {
+            showTranslationConfirmDialog(sourceLang, sourceLangName, sourceText, targetLanguages, allLanguages, nonEmptyTargets);
+        } else {
+            // No existing content, proceed directly
+            performTranslation(sourceLang, sourceLangName, sourceText, targetLanguages);
+        }
+    });
+    
+    function showTranslationConfirmDialog(sourceLang, sourceLangName, sourceText, targetLanguages, allLanguages, nonEmptyTargets) {
+        let dialogHtml = `
+            <div id="translation-confirm-dialog" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; display: flex; align-items: center; justify-content: center;">
+                <div style="background: white; padding: 30px; border-radius: 8px; max-width: 500px; width: 90%; max-height: 80%; overflow-y: auto;">
+                    <h3 style="margin: 0 0 20px 0; color: #333;">
+                        ${$('<div>').text('<?php echo esc_js(__('Confirm Translation', 'ai-interview-widget')); ?>').html()}
+                    </h3>
+                    <p style="margin: 0 0 15px 0; color: #666;">
+                        ${$('<div>').text('<?php echo esc_js(__('You are about to translate the system prompt from', 'ai-interview-widget')); ?>').html()} <strong>${sourceLangName}</strong> ${$('<div>').text('<?php echo esc_js(__('to the selected languages. Some target fields already contain content.', 'ai-interview-widget')); ?>').html()}
+                    </p>
+                    <div style="margin-bottom: 20px; padding: 15px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px;">
+                        <p style="margin: 0; color: #856404; font-weight: 600;">
+                            ⚠️ ${$('<div>').text('<?php echo esc_js(__('Warning: Automatic translation may contain mistakes. Please review all translations before saving.', 'ai-interview-widget')); ?>').html()}
+                        </p>
+                    </div>
+                    <p style="margin: 0 0 15px 0; font-weight: 600;">
+                        ${$('<div>').text('<?php echo esc_js(__('Select languages to translate to:', 'ai-interview-widget')); ?>').html()}
+                    </p>
+                    <div id="language-selection" style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 4px;">
+        `;
+        
+        targetLanguages.forEach(function(lang) {
+            const hasContent = nonEmptyTargets.some(t => t.code === lang);
+            const isChecked = !hasContent; // Default to checked if empty, unchecked if has content
+            dialogHtml += `
+                <label style="display: block; margin-bottom: 10px; cursor: pointer;">
+                    <input type="checkbox" value="${lang}" ${isChecked ? 'checked' : ''} style="margin-right: 8px;">
+                    ${allLanguages[lang]} (${lang})${hasContent ? ' - ⚠️ ' + $('<div>').text('<?php echo esc_js(__('has existing content', 'ai-interview-widget')); ?>').html() : ''}
+                </label>
+            `;
+        });
+        
+        dialogHtml += `
+                    </div>
+                    <div style="margin-top: 20px; text-align: right;">
+                        <button id="cancel-translation" class="button button-secondary" style="margin-right: 10px;">
+                            ${$('<div>').text('<?php echo esc_js(__('Cancel', 'ai-interview-widget')); ?>').html()}
+                        </button>
+                        <button id="confirm-translation" class="button button-primary">
+                            ${$('<div>').text('<?php echo esc_js(__('Translate Selected', 'ai-interview-widget')); ?>').html()}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        $('body').append(dialogHtml);
+        
+        // Handle dialog buttons
+        $('#cancel-translation').on('click', function() {
+            $('#translation-confirm-dialog').remove();
+        });
+        
+        $('#confirm-translation').on('click', function() {
+            const selectedLanguages = [];
+            $('#language-selection input:checked').each(function() {
+                selectedLanguages.push($(this).val());
+            });
+            
+            $('#translation-confirm-dialog').remove();
+            
+            if (selectedLanguages.length === 0) {
+                alert('<?php echo esc_js(__('Please select at least one language to translate to.', 'ai-interview-widget')); ?>');
+                return;
+            }
+            
+            performTranslation(sourceLang, sourceLangName, sourceText, selectedLanguages);
+        });
+        
+        // Close dialog on outside click
+        $('#translation-confirm-dialog').on('click', function(e) {
+            if (e.target === this) {
+                $(this).remove();
+            }
+        });
+    }
+    
+    function performTranslation(sourceLang, sourceLangName, sourceText, targetLanguages) {
+        translationInProgress = true;
+        
+        // Show loading state on all translate buttons
+        $('.translate-prompt-btn').prop('disabled', true).html('🔄 <?php echo esc_js(__('Translating...', 'ai-interview-widget')); ?>');
+        
+        // Show warning banner for source language
+        $('#translation-warning-' + sourceLang).show();
+        
+        // Add loading indicators to target textareas
+        targetLanguages.forEach(function(lang) {
+            const $textarea = $('#system-prompt-' + lang);
+            $textarea.prop('disabled', true);
+            $textarea.after('<div class="translation-loading" style="position: absolute; background: rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: center; font-size: 14px; color: #666; padding: 10px; border-radius: 4px; margin-top: 5px;">🔄 <?php echo esc_js(__('Translating...', 'ai-interview-widget')); ?></div>');
+        });
+        
+        // Perform AJAX request
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'ai_interview_translate_prompt',
+                source_lang: sourceLang,
+                source_text: sourceText,
+                target_langs: JSON.stringify(targetLanguages),
+                nonce: '<?php echo wp_create_nonce('ai_interview_translate_prompt'); ?>'
+            },
+            success: function(response) {
+                handleTranslationResponse(response, targetLanguages, sourceLang, sourceLangName);
+            },
+            error: function(xhr, status, error) {
+                console.error('Translation request failed:', error);
+                alert('<?php echo esc_js(__('Translation request failed. Please try again.', 'ai-interview-widget')); ?>');
+                resetTranslationUI(targetLanguages);
+            }
+        });
+    }
+    
+    function handleTranslationResponse(response, targetLanguages, sourceLang, sourceLangName) {
+        if (response.success && response.data.translations) {
+            const translations = response.data.translations;
+            const errors = response.data.errors || {};
+            
+            let successCount = 0;
+            let errorCount = 0;
+            
+            // Update textareas with translations
+            Object.keys(translations).forEach(function(lang) {
+                const $textarea = $('#system-prompt-' + lang);
+                $textarea.val(translations[lang]);
+                $textarea.prop('disabled', false);
+                $('#translation-warning-' + lang).show();
+                successCount++;
+            });
+            
+            // Show errors for failed translations
+            Object.keys(errors).forEach(function(lang) {
+                console.error('Translation error for ' + lang + ':', errors[lang]);
+                alert('<?php echo esc_js(__('Translation failed for', 'ai-interview-widget')); ?> ' + lang + ': ' + errors[lang]);
+                errorCount++;
+            });
+            
+            // Show summary message
+            if (successCount > 0) {
+                const message = '<?php echo esc_js(__('Successfully translated to', 'ai-interview-widget')); ?> ' + successCount + ' <?php echo esc_js(__('language(s)', 'ai-interview-widget')); ?>' + 
+                               (errorCount > 0 ? '. <?php echo esc_js(__('Failed for', 'ai-interview-widget')); ?> ' + errorCount + ' <?php echo esc_js(__('language(s)', 'ai-interview-widget')); ?>.' : '.');
+                showTranslationMessage(message, 'success');
+            }
+        } else {
+            const errorMessage = response.data && response.data.message ? response.data.message : '<?php echo esc_js(__('Translation failed. Please try again.', 'ai-interview-widget')); ?>';
+            alert(errorMessage);
+        }
+        
+        resetTranslationUI(targetLanguages);
+    }
+    
+    function resetTranslationUI(targetLanguages) {
+        translationInProgress = false;
+        
+        // Reset translate buttons
+        $('.translate-prompt-btn').prop('disabled', false).html('🌐 <?php echo esc_js(__('Translate', 'ai-interview-widget')); ?>');
+        
+        // Remove loading indicators
+        $('.translation-loading').remove();
+        
+        // Re-enable textareas
+        targetLanguages.forEach(function(lang) {
+            $('#system-prompt-' + lang).prop('disabled', false);
+        });
+    }
+    
+    function showTranslationMessage(message, type) {
+        const messageClass = type === 'success' ? 'notice-success' : 'notice-error';
+        const $message = $('<div class="notice ' + messageClass + ' is-dismissible" style="margin: 20px 0; padding: 10px;"><p>' + message + '</p></div>');
+        
+        $('.wrap').prepend($message);
+        
+        // Auto-dismiss after 5 seconds
+        setTimeout(function() {
+            $message.fadeOut();
+        }, 5000);
+    }
+});
+</script>
+
 <?php
 }
 }

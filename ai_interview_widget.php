@@ -5599,8 +5599,18 @@ if ($canvas_shadow_color) {
 <div class="ai-interview-container">
 <div class="ai-interview-inner-container">
 <?php if (!$chatbox_only && !$disable_audio_viz): ?>
+<div class="canvas-container">
 <canvas id="soundbar" width="800" height="500"></canvas>
 <canvas id="audio-visualizer" width="800" height="500" style="display:none;"></canvas>
+<!-- Play Button Overlay -->
+<div id="playButtonOverlay" class="play-button-overlay">
+    <button id="playButton" class="play-button" aria-label="Play audio">
+        <div class="play-button-inner">
+            <div class="play-triangle"></div>
+        </div>
+    </button>
+</div>
+</div>
 <?php endif; ?>
 <?php if (!$disable_greeting): ?>
 <audio id="aiEricGreeting" controls preload="auto" style="visibility:hidden; margin-top:16px; display:block;"></audio>

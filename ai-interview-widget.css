@@ -1,0 +1,1341 @@
+/* AI Interview Widget v1.8.0 - Enhanced with Voice Features */
+/* Comprehensive responsive design with voice controls */
+
+/* CSS Custom Properties for Play Button Design */
+:root {
+    --aiw-btn-size: 100; /* Default button size (radius in pixels) */
+    --aiw-shadow-color: rgba(0, 207, 255, 0.5); /* Default canvas shadow color */
+    --aiw-shadow-intensity: 20; /* Default canvas shadow intensity */
+    --play-button-pulse-speed: 1.0; /* Default pulse speed multiplier */
+    --play-button-disable-pulse: false; /* Default pulse state */
+}
+
+/* WordPress Theme Independence - Override all potential theme interference */
+.ai-interview-container *,
+.ai-interview-container *:before,
+.ai-interview-container *:after {
+    box-sizing: border-box !important;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
+    word-spacing: normal !important;
+    text-decoration: none !important;
+    text-shadow: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Override WordPress theme button/input defaults */
+.ai-interview-container button,
+.ai-interview-container input,
+.ai-interview-container textarea {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    background: none !important;
+    border: none !important;
+    outline: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+}
+
+.ai-interview-container {
+    margin: 20px 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 500px !important;
+    background: var(--container-background, linear-gradient(135deg, #0f0c29, #302b63, #24243e)) !important;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+    color: white !important;
+    padding: var(--container-padding, 20px) !important;
+    border-radius: var(--container-border-radius, 15px) !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    position: relative !important;
+    z-index: 10 !important;
+    overflow: visible !important;
+}
+
+.ai-interview-inner-container {
+    text-align: center !important;
+    max-width: 800px !important;
+    width: 100% !important;
+    position: relative !important;
+}
+
+#soundbar {
+    display: block !important;
+    margin: 20px auto !important;
+    background: var(--canvas-background-color, #0a0a1a) !important;
+    border-radius: var(--canvas-border-radius, 8px) !important;
+    box-shadow: var(--canvas-box-shadow, 0 0 30px 10px var(--aiw-shadow-color), 0 0 50px 20px rgba(0, 102, 255, 0.3));
+    width: 100% !important;
+    max-width: 800px !important;
+    height: 500px !important;
+    visibility: visible !important;
+    z-index: 15 !important;
+    position: relative !important;
+    transform: translateZ(0) !important;
+}
+
+.ai-interview-controls {
+    display: flex !important;
+    gap: 15px !important;
+    justify-content: center !important;
+    margin-top: 0px !important;
+    transform: translateY(-50px);
+    z-index: 20 !important;
+    position: relative !important;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.6s cubic-bezier(.4,0,.2,1) !important;
+}
+
+.ai-interview-container button {
+    background: rgba(0,100,255,0.2) !important;
+    color: #00cfff !important;
+    border: 1px solid #00cfff !important;
+    padding: 10px 20px !important;
+    border-radius: 30px !important;
+    cursor: pointer !important;
+    font-size: 16px !important;
+    transition: all 0.3s ease !important;
+    backdrop-filter: blur(5px) !important;
+    margin: 0 !important;
+}
+
+.ai-interview-container button:hover {
+    background: rgba(0,100,255,0.4) !important;
+    box-shadow: 0 0 15px rgba(0,207,255,0.5) !important;
+}
+
+.ai-interview-container button:disabled {
+    opacity: 0.6 !important;
+    cursor: not-allowed !important;
+    background: rgba(0,100,255,0.1) !important;
+}
+
+#chatInterface {
+    font-size: 16px !important;
+    margin-top: -40px !important;
+    background: rgba(10, 10, 26, 0.8) !important;
+    border-radius: 15px !important;
+    padding: 20px !important;
+    box-shadow: 0 0 20px rgba(0, 207, 255, 0.2) !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    z-index: 20 !important;
+    position: relative !important;
+}
+
+/* AI Chat Header - Independent of WordPress Theme */
+.ai-chat-header {
+    font-size: 18px !important;
+    font-weight: 600 !important;
+    color: #ffffff !important;
+    margin: 0 0 20px 0 !important;
+    padding: 0 !important;
+    text-align: left !important;
+    line-height: 1.3 !important;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+    text-shadow: none !important;
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
+    word-spacing: normal !important;
+    text-decoration: none !important;
+    display: block !important;
+    position: relative !important;
+    z-index: 1 !important;
+}
+
+/* Ensure header is completely independent of theme styles */
+.ai-interview-container .ai-chat-header,
+#chatInterface .ai-chat-header {
+    font-size: 18px !important;
+    font-weight: 600 !important;
+    color: #ffffff !important;
+    margin: 0 0 20px 0 !important;
+    padding: 0 !important;
+    text-align: left !important;
+    line-height: 1.3 !important;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+}
+
+/* Override any WordPress theme h1-h6 styles that might affect this */
+.ai-interview-container .ai-chat-header:before,
+.ai-interview-container .ai-chat-header:after {
+    content: none !important;
+    display: none !important;
+}
+
+#aiEricGreeting {
+    visibility: hidden !important;
+    display: block !important;
+    margin-top: 16px !important;
+}
+
+#chatHistory {
+    background: rgba(0, 0, 0, 0.2) !important;
+    border-radius: 10px !important;
+    padding: 15px !important;
+    text-align: left !important;
+    overflow-y: auto !important;
+    min-height: 50px !important;
+    height: 150px !important;
+    margin-bottom: 20px !important;
+}
+
+.message {
+    margin-bottom: 15px !important;
+    padding: 10px !important;
+    border-radius: 8px !important;
+    word-wrap: break-word !important;
+    position: relative !important;
+    line-height: 1.5 !important;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+}
+
+.user-message {
+    background: rgba(0, 100, 255, 0.2) !important;
+    border-left: 3px solid #00cfff !important;
+}
+
+.ai-message {
+    background: rgba(123, 0, 255, 0.2) !important;
+    border-left: 3px solid #7b00ff !important;
+}
+
+.ai-message .tts-button {
+    position: absolute !important;
+    top: 8px !important;
+    right: 8px !important;
+    background: rgba(123, 0, 255, 0.3) !important;
+    border: 1px solid #7b00ff !important;
+    color: #d0b3ff !important;
+    padding: 4px 8px !important;
+    border-radius: 15px !important;
+    font-size: 12px !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    min-width: 24px !important;
+    height: 24px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.ai-message .tts-button:hover {
+    background: rgba(123, 0, 255, 0.5) !important;
+    box-shadow: 0 0 10px rgba(123, 0, 255, 0.3) !important;
+    transform: scale(1.1) !important;
+}
+
+.ai-message .tts-button.playing {
+    background: rgba(0, 255, 127, 0.3) !important;
+    border-color: #00ff7f !important;
+    color: #00ff7f !important;
+    animation: pulse-tts 1.5s infinite !important;
+}
+
+/* === VOICE CONTROLS STYLING === */
+.voice-controls {
+    display: flex !important;
+    gap: 10px !important;
+    justify-content: center !important;
+    margin: 15px 0 !important;
+    flex-wrap: wrap !important;
+    position: relative !important;
+    z-index: 25 !important;
+}
+
+.voice-btn {
+    background: rgba(123, 0, 255, 0.2) !important;
+    color: #d0b3ff !important;
+    border: 1px solid #7b00ff !important;
+    padding: 8px 15px !important;
+    border-radius: 25px !important;
+    cursor: pointer !important;
+    font-size: 14px !important;
+    transition: all 0.3s ease !important;
+    backdrop-filter: blur(5px) !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    min-width: 80px !important;
+    justify-content: center !important;
+    position: relative !important;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+    outline: none !important;
+}
+
+.voice-btn:hover:not(:disabled) {
+    background: rgba(123, 0, 255, 0.4) !important;
+    box-shadow: 0 0 15px rgba(123, 0, 255, 0.4) !important;
+    transform: translateY(-2px) !important;
+}
+
+.voice-btn:active:not(:disabled) {
+    transform: translateY(0) !important;
+}
+
+.voice-btn:disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+    background: rgba(100, 100, 100, 0.2) !important;
+    border-color: #666 !important;
+    color: #999 !important;
+}
+
+.voice-btn.active {
+    background: rgba(0, 255, 127, 0.3) !important;
+    border-color: #00ff7f !important;
+    color: #00ff7f !important;
+    box-shadow: 0 0 15px rgba(0, 255, 127, 0.4) !important;
+}
+
+.voice-btn.listening {
+    background: rgba(255, 0, 100, 0.3) !important;
+    border-color: #ff0064 !important;
+    color: #ff6b9d !important;
+    animation: pulse-recording 1.5s infinite !important;
+}
+
+.voice-btn.tts-off {
+    background: rgba(100, 100, 100, 0.2) !important;
+    border-color: #666 !important;
+    color: #999 !important;
+}
+
+/* Firefox-specific voice button styling */
+.voice-btn:disabled[title*="Firefox"] {
+    background: rgba(255, 140, 0, 0.2) !important;
+    border-color: #ff8c00 !important;
+    color: #ffa500 !important;
+}
+
+.voice-icon {
+    font-size: 16px !important;
+    line-height: 1 !important;
+    display: inline-block !important;
+}
+
+.voice-text {
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    white-space: nowrap !important;
+}
+
+/* Voice Status Indicator */
+.voice-status {
+    display: none !important;
+    background: rgba(0, 0, 0, 0.4) !important;
+    color: #00cfff !important;
+    padding: 8px 15px !important;
+    border-radius: 20px !important;
+    font-size: 14px !important;
+    margin: 10px 0 !important;
+    text-align: center !important;
+    border: 1px solid rgba(0, 207, 255, 0.3) !important;
+    position: relative !important;
+    z-index: 25 !important;
+}
+
+.voice-status.visible {
+    display: block !important;
+}
+
+.voice-status.listening {
+    background: rgba(255, 0, 100, 0.2) !important;
+    color: #ff6b9d !important;
+    border-color: rgba(255, 0, 100, 0.4) !important;
+    animation: pulse-recording 1.5s infinite !important;
+}
+
+.voice-status.processing {
+    background: rgba(255, 165, 0, 0.2) !important;
+    color: #ffa500 !important;
+    border-color: rgba(255, 165, 0, 0.4) !important;
+}
+
+.voice-status.error {
+    background: rgba(255, 0, 0, 0.2) !important;
+    color: #ff6b6b !important;
+    border-color: rgba(255, 0, 0, 0.4) !important;
+}
+
+.voice-status.firefox-notice {
+    background: rgba(255, 140, 0, 0.2) !important;
+    color: #ffa500 !important;
+    border-color: rgba(255, 140, 0, 0.4) !important;
+}
+
+/* Browser Compatibility Notice */
+.browser-notice {
+    background: #fff3e0 !important;
+    border: 1px solid #ff9800 !important;
+    padding: 8px 12px !important;
+    margin: 10px 0 !important;
+    border-radius: 4px !important;
+    font-size: 12px !important;
+    text-align: center !important;
+    color: #e65100 !important;
+}
+
+.browser-notice.firefox-notice {
+    background: rgba(255, 140, 0, 0.1) !important;
+    border-color: #ff8c00 !important;
+    color: #ff8c00 !important;
+}
+
+/* Voice Activity Detection (VAD) Toggle Button */
+.voice-btn.voice-vad {
+    background: rgba(0, 255, 127, 0.2) !important;
+    border-color: #00ff7f !important;
+    color: #00ff7f !important;
+}
+
+.voice-btn.voice-vad:hover:not(:disabled) {
+    background: rgba(0, 255, 127, 0.4) !important;
+    box-shadow: 0 0 15px rgba(0, 255, 127, 0.4) !important;
+}
+
+.voice-btn.voice-vad:not(.active) {
+    background: rgba(100, 100, 100, 0.2) !important;
+    border-color: #666 !important;
+    color: #999 !important;
+}
+
+.voice-btn.voice-vad:not(.active):hover:not(:disabled) {
+    background: rgba(100, 100, 100, 0.4) !important;
+    box-shadow: 0 0 15px rgba(100, 100, 100, 0.4) !important;
+}
+
+.vad-icon {
+    font-size: 16px !important;
+    line-height: 1 !important;
+    display: inline-block !important;
+}
+
+.vad-text {
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    white-space: nowrap !important;
+}
+
+/* VAD Status Indicators */
+.voice-status.vad-waiting {
+    background: rgba(255, 165, 0, 0.2) !important;
+    color: #ffa500 !important;
+    border-color: rgba(255, 165, 0, 0.4) !important;
+    animation: pulse-vad 1.5s infinite !important;
+}
+
+@keyframes pulse-vad {
+    0%, 100% {
+        box-shadow: 0 0 5px rgba(255, 165, 0, 0.4);
+        transform: scale(1);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(255, 165, 0, 0.8);
+        transform: scale(1.02);
+    }
+}
+
+/* Auto-send message indicator */
+.message.auto-sent::after {
+    content: " 🎤";
+    opacity: 0.7;
+    font-size: 0.8em;
+}
+
+/* Enhanced Preview Styles */
+.preview-controls {
+    transition: all 0.3s ease !important;
+}
+
+.preview-controls button:hover {
+    transform: scale(1.1) !important;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3) !important;
+}
+
+#widget_preview_container.updating {
+    opacity: 0.8;
+    transition: opacity 0.3s ease;
+}
+
+.preview-hover {
+    transform: scale(1.05) !important;
+    transition: transform 0.2s ease !important;
+}
+
+.preview-chat-history {
+    position: relative;
+}
+
+.message.tts-playing {
+    animation: tts-pulse 1s infinite;
+}
+
+@keyframes tts-pulse {
+    0%, 100% { box-shadow: 0 0 5px rgba(123, 0, 255, 0.3); }
+    50% { box-shadow: 0 0 15px rgba(123, 0, 255, 0.8); }
+}
+
+/* Enhanced live preview voice status */
+.preview-voice-status.visible {
+    display: block !important;
+    animation: slideInFromTop 0.3s ease-out;
+}
+
+@keyframes slideInFromTop {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Preview typing animation enhancements */
+.preview-typing.visible {
+    animation: fadeInSlide 0.5s ease-out;
+}
+
+@keyframes fadeInSlide {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Enhanced preview canvas */
+#previewSoundbar {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+#previewSoundbar:hover {
+    transform: scale(1.02);
+    box-shadow: 0 0 25px rgba(0, 207, 255, 0.4);
+}
+
+/* Enhanced Typing Indicator with Spinner */
+.typing-indicator {
+    display: none !important;
+    color: #00cfff !important;
+    font-style: italic !important;
+    margin-bottom: 15px !important;
+    padding: 15px !important;
+    background: rgba(0, 0, 0, 0.3) !important;
+    border-radius: 10px !important;
+    border-left: 3px solid #00cfff !important;
+    position: relative !important;
+    animation: typing-pulse 2s infinite ease-in-out !important;
+}
+
+.typing-indicator.visible {
+    display: block !important;
+}
+
+/* Spinner Animation */
+.ai-spinner {
+    display: inline-block !important;
+    width: 20px !important;
+    height: 20px !important;
+    border: 2px solid rgba(0, 207, 255, 0.3) !important;
+    border-radius: 50% !important;
+    border-top: 2px solid #00cfff !important;
+    animation: spin 1s linear infinite !important;
+    margin-right: 10px !important;
+    vertical-align: middle !important;
+}
+
+/* Brain/Thinking Animation */
+.thinking-dots {
+    display: inline-block !important;
+    margin-left: 10px !important;
+}
+
+.thinking-dots span {
+    display: inline-block !important;
+    width: 8px !important;
+    height: 8px !important;
+    border-radius: 50% !important;
+    background-color: #00cfff !important;
+    margin: 0 2px !important;
+    animation: thinking-bounce 1.4s infinite ease-in-out both !important;
+}
+
+.thinking-dots span:nth-child(1) { animation-delay: -0.32s !important; }
+.thinking-dots span:nth-child(2) { animation-delay: -0.16s !important; }
+.thinking-dots span:nth-child(3) { animation-delay: 0s !important; }
+
+/* AI Processing Indicator */
+.ai-processing {
+    display: none !important;
+    text-align: center !important;
+    padding: 10px !important;
+    background: rgba(123, 0, 255, 0.1) !important;
+    border-radius: 8px !important;
+    margin-bottom: 10px !important;
+    border: 1px solid rgba(123, 0, 255, 0.3) !important;
+}
+
+.ai-processing.visible {
+    display: block !important;
+}
+
+.ai-processing-content {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 10px !important;
+}
+
+.processing-text {
+    color: #d0b3ff !important;
+    font-size: 14px !important;
+}
+
+/* Enhanced Input Area */
+#inputArea {
+    display: flex !important;
+    gap: 10px !important;
+    margin-top: 10px !important;
+    position: relative !important;
+}
+
+#userInput {
+    flex: 1 !important;
+    padding: 12px !important;
+    border-radius: 30px !important;
+    border: 1px solid #00cfff !important;
+    background: rgba(0, 0, 0, 0.3) !important;
+    color: white !important;
+    font-size: 16px !important;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+    transition: all 0.3s ease !important;
+    outline: none !important;
+}
+
+#userInput:focus {
+    border-color: #00ffff !important;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.3) !important;
+}
+
+#userInput:disabled {
+    opacity: 0.6 !important;
+    cursor: not-allowed !important;
+    border-color: rgba(0, 207, 255, 0.3) !important;
+}
+
+#userInput::placeholder {
+    color: rgba(255, 255, 255, 0.5) !important;
+}
+
+#sendButton {
+    background: rgba(123, 0, 255, 0.3) !important;
+    border: 1px solid #7b00ff !important;
+    color: #d0b3ff !important;
+    padding: 10px 20px !important;
+    border-radius: 30px !important;
+    cursor: pointer !important;
+    font-size: 16px !important;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+    transition: all 0.3s ease !important;
+    backdrop-filter: blur(5px) !important;
+    position: relative !important;
+    min-width: 80px !important;
+    outline: none !important;
+}
+
+#sendButton:hover:not(:disabled) {
+    background: rgba(123, 0, 255, 0.5) !important;
+    box-shadow: 0 0 15px rgba(123, 0, 255, 0.4) !important;
+    transform: translateY(-2px) !important;
+}
+
+#sendButton:active:not(:disabled) {
+    transform: translateY(0) !important;
+}
+
+#sendButton:disabled {
+    opacity: 0.6 !important;
+    cursor: not-allowed !important;
+    background: rgba(123, 0, 255, 0.1) !important;
+}
+
+#sendButton.loading {
+    color: transparent !important;
+}
+
+#sendButton .button-spinner {
+    display: none !important;
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    width: 16px !important;
+    height: 16px !important;
+    border: 2px solid rgba(255, 255, 255, 0.3) !important;
+    border-radius: 50% !important;
+    border-top: 2px solid #d0b3ff !important;
+    animation: spin 1s linear infinite !important;
+}
+
+#sendButton.loading .button-spinner {
+    display: block !important;
+}
+
+/* === ANIMATIONS === */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes thinking-bounce {
+    0%, 80%, 100% {
+        transform: scale(0);
+        opacity: 0.5;
+    }
+    40% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes typing-pulse {
+    0%, 100% {
+        background: rgba(0, 0, 0, 0.3);
+        border-left-color: #00cfff;
+    }
+    50% {
+        background: rgba(0, 0, 0, 0.4);
+        border-left-color: #0080ff;
+    }
+}
+
+@keyframes pulse-recording {
+    0%, 100% {
+        box-shadow: 0 0 5px rgba(255, 0, 100, 0.4);
+        transform: scale(1);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(255, 0, 100, 0.8);
+        transform: scale(1.05);
+    }
+}
+
+@keyframes pulse-tts {
+    0%, 100% {
+        box-shadow: 0 0 5px rgba(0, 255, 127, 0.4);
+        transform: scale(1);
+    }
+    50% {
+        box-shadow: 0 0 15px rgba(0, 255, 127, 0.8);
+        transform: scale(1.1);
+    }
+}
+
+@keyframes glow-pulse {
+    0%, 100% {
+        box-shadow: 0 0 5px rgba(0, 207, 255, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(0, 207, 255, 0.6);
+    }
+}
+
+/* === PLAY BUTTON PULSE ANIMATIONS - RESTRICTED SCOPE === */
+/* Create a virtual overlay for play button pulse that doesn't affect canvas shadow */
+#soundbar::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    z-index: 1;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+/* Only show pulse overlay when play button is visible and pulse is enabled */
+#soundbar.show-play-button:not([data-disable-pulse="true"])::before {
+    opacity: 1;
+}
+
+/* Breathing-Pulse Animation - Smooth scale breathing effect */
+@keyframes breathing-pulse {
+    0%, 100% { 
+        transform: scale(1); 
+        opacity: 1;
+    }
+    50% { 
+        transform: scale(1.08); 
+        opacity: 0.9;
+    }
+}
+
+/* Dot-Pulse Animation - Subtle pulsing with glow effect */
+@keyframes dots-pulse {
+    0%, 100% { 
+        transform: scale(1);
+        box-shadow: 0 0 20px var(--aiw-shadow-color);
+    }
+    25% { 
+        transform: scale(1.02);
+        box-shadow: 0 0 25px var(--aiw-shadow-color);
+    }
+    50% { 
+        transform: scale(1.05);
+        box-shadow: 0 0 30px var(--aiw-shadow-color);
+    }
+    75% { 
+        transform: scale(1.02);
+        box-shadow: 0 0 25px var(--aiw-shadow-color);
+    }
+}
+
+/* Apply pulse animations only to the pseudo-element overlay, not the canvas itself */
+#soundbar.pulse-breathing.show-play-button:not([data-disable-pulse="true"])::before {
+    animation: breathing-pulse calc(2.0s / var(--play-button-pulse-speed, 1)) infinite ease-in-out;
+}
+
+#soundbar.pulse-dots.show-play-button:not([data-disable-pulse="true"])::before {
+    animation: dots-pulse calc(1.8s / var(--play-button-pulse-speed, 1)) infinite ease-in-out;
+}
+
+#soundbar.pulse-breathing.pulse-dots.show-play-button:not([data-disable-pulse="true"])::before {
+    animation: breathing-pulse calc(2.0s / var(--play-button-pulse-speed, 1)) infinite ease-in-out, 
+               dots-pulse calc(1.8s / var(--play-button-pulse-speed, 1)) infinite ease-in-out;
+}
+
+/* Ensure the main canvas never pulses - only the overlay */
+#soundbar.pulse-breathing,
+#soundbar.pulse-dots,
+#soundbar.pulse-effect {
+    animation: none !important;
+    transform: translateZ(0) !important;
+}
+
+/* Legacy support - convert old pulse classes to new overlay system */
+.pulse-effect {
+    /* Legacy class - now handled by ::before pseudo-element */
+}
+
+/* === ELEMENTOR COMPATIBILITY === */
+.elementor-widget-container .ai-interview-container {
+    overflow: visible !important;
+}
+
+.elementor-widget-container #soundbar {
+    transform: translateZ(0) !important;
+    backface-visibility: hidden !important;
+}
+
+#chatInterface.visible {
+    display: block !important;
+}
+
+/* === TABLET RESPONSIVE STYLES (768px - 1024px) === */
+@media screen and (max-width: 1024px) and (min-width: 768px) {
+    .ai-interview-container {
+        margin: 15px 0 !important;
+        padding: 15px !important;
+        min-height: 400px !important;
+    }
+    
+    #soundbar {
+        height: 400px !important;
+        margin: 15px auto !important;
+    }
+    
+    #audio-visualizer {
+        height: 80px !important;
+        margin: 15px auto !important;
+    }
+    
+    .ai-interview-controls {
+        gap: 12px !important;
+        transform: translateY(-40px) !important;
+    }
+    
+    .ai-interview-container button {
+        padding: 8px 16px !important;
+        font-size: 15px !important;
+    }
+    
+    #chatInterface {
+        margin-top: -30px !important;
+        padding: 15px !important;
+    }
+    
+    #chatHistory {
+        height: 130px !important;
+        padding: 12px !important;
+    }
+    
+    #userInput {
+        padding: 10px !important;
+        font-size: 15px !important;
+    }
+    
+    #sendButton {
+        padding: 8px 16px !important;
+        font-size: 15px !important;
+    }
+    
+    .voice-controls {
+        gap: 8px !important;
+    }
+    
+    .voice-btn {
+        padding: 6px 12px !important;
+        font-size: 13px !important;
+        min-width: 70px !important;
+    }
+    
+    .voice-icon {
+        font-size: 14px !important;
+    }
+    
+    .voice-text {
+        font-size: 11px !important;
+    }
+    
+    .typing-indicator {
+        padding: 12px !important;
+        font-size: 15px !important;
+    }
+    
+    .ai-spinner {
+        width: 18px !important;
+        height: 18px !important;
+    }
+    
+    .voice-status {
+        font-size: 13px !important;
+        padding: 6px 12px !important;
+    }
+}
+
+/* === MOBILE RESPONSIVE STYLES (up to 767px) === */
+@media screen and (max-width: 767px) {
+    .ai-interview-container {
+        margin: 10px 0 !important;
+        padding: 10px !important;
+        min-height: 350px !important;
+        border-radius: 10px !important;
+    }
+    
+    .ai-interview-inner-container {
+        max-width: 100% !important;
+    }
+    
+    #soundbar {
+        height: 300px !important;
+        margin: 10px auto !important;
+        border-radius: 6px !important;
+        box-shadow: 0 0 20px 5px rgba(0, 207, 255, 0.4), 0 0 30px 10px rgba(0, 102, 255, 0.2) !important;
+    }
+    
+    #audio-visualizer {
+        height: 60px !important;
+        margin: 10px auto !important;
+        border-radius: 6px !important;
+        box-shadow: 0 0 15px 3px rgba(0, 150, 255, 0.3), 0 0 20px 5px rgba(0, 150, 255, 0.2) !important;
+    }
+    
+    .ai-interview-controls {
+        gap: 10px !important;
+        transform: translateY(-30px) !important;
+        flex-wrap: wrap !important;
+    }
+    
+    .ai-interview-container button {
+        padding: 8px 14px !important;
+        font-size: 14px !important;
+        border-radius: 20px !important;
+        min-width: 100px !important;
+    }
+    
+    #chatInterface {
+        margin-top: -20px !important;
+        padding: 12px !important;
+        border-radius: 10px !important;
+        font-size: 14px !important;
+    }
+    
+    #chatInterface h2 {
+        font-size: 18px !important;
+        margin-bottom: 10px !important;
+    }
+    
+    #chatHistory {
+        height: 120px !important;
+        padding: 10px !important;
+        margin-bottom: 15px !important;
+        border-radius: 8px !important;
+        font-size: 14px !important;
+    }
+    
+    .message {
+        margin-bottom: 12px !important;
+        padding: 8px !important;
+        border-radius: 6px !important;
+        font-size: 14px !important;
+        line-height: 1.4 !important;
+    }
+    
+    .voice-controls {
+        gap: 6px !important;
+        margin: 10px 0 !important;
+        justify-content: center !important;
+    }
+    
+    .voice-btn {
+        padding: 6px 10px !important;
+        font-size: 12px !important;
+        min-width: 60px !important;
+        border-radius: 20px !important;
+        flex: 0 1 auto !important;
+    }
+    
+    .voice-icon {
+        font-size: 14px !important;
+    }
+    
+    .voice-text {
+        font-size: 10px !important;
+    }
+    
+    .voice-status {
+        font-size: 12px !important;
+        padding: 6px 10px !important;
+        margin: 8px 0 !important;
+    }
+    
+    #inputArea {
+        flex-direction: column !important;
+        gap: 8px !important;
+    }
+    
+    #userInput {
+        padding: 10px !important;
+        font-size: 14px !important;
+        border-radius: 20px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    
+    #sendButton {
+        padding: 10px 20px !important;
+        font-size: 14px !important;
+        border-radius: 20px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    
+    .typing-indicator {
+        padding: 10px !important;
+        font-size: 14px !important;
+    }
+    
+    .ai-spinner {
+        width: 16px !important;
+        height: 16px !important;
+    }
+    
+    .thinking-dots span {
+        width: 6px !important;
+        height: 6px !important;
+    }
+    
+    .processing-text {
+        font-size: 12px !important;
+    }
+    
+    .ai-message .tts-button {
+        position: static !important;
+        margin-top: 8px !important;
+        display: inline-block !important;
+        margin-left: 8px !important;
+    }
+    
+    .browser-notice {
+        font-size: 11px !important;
+        padding: 6px 8px !important;
+        margin: 8px 0 !important;
+    }
+    
+    /* Mobile touch improvements */
+    .ai-interview-container button:active {
+        transform: scale(0.95) !important;
+    }
+    
+    .voice-btn:active:not(:disabled) {
+        transform: scale(0.95) !important;
+    }
+    
+    #userInput:focus {
+        outline: none !important;
+        border: 2px solid #00cfff !important;
+    }
+}
+
+/* === SMALL MOBILE RESPONSIVE STYLES (up to 480px) === */
+@media screen and (max-width: 480px) {
+    .ai-interview-container {
+        margin: 5px 0 !important;
+        padding: 8px !important;
+        min-height: 300px !important;
+    }
+    
+    #soundbar {
+        height: 250px !important;
+        margin: 8px auto !important;
+    }
+    
+    #audio-visualizer {
+        height: 50px !important;
+        margin: 8px auto !important;
+    }
+    
+    .ai-interview-controls {
+        transform: translateY(-25px) !important;
+    }
+    
+    .ai-interview-container button {
+        padding: 6px 12px !important;
+        font-size: 13px !important;
+        min-width: 80px !important;
+    }
+    
+    #chatInterface {
+        margin-top: -15px !important;
+        padding: 10px !important;
+        font-size: 13px !important;
+    }
+    
+    #chatInterface h2 {
+        font-size: 16px !important;
+    }
+    
+    #chatHistory {
+        height: 100px !important;
+        padding: 8px !important;
+        font-size: 13px !important;
+    }
+    
+    .message {
+        padding: 6px !important;
+        font-size: 13px !important;
+    }
+    
+    .voice-controls {
+        gap: 4px !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+    }
+    
+    .voice-btn {
+        padding: 5px 8px !important;
+        font-size: 11px !important;
+        min-width: 50px !important;
+        flex: 1 1 auto !important;
+        max-width: calc(33.333% - 4px) !important;
+    }
+    
+    .voice-icon {
+        font-size: 12px !important;
+    }
+    
+    .voice-text {
+        font-size: 9px !important;
+    }
+    
+    .voice-status {
+        font-size: 11px !important;
+        padding: 4px 8px !important;
+    }
+    
+    #userInput {
+        padding: 8px !important;
+        font-size: 13px !important;
+    }
+    
+    #sendButton {
+        padding: 8px 16px !important;
+        font-size: 13px !important;
+    }
+    
+    .typing-indicator {
+        padding: 8px !important;
+        font-size: 13px !important;
+    }
+    
+    .ai-spinner {
+        width: 14px !important;
+        height: 14px !important;
+    }
+    
+    .processing-text {
+        font-size: 11px !important;
+    }
+    
+    .browser-notice {
+        font-size: 10px !important;
+        padding: 4px 6px !important;
+    }
+}
+
+/* === ACCESSIBILITY IMPROVEMENTS === */
+@media (prefers-reduced-motion: reduce) {
+    .ai-interview-container,
+    .ai-interview-controls,
+    .voice-btn,
+    #sendButton,
+    .ai-spinner,
+    .thinking-dots span,
+    .pulse-breathing,
+    .pulse-dots,
+    .pulse-effect,
+    #soundbar::before {
+        animation: none !important;
+        transition: none !important;
+    }
+    
+    .voice-btn.listening,
+    .voice-status.listening,
+    .ai-message .tts-button.playing {
+        animation: none !important;
+    }
+    
+    /* Disable all play button pulse effects when reduced motion is preferred */
+    #soundbar.pulse-breathing::before,
+    #soundbar.pulse-dots::before,
+    #soundbar.pulse-effect::before {
+        animation: none !important;
+        opacity: 0 !important;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .ai-interview-container {
+        border: 2px solid #ffffff !important;
+    }
+    
+    .voice-btn,
+    #sendButton {
+        border-width: 2px !important;
+    }
+    
+    .message {
+        border-width: 2px !important;
+    }
+}
+
+/* Dark mode preference support */
+@media (prefers-color-scheme: dark) {
+    .browser-notice {
+        background: rgba(255, 140, 0, 0.1) !important;
+        color: #ffa500 !important;
+    }
+}
+
+/* === PRINT STYLES === */
+@media print {
+    .ai-interview-container {
+        background: white !important;
+        color: black !important;
+        box-shadow: none !important;
+    }
+    
+    #soundbar,
+    .voice-controls,
+    #inputArea,
+    .ai-interview-controls {
+        display: none !important;
+    }
+    
+    #chatHistory {
+        background: white !important;
+        border: 1px solid black !important;
+        height: auto !important;
+        overflow: visible !important;
+    }
+    
+    .message {
+        border: 1px solid black !important;
+        background: white !important;
+        color: black !important;
+    }
+}
+
+/* === FOCUS MANAGEMENT === */
+.voice-btn:focus,
+#sendButton:focus,
+#userInput:focus {
+    outline: 2px solid #00cfff !important;
+    outline-offset: 2px !important;
+}
+
+/* === LOADING STATES === */
+.ai-interview-container.loading {
+    opacity: 0.8 !important;
+    pointer-events: none !important;
+}
+
+.ai-interview-container.loading * {
+    cursor: wait !important;
+}
+
+/* === ERROR STATES === */
+.voice-btn.error {
+    background: rgba(255, 0, 0, 0.2) !important;
+    border-color: #ff0000 !important;
+    color: #ff6b6b !important;
+    animation: shake 0.5s ease-in-out !important;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+/* === SUCCESS STATES === */
+.voice-btn.success {
+    background: rgba(0, 255, 0, 0.2) !important;
+    border-color: #00ff00 !important;
+    color: #00ff00 !important;
+}
+
+/* === FIREFOX SPECIFIC STYLES === */
+@-moz-document url-prefix() {
+    .voice-btn[title*="Firefox"] {
+        background: rgba(255, 140, 0, 0.2) !important;
+        border-color: #ff8c00 !important;
+        color: #ffa500 !important;
+    }
+    
+    .voice-btn[title*="Firefox"]:before {
+        content: "🦊 ";
+    }
+}

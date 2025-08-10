@@ -48,6 +48,13 @@ Interactive AI-powered chat widget for Eric Rorich's portfolio, featuring voice 
 * Browser Console Integration - Frontend error capture
 * WordPress Error Logs - Backend debugging information
 * Debug Dashboard - Real-time system status monitoring
+* **Translation Debug Panel** - Advanced troubleshooting for system prompt translation
+  - Environment status checks (API keys, nonce validation, permissions)
+  - Real-time translation logs with timestamps and context
+  - Request/response preview for debugging failed translations
+  - Test translation functionality with detailed error reporting
+  - Export debug logs for technical support
+  - Global debug API (window.aiwTranslationDebug) for extensibility
 * API Testing Tools - Connection validation and diagnostics
 * Troubleshooting Guides - Step-by-step issue resolution
 

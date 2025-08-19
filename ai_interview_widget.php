@@ -9,9 +9,40 @@
 
 defined('ABSPATH') or die('No script kiddies please!');
 
-// Include provider definitions class
-require_once plugin_dir_path(__FILE__) . 'includes/class-aiw-provider-definitions.php';
-require_once plugin_dir_path(__FILE__) . 'includes/class-aiw-model-cache.php';
+// Define robust plugin constants using WordPress best practices
+if ( ! defined( 'AIW_PLUGIN_FILE' ) ) {
+    define( 'AIW_PLUGIN_FILE', __FILE__ );
+}
+if ( ! defined( 'AIW_PLUGIN_DIR' ) ) {
+    define( 'AIW_PLUGIN_DIR', plugin_dir_path( AIW_PLUGIN_FILE ) );
+}
+if ( ! defined( 'AIW_PLUGIN_URL' ) ) {
+    define( 'AIW_PLUGIN_URL', plugin_dir_url( AIW_PLUGIN_FILE ) );
+}
+
+// Safe include of provider definitions with error handling
+$aiw_provider_defs = AIW_PLUGIN_DIR . 'includes/class-aiw-provider-definitions.php';
+if ( file_exists( $aiw_provider_defs ) ) {
+    require_once $aiw_provider_defs;
+} else {
+    add_action( 'admin_notices', function() use ( $aiw_provider_defs ) {
+        echo '<div class="notice notice-error"><p>' . esc_html( sprintf( __( 'AI Interview Widget: Missing provider definitions file: %s', 'aiw' ), $aiw_provider_defs ) ) . '</p></div>';
+    } );
+    // Prevent further initialization to avoid additional fatals
+    return;
+}
+
+// Safe include of model cache with error handling  
+$aiw_model_cache = AIW_PLUGIN_DIR . 'includes/class-aiw-model-cache.php';
+if ( file_exists( $aiw_model_cache ) ) {
+    require_once $aiw_model_cache;
+} else {
+    add_action( 'admin_notices', function() use ( $aiw_model_cache ) {
+        echo '<div class="notice notice-error"><p>' . esc_html( sprintf( __( 'AI Interview Widget: Missing model cache file: %s', 'aiw' ), $aiw_model_cache ) ) . '</p></div>';
+    } );
+    // Prevent further initialization to avoid additional fatals
+    return;
+}
 
 /**
  * Main AI Interview Widget plugin class
@@ -355,7 +386,7 @@ class AIInterviewWidget {
         
         // Handle greeting audio files (backwards compatibility)
         if (in_array($audio_file, ['greeting_en.mp3', 'greeting_de.mp3'])) {
-            $file_path = plugin_dir_path(__FILE__) . $audio_file;
+            $file_path = AIW_PLUGIN_DIR . $audio_file;
             if (file_exists($file_path)) {
                 $this->serve_audio_file($file_path);
                 exit;
@@ -376,7 +407,7 @@ class AIInterviewWidget {
     // Serve audio file with proper headers
     private function serve_audio_file($file_path) {
         // Security check - ensure file is within allowed directories
-        $plugin_dir = realpath(plugin_dir_path(__FILE__));
+        $plugin_dir = realpath(AIW_PLUGIN_DIR);
         $upload_dir = wp_upload_dir();
         $upload_real_dir = realpath($upload_dir['basedir']);
         $requested_file = realpath($file_path);
@@ -2237,7 +2268,7 @@ class AIInterviewWidget {
         }
         
         /* Load base widget styles */
-        ' . file_get_contents(plugin_dir_path(__FILE__) . 'ai-interview-widget.css') . '
+        ' . file_get_contents(AIW_PLUGIN_DIR . 'ai-interview-widget.css') . '
         
         /* Apply custom styles */
         ' . $custom_css . '
@@ -6360,7 +6391,7 @@ private function aiw_llm_translate($text, $source_lang, $target_lang, $debug_mod
 
 // ENHANCED SCRIPT ENQUEUING - FIXED DATA PASSING
 public function enqueue_scripts() {
-$plugin_url = plugin_dir_url(__FILE__);
+$plugin_url = AIW_PLUGIN_URL;
 
 if (!wp_script_is('ai-interview-widget', 'enqueued')) {
 wp_enqueue_style('ai-interview-widget', $plugin_url . 'ai-interview-widget.css', array(), '1.9.4');
@@ -6522,8 +6553,8 @@ echo '</script>' . "\n";
 }
 
 private function validate_audio_files() {
-$plugin_dir = plugin_dir_path(__FILE__);
-$plugin_url = plugin_dir_url(__FILE__);
+$plugin_dir = AIW_PLUGIN_DIR;
+$plugin_url = AIW_PLUGIN_URL;
 $files = ['greeting_en.mp3', 'greeting_de.mp3'];
 $valid_files = [];
 
@@ -9249,7 +9280,7 @@ public function register_customizer_controls($wp_customize) {
 public function enqueue_customizer_preview_script() {
     wp_enqueue_script(
         'ai-interview-customizer-preview',
-        plugin_dir_url(__FILE__) . 'customizer-preview.js',
+        AIW_PLUGIN_URL . 'customizer-preview.js',
         array('jquery', 'customize-preview'),
         '1.0.0',
         true

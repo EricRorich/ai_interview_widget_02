@@ -97,7 +97,7 @@ class AIW_Provider_Definitions {
                 $models = array(
                     'gpt-4o' => array(
                         'name' => 'GPT-4o',
-                        'description' => 'Latest multimodal model with vision, audio, and text capabilities',
+                        'description' => 'Most capable multimodal model with vision, audio, and text capabilities',
                         'context_window' => 128000,
                         'max_output' => 16384,
                         'capabilities' => array('text', 'vision', 'audio', 'function_calling', 'json_mode'),
@@ -107,7 +107,7 @@ class AIW_Provider_Definitions {
                     ),
                     'gpt-4o-mini' => array(
                         'name' => 'GPT-4o Mini',
-                        'description' => 'Fast and affordable model with vision capabilities',
+                        'description' => 'Fast, affordable model with vision capabilities - best value for most tasks',
                         'context_window' => 128000,
                         'max_output' => 16384,
                         'capabilities' => array('text', 'vision', 'function_calling', 'json_mode'),
@@ -115,9 +115,29 @@ class AIW_Provider_Definitions {
                         'deprecated' => false,
                         'cost_tier' => 'low'
                     ),
+                    'o1-preview' => array(
+                        'name' => 'o1-preview',
+                        'description' => 'Advanced reasoning model for complex problem-solving tasks',
+                        'context_window' => 128000,
+                        'max_output' => 32768,
+                        'capabilities' => array('text', 'advanced_reasoning'),
+                        'recommended' => false,
+                        'deprecated' => false,
+                        'cost_tier' => 'premium'
+                    ),
+                    'o1-mini' => array(
+                        'name' => 'o1-mini',
+                        'description' => 'Faster reasoning model optimized for STEM tasks',
+                        'context_window' => 128000,
+                        'max_output' => 65536,
+                        'capabilities' => array('text', 'advanced_reasoning'),
+                        'recommended' => false,
+                        'deprecated' => false,
+                        'cost_tier' => 'high'
+                    ),
                     'gpt-4-turbo' => array(
                         'name' => 'GPT-4 Turbo',
-                        'description' => 'High-performance model with large context window',
+                        'description' => 'Previous generation high-performance model',
                         'context_window' => 128000,
                         'max_output' => 4096,
                         'capabilities' => array('text', 'vision', 'function_calling', 'json_mode'),
@@ -138,7 +158,7 @@ class AIW_Provider_Definitions {
                     ),
                     'gpt-3.5-turbo' => array(
                         'name' => 'GPT-3.5 Turbo',
-                        'description' => 'Fast and efficient model for basic tasks',
+                        'description' => 'Legacy model - use GPT-4o Mini for better performance and lower cost',
                         'context_window' => 16385,
                         'max_output' => 4096,
                         'capabilities' => array('text', 'function_calling', 'json_mode'),
@@ -154,7 +174,7 @@ class AIW_Provider_Definitions {
                 $models = array(
                     'claude-3-5-sonnet-20241022' => array(
                         'name' => 'Claude 3.5 Sonnet',
-                        'description' => 'Latest and most capable Claude model',
+                        'description' => 'Most capable Claude model with excellent reasoning and coding abilities',
                         'context_window' => 200000,
                         'max_output' => 8192,
                         'capabilities' => array('text', 'vision', 'function_calling'),
@@ -164,7 +184,7 @@ class AIW_Provider_Definitions {
                     ),
                     'claude-3-5-haiku-20241022' => array(
                         'name' => 'Claude 3.5 Haiku',
-                        'description' => 'Fast and affordable Claude model',
+                        'description' => 'Fast and affordable Claude model with vision capabilities',
                         'context_window' => 200000,
                         'max_output' => 8192,
                         'capabilities' => array('text', 'vision'),
@@ -184,7 +204,7 @@ class AIW_Provider_Definitions {
                     ),
                     'claude-3-sonnet-20240229' => array(
                         'name' => 'Claude 3 Sonnet',
-                        'description' => 'Balanced Claude 3 model',
+                        'description' => 'Previous generation model - consider upgrading to Claude 3.5',
                         'context_window' => 200000,
                         'max_output' => 4096,
                         'capabilities' => array('text', 'vision'),
@@ -195,7 +215,7 @@ class AIW_Provider_Definitions {
                     ),
                     'claude-3-haiku-20240307' => array(
                         'name' => 'Claude 3 Haiku',
-                        'description' => 'Fast Claude 3 model',
+                        'description' => 'Previous generation model - consider upgrading to Claude 3.5 Haiku',
                         'context_window' => 200000,
                         'max_output' => 4096,
                         'capabilities' => array('text', 'vision'),
@@ -211,18 +231,18 @@ class AIW_Provider_Definitions {
                 $models = array(
                     'gemini-2.0-flash-exp' => array(
                         'name' => 'Gemini 2.0 Flash (Experimental)',
-                        'description' => 'Latest experimental Gemini model with multimodal capabilities',
+                        'description' => 'Latest experimental Gemini model with advanced multimodal capabilities',
                         'context_window' => 1000000,
                         'max_output' => 8192,
                         'capabilities' => array('text', 'vision', 'audio', 'function_calling', 'json_mode'),
-                        'recommended' => true,
+                        'recommended' => false,
                         'deprecated' => false,
                         'experimental' => true,
                         'cost_tier' => 'medium'
                     ),
                     'gemini-1.5-pro' => array(
                         'name' => 'Gemini 1.5 Pro',
-                        'description' => 'Advanced model with large context window',
+                        'description' => 'Most capable production model with massive context window',
                         'context_window' => 2000000,
                         'max_output' => 8192,
                         'capabilities' => array('text', 'vision', 'audio', 'function_calling', 'json_mode'),
@@ -232,7 +252,7 @@ class AIW_Provider_Definitions {
                     ),
                     'gemini-1.5-flash' => array(
                         'name' => 'Gemini 1.5 Flash',
-                        'description' => 'Fast and efficient model for most tasks',
+                        'description' => 'Fast and efficient model for most tasks with excellent value',
                         'context_window' => 1000000,
                         'max_output' => 8192,
                         'capabilities' => array('text', 'vision', 'audio', 'function_calling', 'json_mode'),
@@ -240,9 +260,19 @@ class AIW_Provider_Definitions {
                         'deprecated' => false,
                         'cost_tier' => 'low'
                     ),
+                    'gemini-1.5-flash-8b' => array(
+                        'name' => 'Gemini 1.5 Flash-8B',
+                        'description' => 'Ultra-fast and cost-effective model for high-volume applications',
+                        'context_window' => 1000000,
+                        'max_output' => 8192,
+                        'capabilities' => array('text', 'vision', 'function_calling', 'json_mode'),
+                        'recommended' => false,
+                        'deprecated' => false,
+                        'cost_tier' => 'ultra_low'
+                    ),
                     'gemini-1.0-pro' => array(
                         'name' => 'Gemini 1.0 Pro',
-                        'description' => 'Original Gemini Pro model',
+                        'description' => 'Legacy model - consider upgrading to Gemini 1.5 Flash for better performance',
                         'context_window' => 32000,
                         'max_output' => 2048,
                         'capabilities' => array('text', 'function_calling'),
@@ -259,7 +289,7 @@ class AIW_Provider_Definitions {
                 $models = array(
                     'gpt-4o' => array(
                         'name' => 'GPT-4o (Azure)',
-                        'description' => 'Latest OpenAI model hosted on Azure',
+                        'description' => 'Latest OpenAI model hosted on Azure with enterprise features',
                         'context_window' => 128000,
                         'max_output' => 16384,
                         'capabilities' => array('text', 'vision', 'function_calling', 'json_mode'),
@@ -269,7 +299,7 @@ class AIW_Provider_Definitions {
                     ),
                     'gpt-4o-mini' => array(
                         'name' => 'GPT-4o Mini (Azure)',
-                        'description' => 'Affordable OpenAI model hosted on Azure',
+                        'description' => 'Fast and affordable OpenAI model hosted on Azure',
                         'context_window' => 128000,
                         'max_output' => 16384,
                         'capabilities' => array('text', 'vision', 'function_calling', 'json_mode'),
@@ -277,9 +307,19 @@ class AIW_Provider_Definitions {
                         'deprecated' => false,
                         'cost_tier' => 'low'
                     ),
+                    'o1-preview' => array(
+                        'name' => 'o1-preview (Azure)',
+                        'description' => 'Advanced reasoning model available on Azure',
+                        'context_window' => 128000,
+                        'max_output' => 32768,
+                        'capabilities' => array('text', 'advanced_reasoning'),
+                        'recommended' => false,
+                        'deprecated' => false,
+                        'cost_tier' => 'premium'
+                    ),
                     'gpt-4-turbo' => array(
                         'name' => 'GPT-4 Turbo (Azure)',
-                        'description' => 'High-performance model on Azure',
+                        'description' => 'Previous generation high-performance model on Azure',
                         'context_window' => 128000,
                         'max_output' => 4096,
                         'capabilities' => array('text', 'vision', 'function_calling', 'json_mode'),
@@ -289,7 +329,7 @@ class AIW_Provider_Definitions {
                     ),
                     'gpt-35-turbo' => array(
                         'name' => 'GPT-3.5 Turbo (Azure)',
-                        'description' => 'Fast model for basic tasks on Azure',
+                        'description' => 'Legacy model - consider upgrading to GPT-4o Mini for better performance',
                         'context_window' => 16385,
                         'max_output' => 4096,
                         'capabilities' => array('text', 'function_calling', 'json_mode'),

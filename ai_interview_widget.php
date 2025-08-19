@@ -2,47 +2,12 @@
 /**
  * Plugin Name: AI Interview Widget
  * Description: Interactive AI widget for Eric Rorich's portfolio with voice capabilities. Displays greeting and handles chat interactions with speech-to-text and text-to-speech features. Now includes WordPress Customizer integration for play button designs.
- * Version: 1.9.6
+ * Version: 1.9.5
  * Author: Eric Rorich
  * Updated: 2025-01-27 14:30:00
  */
 
 defined('ABSPATH') or die('No script kiddies please!');
-
-// Define robust plugin constants using WordPress best practices
-if ( ! defined( 'AIW_PLUGIN_FILE' ) ) {
-    define( 'AIW_PLUGIN_FILE', __FILE__ );
-}
-if ( ! defined( 'AIW_PLUGIN_DIR' ) ) {
-    define( 'AIW_PLUGIN_DIR', plugin_dir_path( AIW_PLUGIN_FILE ) );
-}
-if ( ! defined( 'AIW_PLUGIN_URL' ) ) {
-    define( 'AIW_PLUGIN_URL', plugin_dir_url( AIW_PLUGIN_FILE ) );
-}
-
-// Safe include of provider definitions with error handling
-$aiw_provider_defs = AIW_PLUGIN_DIR . 'includes/class-aiw-provider-definitions.php';
-if ( file_exists( $aiw_provider_defs ) ) {
-    require_once $aiw_provider_defs;
-} else {
-    add_action( 'admin_notices', function() use ( $aiw_provider_defs ) {
-        echo '<div class="notice notice-error"><p>' . esc_html( sprintf( __( 'AI Interview Widget: Missing provider definitions file: %s', 'aiw' ), $aiw_provider_defs ) ) . '</p></div>';
-    } );
-    // Prevent further initialization to avoid additional fatals
-    return;
-}
-
-// Safe include of model cache with error handling  
-$aiw_model_cache = AIW_PLUGIN_DIR . 'includes/class-aiw-model-cache.php';
-if ( file_exists( $aiw_model_cache ) ) {
-    require_once $aiw_model_cache;
-} else {
-    add_action( 'admin_notices', function() use ( $aiw_model_cache ) {
-        echo '<div class="notice notice-error"><p>' . esc_html( sprintf( __( 'AI Interview Widget: Missing model cache file: %s', 'aiw' ), $aiw_model_cache ) ) . '</p></div>';
-    } );
-    // Prevent further initialization to avoid additional fatals
-    return;
-}
 
 /**
  * Main AI Interview Widget plugin class
@@ -101,7 +66,6 @@ class AIInterviewWidget {
         add_action('admin_init', array($this, 'register_settings'));
         add_filter('plugin_action_links_' . plugin_basename(__FILE__), array($this, 'add_settings_link'));
         add_action('admin_init', array($this, 'remove_old_menu_hooks'));
-        add_action('admin_enqueue_scripts', array($this, 'admin_enqueue_scripts'));
 
         // Plugin lifecycle hooks
         register_activation_hook(__FILE__, array($this, 'plugin_activation'));
@@ -186,101 +150,6 @@ class AIInterviewWidget {
         wp_clear_scheduled_hook('ai_interview_cleanup_tts_files');
         
         error_log('AI Interview Widget v1.9.3: Plugin uninstalled and cleaned up at 2025-08-03 18:37:12 UTC');
-    }
-
-    /**
-     * Enqueue admin scripts and styles
-     * 
-     * @since 1.9.6
-     */
-    public function admin_enqueue_scripts($hook) {
-        // Only load on our admin pages
-        if (strpos($hook, 'ai-interview-widget') === false) {
-            return;
-        }
-        
-        // Add enhanced admin styles
-        $admin_css = "
-        <style type='text/css'>
-        .aiw-model-select {
-            position: relative;
-        }
-        
-        .aiw-model-select select {
-            width: 100%;
-            max-width: 400px;
-        }
-        
-        .aiw-model-select option[data-deprecated='true'] {
-            color: #d63638 !important;
-            font-style: italic;
-        }
-        
-        .aiw-model-select option[data-recommended='true'] {
-            font-weight: bold;
-        }
-        
-        .aiw-model-select option[data-experimental='true'] {
-            color: #856404 !important;
-        }
-        
-        #model-info {
-            transition: all 0.3s ease;
-        }
-        
-        .aiw-provider-section .form-table th {
-            width: 180px;
-            padding: 15px 10px 15px 0;
-        }
-        
-        .aiw-provider-section .form-table td {
-            padding: 15px 10px;
-        }
-        
-        .aiw-status-indicator {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 600;
-            margin-left: 8px;
-        }
-        
-        .aiw-status-recommended {
-            background: #d4edda;
-            color: #155724;
-        }
-        
-        .aiw-status-deprecated {
-            background: #f8d7da;
-            color: #721c24;
-        }
-        
-        .aiw-status-experimental {
-            background: #fff3cd;
-            color: #856404;
-        }
-        
-        @media (max-width: 768px) {
-            .aiw-provider-section .form-table,
-            .aiw-provider-section .form-table th,
-            .aiw-provider-section .form-table td {
-                display: block;
-                width: 100%;
-            }
-            
-            .aiw-provider-section .form-table th {
-                padding-bottom: 5px;
-            }
-            
-            .aiw-provider-section .form-table td {
-                padding-top: 0;
-                padding-bottom: 20px;
-            }
-        }
-        </style>";
-        
-        echo $admin_css;
     }
 
     /**
@@ -482,7 +351,7 @@ class AIInterviewWidget {
         
         // Handle greeting audio files (backwards compatibility)
         if (in_array($audio_file, ['greeting_en.mp3', 'greeting_de.mp3'])) {
-            $file_path = AIW_PLUGIN_DIR . $audio_file;
+            $file_path = plugin_dir_path(__FILE__) . $audio_file;
             if (file_exists($file_path)) {
                 $this->serve_audio_file($file_path);
                 exit;
@@ -503,7 +372,7 @@ class AIInterviewWidget {
     // Serve audio file with proper headers
     private function serve_audio_file($file_path) {
         // Security check - ensure file is within allowed directories
-        $plugin_dir = realpath(AIW_PLUGIN_DIR);
+        $plugin_dir = realpath(plugin_dir_path(__FILE__));
         $upload_dir = wp_upload_dir();
         $upload_real_dir = realpath($upload_dir['basedir']);
         $requested_file = realpath($file_path);
@@ -795,7 +664,7 @@ class AIInterviewWidget {
             'ai_interview_widget_llm_model',
             array(
                 'type' => 'string',
-                'sanitize_callback' => array($this, 'sanitize_llm_model'),
+                'sanitize_callback' => 'sanitize_text_field',
                 'default' => 'gpt-4o-mini'
             )
         );
@@ -2364,7 +2233,7 @@ class AIInterviewWidget {
         }
         
         /* Load base widget styles */
-        ' . file_get_contents(AIW_PLUGIN_DIR . 'ai-interview-widget.css') . '
+        ' . file_get_contents(plugin_dir_path(__FILE__) . 'ai-interview-widget.css') . '
         
         /* Apply custom styles */
         ' . $custom_css . '
@@ -5506,94 +5375,31 @@ return $api_key;
 }
 
 /**
- * Sanitize LLM model selection
- * 
- * Validates the selected model against the current provider's available models.
- * Falls back to provider default if invalid.
- * 
- * @param string $model The model to validate
- * @return string Valid model ID
- */
-public function sanitize_llm_model($model) {
-    $model = sanitize_text_field(trim($model));
-    $provider = get_option('ai_interview_widget_api_provider', 'openai');
-    
-    // If model is empty, use provider default
-    if (empty($model)) {
-        return $this->get_default_model_for_provider($provider);
-    }
-    
-    // Validate against current provider's models
-    $provider_models = AIW_Provider_Definitions::get_models_for_provider($provider);
-    
-    if (!array_key_exists($model, $provider_models)) {
-        $default_model = $this->get_default_model_for_provider($provider);
-        
-        add_settings_error(
-            'ai_interview_widget_llm_model',
-            'invalid_model',
-            sprintf(
-                'Invalid model "%s" for provider "%s". Reset to default model "%s".',
-                esc_html($model),
-                esc_html($provider),
-                esc_html($default_model)
-            ),
-            'notice-warning'
-        );
-        
-        return $default_model;
-    }
-    
-    return $model;
-}
-
-/**
  * FIXED: Ensure valid model setting is always available
  */
 private function ensure_valid_model_setting() {
     $model = get_option('ai_interview_widget_llm_model', '');
-    $provider = get_option('ai_interview_widget_api_provider', 'openai');
     
     // If model is empty or invalid, reset to default
     if (empty($model) || !is_string($model) || trim($model) === '') {
-        $default_model = $this->get_default_model_for_provider($provider);
-        update_option('ai_interview_widget_llm_model', $default_model);
-        error_log('AI Interview Widget: Reset model setting to default (' . $default_model . ')');
-        return $default_model;
+        update_option('ai_interview_widget_llm_model', 'gpt-4o-mini');
+        error_log('AI Interview Widget: Reset model setting to default (gpt-4o-mini)');
+        return 'gpt-4o-mini';
     }
     
-    // Validate against current provider's models
-    $provider_models = AIW_Provider_Definitions::get_models_for_provider($provider);
+    // Validate against known good models
+    $valid_models = array(
+        'gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-4', 'gpt-4-32k',
+        'gpt-3.5-turbo', 'gpt-3.5-turbo-16k'
+    );
     
-    if (!array_key_exists($model, $provider_models)) {
-        $default_model = $this->get_default_model_for_provider($provider);
-        update_option('ai_interview_widget_llm_model', $default_model);
-        error_log('AI Interview Widget: Invalid model "' . $model . '" for provider "' . $provider . '", reset to default');
-        return $default_model;
+    if (!in_array($model, $valid_models)) {
+        update_option('ai_interview_widget_llm_model', 'gpt-4o-mini');
+        error_log('AI Interview Widget: Invalid model "' . $model . '", reset to default');
+        return 'gpt-4o-mini';
     }
     
     return $model;
-}
-
-/**
- * Get default model for a provider
- * 
- * @param string $provider Provider ID
- * @return string Default model ID
- */
-private function get_default_model_for_provider($provider) {
-    $models = AIW_Provider_Definitions::get_models_for_provider($provider);
-    
-    // Try to find a recommended model first
-    foreach ($models as $model_id => $model_config) {
-        if (!empty($model_config['recommended'])) {
-            return $model_id;
-        }
-    }
-    
-    // Fallback to first available model
-    $model_keys = array_keys($models);
-    return !empty($model_keys) ? $model_keys[0] : 'gpt-4o-mini';
 }
 
 // ==========================================
@@ -6487,7 +6293,7 @@ private function aiw_llm_translate($text, $source_lang, $target_lang, $debug_mod
 
 // ENHANCED SCRIPT ENQUEUING - FIXED DATA PASSING
 public function enqueue_scripts() {
-$plugin_url = AIW_PLUGIN_URL;
+$plugin_url = plugin_dir_url(__FILE__);
 
 if (!wp_script_is('ai-interview-widget', 'enqueued')) {
 wp_enqueue_style('ai-interview-widget', $plugin_url . 'ai-interview-widget.css', array(), '1.9.4');
@@ -6649,8 +6455,8 @@ echo '</script>' . "\n";
 }
 
 private function validate_audio_files() {
-$plugin_dir = AIW_PLUGIN_DIR;
-$plugin_url = AIW_PLUGIN_URL;
+$plugin_dir = plugin_dir_path(__FILE__);
+$plugin_url = plugin_dir_url(__FILE__);
 $files = ['greeting_en.mp3', 'greeting_de.mp3'];
 $valid_files = [];
 
@@ -6888,9 +6694,6 @@ $this->test_elevenlabs_connection();
 if (isset($_POST['test_voice_features'])) {
 $this->test_voice_features();
 }
-if (isset($_POST['clear_model_cache'])) {
-$this->handle_clear_model_cache();
-}
 if (isset($_POST['upload_system_prompt'])) {
 $this->handle_system_prompt_upload();
 }
@@ -6997,7 +6800,7 @@ $content_settings = get_option('ai_interview_widget_content_settings', '');
     </div>
 
     <!-- AI Provider Selection Container -->
-    <div class="postbox aiw-provider-section" style="padding: 25px; margin-bottom: 20px; border-left: 4px solid #2196F3; background: linear-gradient(135deg, #f8fbff 0%, #e3f2fd 100%); box-shadow: 0 2px 8px rgba(33, 150, 243, 0.1);">
+    <div class="postbox" style="padding: 25px; margin-bottom: 20px; border-left: 4px solid #2196F3; background: linear-gradient(135deg, #f8fbff 0%, #e3f2fd 100%); box-shadow: 0 2px 8px rgba(33, 150, 243, 0.1);">
         <div style="display: flex; align-items: center; margin-bottom: 20px;">
             <span style="font-size: 24px; margin-right: 12px; color: #2196F3;">🧠</span>
             <h3 style="margin: 0; color: #1565C0; font-size: 20px;">AI Provider Selection</h3>
@@ -7005,7 +6808,7 @@ $content_settings = get_option('ai_interview_widget_content_settings', '');
         <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e1f5fe; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
             <?php
             // Manually render AI Provider Selection section
-            echo '<p style="margin: 0 0 15px 0; color: #666;">Select your preferred AI provider and model. The system will automatically show you the latest available models with detailed information about their capabilities.</p>';
+            echo '<p style="margin: 0 0 15px 0; color: #666;">Select your preferred AI provider. Configure the corresponding API keys below based on your selection.</p>';
             ?>
             <table class="form-table" role="presentation" style="margin: 0;">
                 <tr>
@@ -7444,12 +7247,6 @@ $content_settings = get_option('ai_interview_widget_content_settings', '');
                 <input type="hidden" name="test_voice_features" value="1">
                 <button type="submit" class="button button-secondary">🎤 Test Voice Features</button>
             </form>
-            
-            <form method="post" style="display: inline;">
-                <?php wp_nonce_field('clear_model_cache', 'clear_cache_nonce'); ?>
-                <input type="hidden" name="clear_model_cache" value="1">
-                <button type="submit" class="button button-secondary" onclick="return confirm('Clear model cache? This will refresh all model definitions.');">🔄 Clear Model Cache</button>
-            </form>
         </div>
     </div>
 </div>
@@ -7464,43 +7261,15 @@ public function provider_section_callback() {
 
 public function api_provider_field_callback() {
     $current_provider = get_option('ai_interview_widget_api_provider', 'openai');
-    $providers = AIW_Provider_Definitions::get_providers();
     ?>
-    <select id="api_provider" name="ai_interview_widget_api_provider" onchange="toggleApiFields(this.value); updateModelOptions(this.value);" aria-label="AI Provider Selection">
-        <?php foreach ($providers as $provider_id => $provider_config): ?>
-            <option value="<?php echo esc_attr($provider_id); ?>" <?php selected($current_provider, $provider_id); ?>>
-                <?php echo esc_html($provider_config['name']); ?>
-            </option>
-        <?php endforeach; ?>
+    <select id="api_provider" name="ai_interview_widget_api_provider" onchange="toggleApiFields(this.value); updateModelOptions(this.value);">
+        <option value="openai" <?php selected($current_provider, 'openai'); ?>>OpenAI GPT-4</option>
+        <option value="anthropic" <?php selected($current_provider, 'anthropic'); ?>>Anthropic Claude</option>
+        <option value="gemini" <?php selected($current_provider, 'gemini'); ?>>Google Gemini</option>
+        <option value="azure" <?php selected($current_provider, 'azure'); ?>>Azure OpenAI</option>
+        <option value="custom" <?php selected($current_provider, 'custom'); ?>>Custom API Endpoint</option>
     </select>
-    <p class="description">
-        Choose your AI provider. Each provider offers different capabilities and pricing.
-        <?php 
-        if (isset($providers[$current_provider])) {
-            echo '<br><strong>Current:</strong> ' . esc_html($providers[$current_provider]['description']);
-            if (!empty($providers[$current_provider]['docs_url'])) {
-                echo ' <a href="' . esc_url($providers[$current_provider]['docs_url']) . '" target="_blank" rel="noopener">View Documentation</a>';
-            }
-        }
-        ?>
-    </p>
-    
-    <?php
-    // Generate JavaScript model data from provider definitions with optional caching
-    $all_providers = AIW_Provider_Definitions::get_providers();
-    $model_data = array();
-    foreach ($all_providers as $provider_id => $provider_config) {
-        if (AIW_Model_Cache::is_caching_enabled()) {
-            $model_data[$provider_id] = AIW_Model_Cache::get_models_for_select_with_cache($provider_id);
-        } else {
-            $model_data[$provider_id] = AIW_Provider_Definitions::get_models_for_select($provider_id);
-        }
-    }
-    ?>
-    <script>
-    // Provider model data generated from PHP
-    window.aiwProviderModels = <?php echo wp_json_encode($model_data); ?>;
-    </script>
+    <p class="description">Choose your AI provider. Each provider offers different capabilities and pricing.</p>
     
     <script>
     function toggleApiFields(provider) {
@@ -7547,232 +7316,62 @@ public function api_provider_field_callback() {
         // Clear existing options
         modelSelect.innerHTML = '';
         
-        // Get models from PHP-generated data
-        const allModels = window.aiwProviderModels || {};
-        const providerModels = allModels[provider] || [];
+        // Add models based on provider
+        const models = {
+            'openai': [
+                { value: 'gpt-4o', label: 'GPT-4o (Latest)' },
+                { value: 'gpt-4o-mini', label: 'GPT-4o-mini (Fast)' },
+                { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
+                { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' }
+            ],
+            'anthropic': [
+                { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet (Latest)' },
+                { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus' },
+                { value: 'claude-3-sonnet-20240229', label: 'Claude 3 Sonnet' },
+                { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku' }
+            ],
+            'gemini': [
+                { value: 'gemini-2.0-flash-exp', label: 'Gemini 2.0 Flash (Experimental)' },
+                { value: 'gemini-exp-1206', label: 'Gemini Experimental 1206' },
+                { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' },
+                { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash' }
+            ],
+            'azure': [
+                { value: 'gpt-4o', label: 'GPT-4o (Azure)' },
+                { value: 'gpt-4o-mini', label: 'GPT-4o-mini (Azure)' },
+                { value: 'gpt-4-turbo', label: 'GPT-4 Turbo (Azure)' },
+                { value: 'gpt-35-turbo', label: 'GPT-3.5 Turbo (Azure)' }
+            ],
+            'custom': [
+                { value: 'custom-model', label: 'Custom Model' }
+            ]
+        };
         
-        // Add models with enhanced information
+        const providerModels = models[provider] || models['openai'];
         providerModels.forEach(model => {
             const option = document.createElement('option');
             option.value = model.value;
             option.textContent = model.label;
-            option.title = model.description; // Add tooltip
-            
-            // Add data attributes for capabilities and deprecation info
-            if (model.capabilities) {
-                option.setAttribute('data-capabilities', model.capabilities.join(','));
-            }
-            if (model.deprecated) {
-                option.setAttribute('data-deprecated', 'true');
-                option.style.color = '#d63638'; // Red color for deprecated models
-                option.style.fontStyle = 'italic';
-            }
-            if (model.recommended) {
-                option.setAttribute('data-recommended', 'true');
-                option.style.fontWeight = 'bold';
-            }
-            if (model.experimental) {
-                option.setAttribute('data-experimental', 'true');
-                option.style.color = '#856404'; // Amber color for experimental
-            }
-            if (model.migration_suggestion) {
-                option.setAttribute('data-migration', model.migration_suggestion);
-            }
-            
             modelSelect.appendChild(option);
         });
         
-        // Preserve saved model if available, otherwise use safe default
+        // FIXED: Preserve saved model if available, otherwise use safe default
         const savedModel = window.currentSavedModel || 'gpt-4o-mini';
         const isValidForProvider = providerModels.some(model => model.value === savedModel);
         
         if (isValidForProvider && savedModel) {
             modelSelect.value = savedModel;
         } else if (providerModels.length > 0) {
-            // Use first recommended model or first option
-            const recommendedModel = providerModels.find(model => model.recommended);
-            modelSelect.value = recommendedModel ? recommendedModel.value : providerModels[0].value;
+            // Use default model if available, otherwise first option
+            const defaultModel = providerModels.find(model => model.value === 'gpt-4o-mini');
+            modelSelect.value = defaultModel ? defaultModel.value : providerModels[0].value;
         }
-        
-        // Show model information
-        updateModelInfo(modelSelect.value, provider);
-    }
-    
-    function updateModelInfo(modelId, provider) {
-        const allModels = window.aiwProviderModels || {};
-        const providerModels = allModels[provider] || [];
-        const model = providerModels.find(m => m.value === modelId);
-        
-        // Remove existing model info
-        const existingInfo = document.getElementById('model-info');
-        if (existingInfo) {
-            existingInfo.remove();
-        }
-        
-        if (!model) return;
-        
-        // Create model info container with enhanced styling
-        const infoDiv = document.createElement('div');
-        infoDiv.id = 'model-info';
-        
-        // Determine styling based on model status
-        let borderColor = '#2271b1';
-        let backgroundColor = '#f0f6fc';
-        
-        if (model.deprecated) {
-            borderColor = '#d63638';
-            backgroundColor = '#fef7f7';
-        } else if (model.experimental) {
-            borderColor = '#dba617';
-            backgroundColor = '#fffbf0';
-        } else if (model.recommended) {
-            borderColor = '#00a32a';
-            backgroundColor = '#f0f8f0';
-        }
-        
-        infoDiv.style.cssText = `margin-top: 12px; padding: 15px; background: ${backgroundColor}; border-radius: 6px; border-left: 4px solid ${borderColor}; box-shadow: 0 1px 3px rgba(0,0,0,0.1);`;
-        
-        let infoHTML = `<div style="font-size: 14px; line-height: 1.5;">`;
-        infoHTML += `<strong style="color: #333;">${model.description}</strong>`;
-        
-        // Add capabilities with icons
-        if (model.capabilities && model.capabilities.length > 0) {
-            infoHTML += '<br><div style="margin-top: 8px;">';
-            infoHTML += '<span style="color: #666; font-size: 13px;">🔧 <strong>Capabilities:</strong> ';
-            
-            const capabilityIcons = {
-                'text': '📝',
-                'vision': '👁️',
-                'audio': '🎵',
-                'function_calling': '⚙️',
-                'json_mode': '📊',
-                'advanced_reasoning': '🧠'
-            };
-            
-            const formattedCapabilities = model.capabilities.map(cap => {
-                const icon = capabilityIcons[cap] || '•';
-                return `${icon} ${cap.replace('_', ' ')}`;
-            });
-            
-            infoHTML += formattedCapabilities.join(', ') + '</span></div>';
-        }
-        
-        // Add context window info if available
-        if (model.context_window) {
-            infoHTML += `<br><span style="color: #666; font-size: 13px;">📏 <strong>Context Window:</strong> ${model.context_window.toLocaleString()} tokens</span>`;
-        }
-        
-        // Add cost tier information
-        if (model.cost_tier) {
-            const costIcons = {
-                'ultra_low': '💰',
-                'low': '💰💰',
-                'medium': '💰💰💰',
-                'high': '💰💰💰💰',
-                'premium': '💎'
-            };
-            const costIcon = costIcons[model.cost_tier] || '💰';
-            infoHTML += `<br><span style="color: #666; font-size: 13px;">${costIcon} <strong>Cost Tier:</strong> ${model.cost_tier.replace('_', ' ')}</span>`;
-        }
-        
-        // Enhanced status indicators
-        if (model.recommended) {
-            infoHTML += '<br><div style="margin-top: 10px; padding: 8px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; color: #155724;">';
-            infoHTML += '⭐ <strong>Recommended:</strong> This model is recommended for most use cases.</div>';
-        }
-        
-        if (model.deprecated) {
-            infoDiv.style.borderLeft = '4px solid #d63638';
-            infoHTML += '<br><div style="margin-top: 10px; padding: 8px; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;">';
-            infoHTML += '⚠️ <strong>Deprecated:</strong> This model is deprecated and may be removed in the future.';
-            if (model.migration_suggestion) {
-                infoHTML += `<br>🔄 <strong>Migration suggestion:</strong> Consider upgrading to <em>${model.migration_suggestion}</em>`;
-            }
-            infoHTML += '</div>';
-        }
-        
-        if (model.experimental) {
-            infoHTML += '<br><div style="margin-top: 10px; padding: 8px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; color: #856404;">';
-            infoHTML += '🧪 <strong>Experimental:</strong> This model is experimental and may have limited availability or stability.</div>';
-        }
-        
-        infoHTML += '</div>';
-        infoDiv.innerHTML = infoHTML;
-        
-        // Insert after the model select with smooth animation
-        const modelSelect = document.getElementById('llm_model');
-        if (modelSelect) {
-            modelSelect.parentNode.insertBefore(infoDiv, modelSelect.nextSibling);
-            
-            // Add fade-in animation
-            infoDiv.style.opacity = '0';
-            infoDiv.style.transform = 'translateY(-10px)';
-            infoDiv.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-            
-            setTimeout(() => {
-                infoDiv.style.opacity = '1';
-                infoDiv.style.transform = 'translateY(0)';
-            }, 10);
-        }
-    }
     }
     
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
         toggleApiFields('<?php echo esc_js($current_provider); ?>');
         updateModelOptions('<?php echo esc_js($current_provider); ?>');
-        
-        // Enhanced keyboard navigation
-        const providerSelect = document.getElementById('api_provider');
-        const modelSelect = document.getElementById('llm_model');
-        
-        if (providerSelect) {
-            // Add keyboard navigation hints
-            providerSelect.setAttribute('aria-describedby', 'provider-help');
-            
-            // Enhanced change handler for accessibility
-            providerSelect.addEventListener('change', function() {
-                const selectedProvider = this.value;
-                toggleApiFields(selectedProvider);
-                updateModelOptions(selectedProvider);
-                
-                // Announce change to screen readers
-                const announcement = document.createElement('div');
-                announcement.setAttribute('aria-live', 'polite');
-                announcement.style.position = 'absolute';
-                announcement.style.left = '-10000px';
-                announcement.textContent = `Provider changed to ${this.options[this.selectedIndex].text}. Model options updated.`;
-                document.body.appendChild(announcement);
-                setTimeout(() => document.body.removeChild(announcement), 1000);
-            });
-        }
-        
-        if (modelSelect) {
-            // Add keyboard navigation for model selection
-            modelSelect.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    this.focus();
-                    this.click();
-                }
-            });
-            
-            // Enhanced model change handler
-            modelSelect.addEventListener('change', function() {
-                const selectedModel = this.value;
-                const provider = providerSelect ? providerSelect.value : '<?php echo esc_js($current_provider); ?>';
-                updateModelInfo(selectedModel, provider);
-                
-                // Announce model change to screen readers
-                const announcement = document.createElement('div');
-                announcement.setAttribute('aria-live', 'polite');
-                announcement.style.position = 'absolute';
-                announcement.style.left = '-10000px';
-                announcement.textContent = `Model changed to ${this.options[this.selectedIndex].text}. Model information updated.`;
-                document.body.appendChild(announcement);
-                setTimeout(() => document.body.removeChild(announcement), 1000);
-            });
-        }
     });
     </script>
     <?php
@@ -7786,12 +7385,10 @@ public function llm_model_field_callback() {
     $current_model = get_option('ai_interview_widget_llm_model', 'gpt-4o-mini');
     $current_provider = get_option('ai_interview_widget_api_provider', 'openai');
     ?>
-    <div class="aiw-model-select">
-        <select id="llm_model" name="ai_interview_widget_llm_model" aria-label="AI Model Selection" onchange="updateModelInfo(this.value, '<?php echo esc_js($current_provider); ?>');">
-            <!-- Options will be populated by JavaScript based on provider selection -->
-        </select>
-        <p class="description">Select the specific LLM model to use with your chosen provider. Different models offer varying capabilities and cost structures. <span style="color: #00a32a;">⭐ = Recommended</span>, <span style="color: #d63638;">⚠️ = Deprecated</span>, <span style="color: #856404;">🧪 = Experimental</span></p>
-    </div>
+    <select id="llm_model" name="ai_interview_widget_llm_model">
+        <!-- Options will be populated by JavaScript based on provider selection -->
+    </select>
+    <p class="description">Select the specific LLM model to use with your chosen provider. Different models offer varying capabilities and cost structures.</p>
     
     <script>
     // Store current model for JavaScript access
@@ -7802,14 +7399,6 @@ public function llm_model_field_callback() {
         setTimeout(function() {
             updateModelOptions('<?php echo esc_js($current_provider); ?>');
         }, 50);
-        
-        // Add event listener for model changes
-        const modelSelect = document.getElementById('llm_model');
-        if (modelSelect) {
-            modelSelect.addEventListener('change', function() {
-                updateModelInfo(this.value, '<?php echo esc_js($current_provider); ?>');
-            });
-        }
     });
     </script>
     <?php
@@ -8436,32 +8025,6 @@ if (!empty($elevenlabs_key)) {
 }
 
 add_settings_error('test_results', 'voice_test', '✅ Voice features ready! ' . implode(' | ', $features), 'updated');
-}
-
-/**
- * Handle model cache clearing
- */
-public function handle_clear_model_cache() {
-    // Verify nonce
-    if (!isset($_POST['clear_cache_nonce']) || !wp_verify_nonce($_POST['clear_cache_nonce'], 'clear_model_cache')) {
-        add_settings_error('test_results', 'cache_clear_error', '❌ Security verification failed.', 'error');
-        return;
-    }
-    
-    // Check user permissions
-    if (!current_user_can('manage_options')) {
-        add_settings_error('test_results', 'cache_clear_error', '❌ Insufficient permissions.', 'error');
-        return;
-    }
-    
-    // Clear the cache
-    $success = AIW_Model_Cache::clear_all_cache();
-    
-    if ($success) {
-        add_settings_error('test_results', 'cache_clear_success', '✅ Model cache cleared successfully! Fresh model data will be loaded.', 'updated');
-    } else {
-        add_settings_error('test_results', 'cache_clear_error', '⚠️ Cache clearing completed with some errors.', 'notice-warning');
-    }
 }
 
 // Handle system prompt file upload
@@ -9513,7 +9076,7 @@ public function register_customizer_controls($wp_customize) {
 public function enqueue_customizer_preview_script() {
     wp_enqueue_script(
         'ai-interview-customizer-preview',
-        AIW_PLUGIN_URL . 'customizer-preview.js',
+        plugin_dir_url(__FILE__) . 'customizer-preview.js',
         array('jquery', 'customize-preview'),
         '1.0.0',
         true

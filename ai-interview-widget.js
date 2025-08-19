@@ -2249,7 +2249,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 const greetingAudioPlaying = audio && !audio.paused && !audio.ended;
                 const ttsAudioPlaying = currentTTSAudio && !currentTTSAudio.paused && !currentTTSAudio.ended;
                 
-                if (greetingAudioPlaying || ttsAudioPlaying) {
+                // Also continue if visualization is active and audio is ready but may not have started playing yet
+                const shouldKeepAnimating = greetingAudioPlaying || ttsAudioPlaying || 
+                    (audioVisualizationActive && audio && !audio.ended);
+                
+                if (shouldKeepAnimating) {
                     requestAnimationFrame(drawSoundbar);
                 } else if (audio && audio.ended) {
                     debug("Audio ended, should show chat");

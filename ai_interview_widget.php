@@ -101,6 +101,7 @@ class AIInterviewWidget {
         add_action('admin_init', array($this, 'register_settings'));
         add_filter('plugin_action_links_' . plugin_basename(__FILE__), array($this, 'add_settings_link'));
         add_action('admin_init', array($this, 'remove_old_menu_hooks'));
+        add_action('admin_enqueue_scripts', array($this, 'admin_enqueue_scripts'));
 
         // Plugin lifecycle hooks
         register_activation_hook(__FILE__, array($this, 'plugin_activation'));
@@ -185,6 +186,101 @@ class AIInterviewWidget {
         wp_clear_scheduled_hook('ai_interview_cleanup_tts_files');
         
         error_log('AI Interview Widget v1.9.3: Plugin uninstalled and cleaned up at 2025-08-03 18:37:12 UTC');
+    }
+
+    /**
+     * Enqueue admin scripts and styles
+     * 
+     * @since 1.9.6
+     */
+    public function admin_enqueue_scripts($hook) {
+        // Only load on our admin pages
+        if (strpos($hook, 'ai-interview-widget') === false) {
+            return;
+        }
+        
+        // Add enhanced admin styles
+        $admin_css = "
+        <style type='text/css'>
+        .aiw-model-select {
+            position: relative;
+        }
+        
+        .aiw-model-select select {
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .aiw-model-select option[data-deprecated='true'] {
+            color: #d63638 !important;
+            font-style: italic;
+        }
+        
+        .aiw-model-select option[data-recommended='true'] {
+            font-weight: bold;
+        }
+        
+        .aiw-model-select option[data-experimental='true'] {
+            color: #856404 !important;
+        }
+        
+        #model-info {
+            transition: all 0.3s ease;
+        }
+        
+        .aiw-provider-section .form-table th {
+            width: 180px;
+            padding: 15px 10px 15px 0;
+        }
+        
+        .aiw-provider-section .form-table td {
+            padding: 15px 10px;
+        }
+        
+        .aiw-status-indicator {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        
+        .aiw-status-recommended {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .aiw-status-deprecated {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .aiw-status-experimental {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        @media (max-width: 768px) {
+            .aiw-provider-section .form-table,
+            .aiw-provider-section .form-table th,
+            .aiw-provider-section .form-table td {
+                display: block;
+                width: 100%;
+            }
+            
+            .aiw-provider-section .form-table th {
+                padding-bottom: 5px;
+            }
+            
+            .aiw-provider-section .form-table td {
+                padding-top: 0;
+                padding-bottom: 20px;
+            }
+        }
+        </style>";
+        
+        echo $admin_css;
     }
 
     /**
@@ -6901,7 +6997,7 @@ $content_settings = get_option('ai_interview_widget_content_settings', '');
     </div>
 
     <!-- AI Provider Selection Container -->
-    <div class="postbox" style="padding: 25px; margin-bottom: 20px; border-left: 4px solid #2196F3; background: linear-gradient(135deg, #f8fbff 0%, #e3f2fd 100%); box-shadow: 0 2px 8px rgba(33, 150, 243, 0.1);">
+    <div class="postbox aiw-provider-section" style="padding: 25px; margin-bottom: 20px; border-left: 4px solid #2196F3; background: linear-gradient(135deg, #f8fbff 0%, #e3f2fd 100%); box-shadow: 0 2px 8px rgba(33, 150, 243, 0.1);">
         <div style="display: flex; align-items: center; margin-bottom: 20px;">
             <span style="font-size: 24px; margin-right: 12px; color: #2196F3;">🧠</span>
             <h3 style="margin: 0; color: #1565C0; font-size: 20px;">AI Provider Selection</h3>
@@ -6909,7 +7005,7 @@ $content_settings = get_option('ai_interview_widget_content_settings', '');
         <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e1f5fe; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
             <?php
             // Manually render AI Provider Selection section
-            echo '<p style="margin: 0 0 15px 0; color: #666;">Select your preferred AI provider. Configure the corresponding API keys below based on your selection.</p>';
+            echo '<p style="margin: 0 0 15px 0; color: #666;">Select your preferred AI provider and model. The system will automatically show you the latest available models with detailed information about their capabilities.</p>';
             ?>
             <table class="form-table" role="presentation" style="margin: 0;">
                 <tr>
@@ -7460,6 +7556,7 @@ public function api_provider_field_callback() {
             const option = document.createElement('option');
             option.value = model.value;
             option.textContent = model.label;
+            option.title = model.description; // Add tooltip
             
             // Add data attributes for capabilities and deprecation info
             if (model.capabilities) {
@@ -7468,9 +7565,15 @@ public function api_provider_field_callback() {
             if (model.deprecated) {
                 option.setAttribute('data-deprecated', 'true');
                 option.style.color = '#d63638'; // Red color for deprecated models
+                option.style.fontStyle = 'italic';
             }
             if (model.recommended) {
                 option.setAttribute('data-recommended', 'true');
+                option.style.fontWeight = 'bold';
+            }
+            if (model.experimental) {
+                option.setAttribute('data-experimental', 'true');
+                option.style.color = '#856404'; // Amber color for experimental
             }
             if (model.migration_suggestion) {
                 option.setAttribute('data-migration', model.migration_suggestion);
@@ -7508,33 +7611,109 @@ public function api_provider_field_callback() {
         
         if (!model) return;
         
-        // Create model info container
+        // Create model info container with enhanced styling
         const infoDiv = document.createElement('div');
         infoDiv.id = 'model-info';
-        infoDiv.style.cssText = 'margin-top: 10px; padding: 10px; background: #f9f9f9; border-radius: 4px; border-left: 4px solid #2271b1;';
         
-        let infoHTML = '<strong>' + model.description + '</strong>';
+        // Determine styling based on model status
+        let borderColor = '#2271b1';
+        let backgroundColor = '#f0f6fc';
         
+        if (model.deprecated) {
+            borderColor = '#d63638';
+            backgroundColor = '#fef7f7';
+        } else if (model.experimental) {
+            borderColor = '#dba617';
+            backgroundColor = '#fffbf0';
+        } else if (model.recommended) {
+            borderColor = '#00a32a';
+            backgroundColor = '#f0f8f0';
+        }
+        
+        infoDiv.style.cssText = `margin-top: 12px; padding: 15px; background: ${backgroundColor}; border-radius: 6px; border-left: 4px solid ${borderColor}; box-shadow: 0 1px 3px rgba(0,0,0,0.1);`;
+        
+        let infoHTML = `<div style="font-size: 14px; line-height: 1.5;">`;
+        infoHTML += `<strong style="color: #333;">${model.description}</strong>`;
+        
+        // Add capabilities with icons
         if (model.capabilities && model.capabilities.length > 0) {
-            infoHTML += '<br><span style="color: #666;">Capabilities: ' + model.capabilities.join(', ') + '</span>';
+            infoHTML += '<br><div style="margin-top: 8px;">';
+            infoHTML += '<span style="color: #666; font-size: 13px;">🔧 <strong>Capabilities:</strong> ';
+            
+            const capabilityIcons = {
+                'text': '📝',
+                'vision': '👁️',
+                'audio': '🎵',
+                'function_calling': '⚙️',
+                'json_mode': '📊',
+                'advanced_reasoning': '🧠'
+            };
+            
+            const formattedCapabilities = model.capabilities.map(cap => {
+                const icon = capabilityIcons[cap] || '•';
+                return `${icon} ${cap.replace('_', ' ')}`;
+            });
+            
+            infoHTML += formattedCapabilities.join(', ') + '</span></div>';
+        }
+        
+        // Add context window info if available
+        if (model.context_window) {
+            infoHTML += `<br><span style="color: #666; font-size: 13px;">📏 <strong>Context Window:</strong> ${model.context_window.toLocaleString()} tokens</span>`;
+        }
+        
+        // Add cost tier information
+        if (model.cost_tier) {
+            const costIcons = {
+                'ultra_low': '💰',
+                'low': '💰💰',
+                'medium': '💰💰💰',
+                'high': '💰💰💰💰',
+                'premium': '💎'
+            };
+            const costIcon = costIcons[model.cost_tier] || '💰';
+            infoHTML += `<br><span style="color: #666; font-size: 13px;">${costIcon} <strong>Cost Tier:</strong> ${model.cost_tier.replace('_', ' ')}</span>`;
+        }
+        
+        // Enhanced status indicators
+        if (model.recommended) {
+            infoHTML += '<br><div style="margin-top: 10px; padding: 8px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; color: #155724;">';
+            infoHTML += '⭐ <strong>Recommended:</strong> This model is recommended for most use cases.</div>';
         }
         
         if (model.deprecated) {
-            infoHTML += '<br><span style="color: #d63638; font-weight: bold;">⚠️ This model is deprecated.</span>';
+            infoDiv.style.borderLeft = '4px solid #d63638';
+            infoHTML += '<br><div style="margin-top: 10px; padding: 8px; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;">';
+            infoHTML += '⚠️ <strong>Deprecated:</strong> This model is deprecated and may be removed in the future.';
             if (model.migration_suggestion) {
-                infoHTML += ' <span style="color: #135e96;">Consider migrating to: ' + model.migration_suggestion + '</span>';
+                infoHTML += `<br>🔄 <strong>Migration suggestion:</strong> Consider upgrading to <em>${model.migration_suggestion}</em>`;
             }
+            infoHTML += '</div>';
         }
         
         if (model.experimental) {
-            infoHTML += '<br><span style="color: #d63638;">🧪 This is an experimental model.</span>';
+            infoHTML += '<br><div style="margin-top: 10px; padding: 8px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; color: #856404;">';
+            infoHTML += '🧪 <strong>Experimental:</strong> This model is experimental and may have limited availability or stability.</div>';
         }
         
+        infoHTML += '</div>';
         infoDiv.innerHTML = infoHTML;
         
-        // Insert after the model select
+        // Insert after the model select with smooth animation
         const modelSelect = document.getElementById('llm_model');
-        modelSelect.parentNode.insertBefore(infoDiv, modelSelect.nextSibling);
+        if (modelSelect) {
+            modelSelect.parentNode.insertBefore(infoDiv, modelSelect.nextSibling);
+            
+            // Add fade-in animation
+            infoDiv.style.opacity = '0';
+            infoDiv.style.transform = 'translateY(-10px)';
+            infoDiv.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+            
+            setTimeout(() => {
+                infoDiv.style.opacity = '1';
+                infoDiv.style.transform = 'translateY(0)';
+            }, 10);
+        }
     }
     }
     
@@ -7542,6 +7721,58 @@ public function api_provider_field_callback() {
     document.addEventListener('DOMContentLoaded', function() {
         toggleApiFields('<?php echo esc_js($current_provider); ?>');
         updateModelOptions('<?php echo esc_js($current_provider); ?>');
+        
+        // Enhanced keyboard navigation
+        const providerSelect = document.getElementById('api_provider');
+        const modelSelect = document.getElementById('llm_model');
+        
+        if (providerSelect) {
+            // Add keyboard navigation hints
+            providerSelect.setAttribute('aria-describedby', 'provider-help');
+            
+            // Enhanced change handler for accessibility
+            providerSelect.addEventListener('change', function() {
+                const selectedProvider = this.value;
+                toggleApiFields(selectedProvider);
+                updateModelOptions(selectedProvider);
+                
+                // Announce change to screen readers
+                const announcement = document.createElement('div');
+                announcement.setAttribute('aria-live', 'polite');
+                announcement.style.position = 'absolute';
+                announcement.style.left = '-10000px';
+                announcement.textContent = `Provider changed to ${this.options[this.selectedIndex].text}. Model options updated.`;
+                document.body.appendChild(announcement);
+                setTimeout(() => document.body.removeChild(announcement), 1000);
+            });
+        }
+        
+        if (modelSelect) {
+            // Add keyboard navigation for model selection
+            modelSelect.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    this.focus();
+                    this.click();
+                }
+            });
+            
+            // Enhanced model change handler
+            modelSelect.addEventListener('change', function() {
+                const selectedModel = this.value;
+                const provider = providerSelect ? providerSelect.value : '<?php echo esc_js($current_provider); ?>';
+                updateModelInfo(selectedModel, provider);
+                
+                // Announce model change to screen readers
+                const announcement = document.createElement('div');
+                announcement.setAttribute('aria-live', 'polite');
+                announcement.style.position = 'absolute';
+                announcement.style.left = '-10000px';
+                announcement.textContent = `Model changed to ${this.options[this.selectedIndex].text}. Model information updated.`;
+                document.body.appendChild(announcement);
+                setTimeout(() => document.body.removeChild(announcement), 1000);
+            });
+        }
     });
     </script>
     <?php
@@ -7555,10 +7786,12 @@ public function llm_model_field_callback() {
     $current_model = get_option('ai_interview_widget_llm_model', 'gpt-4o-mini');
     $current_provider = get_option('ai_interview_widget_api_provider', 'openai');
     ?>
-    <select id="llm_model" name="ai_interview_widget_llm_model" aria-label="AI Model Selection" onchange="updateModelInfo(this.value, '<?php echo esc_js($current_provider); ?>');">
-        <!-- Options will be populated by JavaScript based on provider selection -->
-    </select>
-    <p class="description">Select the specific LLM model to use with your chosen provider. Different models offer varying capabilities and cost structures.</p>
+    <div class="aiw-model-select">
+        <select id="llm_model" name="ai_interview_widget_llm_model" aria-label="AI Model Selection" onchange="updateModelInfo(this.value, '<?php echo esc_js($current_provider); ?>');">
+            <!-- Options will be populated by JavaScript based on provider selection -->
+        </select>
+        <p class="description">Select the specific LLM model to use with your chosen provider. Different models offer varying capabilities and cost structures. <span style="color: #00a32a;">⭐ = Recommended</span>, <span style="color: #d63638;">⚠️ = Deprecated</span>, <span style="color: #856404;">🧪 = Experimental</span></p>
+    </div>
     
     <script>
     // Store current model for JavaScript access

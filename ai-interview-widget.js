@@ -2013,16 +2013,19 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                         
                         audio.currentTime = 0;
-                        audioVisualizationActive = true;
-                        drawSoundbar();
 
                         debug("Attempting to play audio:", currentAudioSrc);
                         audio.play().then(() => {
                             debug("Audio playback started successfully");
+                            // Start visualization only after audio is actually playing
+                            audioVisualizationActive = true;
+                            drawSoundbar();
+                            debug("Audio visualization started after successful audio playback");
                             // The greeting audio uses the existing audio context and soundbar canvas
                             // No need to call attachAudioVisualization here as it would create conflicts
                         }).catch(err => {
                             console.error("Audio play error:", err);
+                            audioVisualizationActive = false;
                             showChatInterface();
                         });
                     } catch (e) {
@@ -2130,12 +2133,21 @@ document.addEventListener('DOMContentLoaded', function() {
                     source.connect(analyser);
                     analyser.connect(audioCtx.destination);
 
-                    debug("Audio context setup complete", {                        bufferLength: bufferLength,
-                        fftSize: analyser.fftSize
+                    debug("Audio context setup complete", {
+                        audioCtxState: audioCtx.state,
+                        bufferLength: bufferLength,
+                        fftSize: analyser.fftSize,
+                        audioReady: audio.readyState
                     });
                 }
             } catch (e) {
                 console.error("Audio context setup failed:", e);
+                debug("Audio context setup error details:", {
+                    audioElement: !!audio,
+                    audioSrc: audio ? audio.src : 'no audio',
+                    error: e.message
+                });
+                audioVisualizationActive = false;
                 showChatInterface();
             }
         }
@@ -2230,7 +2242,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         function drawSoundbar() {
-            if (!audioVisualizationActive || !ctx || !canvas) return;
+            if (!audioVisualizationActive || !ctx || !canvas || !analyser) {
+                debug("Skipping drawSoundbar - missing required components:", {
+                    audioVisualizationActive,
+                    ctx: !!ctx,
+                    canvas: !!canvas,
+                    analyser: !!analyser
+                });
+                return;
+            }
 
             try {
                 analyser.getByteFrequencyData(dataArray);

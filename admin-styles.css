@@ -1,0 +1,196 @@
+/**
+ * AI Interview Widget - Admin Styles
+ * 
+ * Enhanced admin interface styling for improved UX
+ * 
+ * @since 1.9.6
+ * @author Eric Rorich
+ */
+
+/* Enhanced Provider Selection Styling */
+.ai-provider-section {
+    position: relative;
+}
+
+.ai-provider-section select {
+    min-width: 200px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ai-provider-section select:focus {
+    border-color: #0073aa;
+    box-shadow: 0 0 0 1px #0073aa;
+    outline: none;
+}
+
+/* Model Information Display */
+.model-info {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.model-info .notice {
+    border-radius: 0 4px 4px 0;
+    transition: all 0.2s ease;
+}
+
+.model-info .notice:hover {
+    transform: translateX(2px);
+}
+
+/* Capability badges */
+.capability-badge {
+    display: inline-block;
+    background: #f0f6fc;
+    color: #0969da;
+    padding: 2px 6px;
+    margin: 2px 4px 2px 0;
+    border-radius: 3px;
+    font-size: 11px;
+    border: 1px solid #d1d9e0;
+    transition: all 0.2s ease;
+}
+
+.capability-badge:hover {
+    background: #dbeafe;
+    transform: scale(1.05);
+}
+
+/* Loading states */
+.aiw-loading {
+    position: relative;
+    opacity: 0.7;
+}
+
+.aiw-loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    width: 16px;
+    height: 16px;
+    margin-top: -8px;
+    border: 2px solid #0073aa;
+    border-top: 2px solid transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive design for mobile */
+@media (max-width: 782px) {
+    .ai-provider-section select {
+        width: 100%;
+        min-width: auto;
+        font-size: 16px; /* Prevent zoom on iOS */
+        min-height: 44px; /* Touch target size */
+    }
+    
+    .model-info {
+        margin-top: 12px;
+    }
+    
+    .model-info .notice {
+        margin: 8px 0;
+        padding: 12px;
+    }
+    
+    .capability-badge {
+        margin: 3px 6px 3px 0;
+        padding: 4px 8px;
+        font-size: 12px;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .model-info .notice {
+        border-width: 2px;
+    }
+    
+    .capability-badge {
+        border-width: 2px;
+        font-weight: bold;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .model-info,
+    .capability-badge,
+    .ai-provider-section select,
+    .model-info .notice {
+        animation: none;
+        transition: none;
+    }
+    
+    .aiw-loading::after {
+        animation: none;
+    }
+}
+
+/* Dark mode support (if WordPress admin has dark mode) */
+@media (prefers-color-scheme: dark) {
+    .capability-badge {
+        background: #1a365d;
+        color: #63b3ed;
+        border-color: #2a4a6b;
+    }
+    
+    .model-info .description {
+        color: #a0aec0;
+    }
+}
+
+/* Enhanced form table styling */
+.form-table th {
+    width: 200px;
+    vertical-align: top;
+    padding-top: 15px;
+}
+
+.form-table td {
+    vertical-align: top;
+    padding-top: 10px;
+}
+
+/* Provider section styling improvements */
+.postbox .ai-provider-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.postbox .ai-provider-header .dashicons {
+    font-size: 24px;
+    margin-right: 12px;
+    color: #2196F3;
+}
+
+.postbox .ai-provider-header h3 {
+    margin: 0;
+    color: #1565C0;
+    font-size: 20px;
+    flex: 1;
+}
+
+@media (max-width: 600px) {
+    .postbox .ai-provider-header {
+        flex-direction: column;
+        align-items: flex-start;
+        text-align: left;
+    }
+    
+    .postbox .ai-provider-header h3 {
+        margin-top: 8px;
+    }
+}

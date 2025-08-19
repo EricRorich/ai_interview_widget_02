@@ -32,6 +32,9 @@ class AIInterviewWidget {
      * @since 1.0.0
      */
     public function __construct() {
+        // Include required files
+        $this->include_dependencies();
+        
         // Frontend scripts and shortcodes
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
         add_shortcode('ai_interview_widget', array($this, 'render_widget'));
@@ -64,6 +67,7 @@ class AIInterviewWidget {
         // Admin interface
         add_action('admin_menu', array($this, 'add_admin_menu'), 9);
         add_action('admin_init', array($this, 'register_settings'));
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
         add_filter('plugin_action_links_' . plugin_basename(__FILE__), array($this, 'add_settings_link'));
         add_action('admin_init', array($this, 'remove_old_menu_hooks'));
 
@@ -97,6 +101,9 @@ class AIInterviewWidget {
         add_action('wp_ajax_ai_interview_load_default_preset', array($this, 'load_default_preset'));
         add_action('wp_ajax_ai_interview_delete_preset', array($this, 'delete_design_preset'));
         add_action('wp_ajax_ai_interview_get_presets', array($this, 'get_design_presets'));
+        
+        // AI Provider Management AJAX handlers
+        add_action('wp_ajax_ai_interview_get_models', array($this, 'handle_get_models'));
 
         // Preview system AJAX handlers
         add_action('wp_ajax_ai_interview_render_preview', array($this, 'handle_preview_render'));
@@ -150,6 +157,73 @@ class AIInterviewWidget {
         wp_clear_scheduled_hook('ai_interview_cleanup_tts_files');
         
         error_log('AI Interview Widget v1.9.3: Plugin uninstalled and cleaned up at 2025-08-03 18:37:12 UTC');
+    }
+
+    /**
+     * Include required dependency files
+     * 
+     * Loads the provider definitions and model cache classes
+     * to ensure they're available throughout the plugin.
+     * 
+     * @since 1.9.6
+     */
+    private function include_dependencies() {
+        $includes_path = plugin_dir_path(__FILE__) . 'includes/';
+        
+        // Include provider definitions
+        if (file_exists($includes_path . 'class-aiw-provider-definitions.php')) {
+            require_once $includes_path . 'class-aiw-provider-definitions.php';
+        }
+        
+        // Include model cache (optional)
+        if (file_exists($includes_path . 'class-aiw-model-cache.php')) {
+            require_once $includes_path . 'class-aiw-model-cache.php';
+        }
+    }
+
+    /**
+     * Enqueue admin scripts and styles
+     * 
+     * Loads admin-specific JavaScript for enhanced functionality
+     * including dynamic model loading and enhanced UI features.
+     * 
+     * @since 1.9.6
+     */
+    public function enqueue_admin_scripts($hook) {
+        // Only load on our admin pages
+        if (strpos($hook, 'ai-interview-widget') === false) {
+            return;
+        }
+        
+        // Enqueue admin script
+        wp_enqueue_script(
+            'ai-interview-admin',
+            plugin_dir_url(__FILE__) . 'admin-enhancements.js',
+            array('jquery'),
+            '1.9.6',
+            true
+        );
+        
+        // Enqueue admin styles
+        wp_enqueue_style(
+            'ai-interview-admin-styles',
+            plugin_dir_url(__FILE__) . 'admin-styles.css',
+            array(),
+            '1.9.6'
+        );
+        
+        // Localize script with AJAX URL and nonce
+        wp_localize_script('ai-interview-admin', 'aiwAdmin', array(
+            'ajaxurl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('ai_interview_admin'),
+            'strings' => array(
+                'loading' => __('Loading models...', 'ai-interview-widget'),
+                'error' => __('Error loading models. Please try again.', 'ai-interview-widget'),
+                'deprecated' => __('This model is deprecated', 'ai-interview-widget'),
+                'recommended' => __('Recommended model', 'ai-interview-widget'),
+                'experimental' => __('Experimental model', 'ai-interview-widget')
+            )
+        ));
     }
 
     /**
@@ -1837,6 +1911,99 @@ class AIInterviewWidget {
         } catch (Exception $e) {
             error_log('AI Interview Widget: Error getting presets: ' . $e->getMessage());
             wp_send_json_error('An unexpected error occurred while loading presets. Please try again.');
+        }
+    }
+
+    /**
+     * AJAX Handler: Get Models for Provider
+     * Returns model list with capabilities, deprecation status, and descriptions
+     */
+    public function handle_get_models() {
+        // Verify nonce for security
+        if (!check_ajax_referer('ai_interview_admin', 'nonce', false)) {
+            wp_send_json_error('Security verification failed. Please refresh the page and try again.');
+            return;
+        }
+        
+        // Check user permissions
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('You do not have permission to view model information.');
+            return;
+        }
+        
+        $provider = sanitize_text_field($_POST['provider'] ?? '');
+        
+        if (empty($provider)) {
+            wp_send_json_error('Provider parameter is required.');
+            return;
+        }
+        
+        // Validate provider against allowed providers
+        $allowed_providers = array('openai', 'anthropic', 'gemini', 'azure', 'custom');
+        if (!in_array($provider, $allowed_providers, true)) {
+            wp_send_json_error('Invalid provider specified.');
+            return;
+        }
+        
+        try {
+            // Get models from provider definitions with caching
+            if (class_exists('AIW_Model_Cache')) {
+                $models = AIW_Model_Cache::get_models_for_select_with_cache($provider);
+            } else {
+                $models = AIW_Provider_Definitions::get_models_for_select($provider);
+            }
+            
+            // Validate that we have models
+            if (empty($models) || !is_array($models)) {
+                wp_send_json_error('No models available for the selected provider.');
+                return;
+            }
+            
+            // Sanitize model data before returning
+            $sanitized_models = array();
+            foreach ($models as $model) {
+                if (is_array($model) && isset($model['value']) && isset($model['label'])) {
+                    $sanitized_model = array(
+                        'value' => sanitize_text_field($model['value']),
+                        'label' => sanitize_text_field($model['label'])
+                    );
+                    
+                    // Add optional fields if present
+                    if (isset($model['description'])) {
+                        $sanitized_model['description'] = sanitize_textarea_field($model['description']);
+                    }
+                    if (isset($model['capabilities']) && is_array($model['capabilities'])) {
+                        $sanitized_model['capabilities'] = array_map('sanitize_text_field', $model['capabilities']);
+                    }
+                    if (isset($model['deprecated'])) {
+                        $sanitized_model['deprecated'] = (bool) $model['deprecated'];
+                    }
+                    if (isset($model['recommended'])) {
+                        $sanitized_model['recommended'] = (bool) $model['recommended'];
+                    }
+                    if (isset($model['experimental'])) {
+                        $sanitized_model['experimental'] = (bool) $model['experimental'];
+                    }
+                    if (isset($model['migration_suggestion'])) {
+                        $sanitized_model['migration_suggestion'] = sanitize_text_field($model['migration_suggestion']);
+                    }
+                    
+                    $sanitized_models[] = $sanitized_model;
+                }
+            }
+            
+            // Return success response with sanitized model data
+            wp_send_json_success(array(
+                'models' => $sanitized_models,
+                'provider' => $provider,
+                'count' => count($sanitized_models),
+                'cached' => class_exists('AIW_Model_Cache'),
+                'timestamp' => current_time('timestamp')
+            ));
+            
+        } catch (Exception $e) {
+            error_log('AI Interview Widget: Error getting models for provider ' . $provider . ': ' . $e->getMessage());
+            wp_send_json_error('An unexpected error occurred while loading models. Please try again.');
         }
     }
 
@@ -7307,64 +7474,50 @@ public function api_provider_field_callback() {
     }
     
     function updateModelOptions(provider) {
+        // This function is now enhanced by admin-enhancements.js
+        // Fallback implementation for basic functionality
         const modelSelect = document.getElementById('llm_model');
         if (!modelSelect) return;
         
-        // Store current value before clearing
-        const currentValue = modelSelect.value;
+        // If enhanced version is available, delegate to it
+        if (typeof updateModelOptionsEnhanced === 'function') {
+            updateModelOptionsEnhanced(provider);
+            return;
+        }
         
-        // Clear existing options
-        modelSelect.innerHTML = '';
-        
-        // Add models based on provider
-        const models = {
+        // Basic fallback implementation
+        const basicModels = {
             'openai': [
                 { value: 'gpt-4o', label: 'GPT-4o (Latest)' },
-                { value: 'gpt-4o-mini', label: 'GPT-4o-mini (Fast)' },
-                { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
-                { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' }
+                { value: 'gpt-4o-mini', label: 'GPT-4o-mini (Fast)' }
             ],
             'anthropic': [
-                { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet (Latest)' },
-                { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus' },
-                { value: 'claude-3-sonnet-20240229', label: 'Claude 3 Sonnet' },
-                { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku' }
+                { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet (Latest)' }
             ],
             'gemini': [
-                { value: 'gemini-2.0-flash-exp', label: 'Gemini 2.0 Flash (Experimental)' },
-                { value: 'gemini-exp-1206', label: 'Gemini Experimental 1206' },
-                { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' },
-                { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash' }
+                { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' }
             ],
             'azure': [
-                { value: 'gpt-4o', label: 'GPT-4o (Azure)' },
-                { value: 'gpt-4o-mini', label: 'GPT-4o-mini (Azure)' },
-                { value: 'gpt-4-turbo', label: 'GPT-4 Turbo (Azure)' },
-                { value: 'gpt-35-turbo', label: 'GPT-3.5 Turbo (Azure)' }
+                { value: 'gpt-4o', label: 'GPT-4o (Azure)' }
             ],
             'custom': [
                 { value: 'custom-model', label: 'Custom Model' }
             ]
         };
         
-        const providerModels = models[provider] || models['openai'];
-        providerModels.forEach(model => {
+        const models = basicModels[provider] || basicModels['openai'];
+        modelSelect.innerHTML = '';
+        models.forEach(model => {
             const option = document.createElement('option');
             option.value = model.value;
             option.textContent = model.label;
             modelSelect.appendChild(option);
         });
         
-        // FIXED: Preserve saved model if available, otherwise use safe default
+        // Restore saved model if available
         const savedModel = window.currentSavedModel || 'gpt-4o-mini';
-        const isValidForProvider = providerModels.some(model => model.value === savedModel);
-        
-        if (isValidForProvider && savedModel) {
+        if (modelSelect.querySelector(`option[value="${savedModel}"]`)) {
             modelSelect.value = savedModel;
-        } else if (providerModels.length > 0) {
-            // Use default model if available, otherwise first option
-            const defaultModel = providerModels.find(model => model.value === 'gpt-4o-mini');
-            modelSelect.value = defaultModel ? defaultModel.value : providerModels[0].value;
         }
     }
     

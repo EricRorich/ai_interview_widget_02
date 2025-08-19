@@ -9,6 +9,9 @@
 
 defined('ABSPATH') or die('No script kiddies please!');
 
+// Include provider definitions class
+require_once plugin_dir_path(__FILE__) . 'includes/class-aiw-provider-definitions.php';
+
 /**
  * Main AI Interview Widget plugin class
  * 
@@ -664,7 +667,7 @@ class AIInterviewWidget {
             'ai_interview_widget_llm_model',
             array(
                 'type' => 'string',
-                'sanitize_callback' => 'sanitize_text_field',
+                'sanitize_callback' => array($this, 'sanitize_llm_model'),
                 'default' => 'gpt-4o-mini'
             )
         );
@@ -5375,31 +5378,94 @@ return $api_key;
 }
 
 /**
+ * Sanitize LLM model selection
+ * 
+ * Validates the selected model against the current provider's available models.
+ * Falls back to provider default if invalid.
+ * 
+ * @param string $model The model to validate
+ * @return string Valid model ID
+ */
+public function sanitize_llm_model($model) {
+    $model = sanitize_text_field(trim($model));
+    $provider = get_option('ai_interview_widget_api_provider', 'openai');
+    
+    // If model is empty, use provider default
+    if (empty($model)) {
+        return $this->get_default_model_for_provider($provider);
+    }
+    
+    // Validate against current provider's models
+    $provider_models = AIW_Provider_Definitions::get_models_for_provider($provider);
+    
+    if (!array_key_exists($model, $provider_models)) {
+        $default_model = $this->get_default_model_for_provider($provider);
+        
+        add_settings_error(
+            'ai_interview_widget_llm_model',
+            'invalid_model',
+            sprintf(
+                'Invalid model "%s" for provider "%s". Reset to default model "%s".',
+                esc_html($model),
+                esc_html($provider),
+                esc_html($default_model)
+            ),
+            'notice-warning'
+        );
+        
+        return $default_model;
+    }
+    
+    return $model;
+}
+
+/**
  * FIXED: Ensure valid model setting is always available
  */
 private function ensure_valid_model_setting() {
     $model = get_option('ai_interview_widget_llm_model', '');
+    $provider = get_option('ai_interview_widget_api_provider', 'openai');
     
     // If model is empty or invalid, reset to default
     if (empty($model) || !is_string($model) || trim($model) === '') {
-        update_option('ai_interview_widget_llm_model', 'gpt-4o-mini');
-        error_log('AI Interview Widget: Reset model setting to default (gpt-4o-mini)');
-        return 'gpt-4o-mini';
+        $default_model = $this->get_default_model_for_provider($provider);
+        update_option('ai_interview_widget_llm_model', $default_model);
+        error_log('AI Interview Widget: Reset model setting to default (' . $default_model . ')');
+        return $default_model;
     }
     
-    // Validate against known good models
-    $valid_models = array(
-        'gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-4', 'gpt-4-32k',
-        'gpt-3.5-turbo', 'gpt-3.5-turbo-16k'
-    );
+    // Validate against current provider's models
+    $provider_models = AIW_Provider_Definitions::get_models_for_provider($provider);
     
-    if (!in_array($model, $valid_models)) {
-        update_option('ai_interview_widget_llm_model', 'gpt-4o-mini');
-        error_log('AI Interview Widget: Invalid model "' . $model . '", reset to default');
-        return 'gpt-4o-mini';
+    if (!array_key_exists($model, $provider_models)) {
+        $default_model = $this->get_default_model_for_provider($provider);
+        update_option('ai_interview_widget_llm_model', $default_model);
+        error_log('AI Interview Widget: Invalid model "' . $model . '" for provider "' . $provider . '", reset to default');
+        return $default_model;
     }
     
     return $model;
+}
+
+/**
+ * Get default model for a provider
+ * 
+ * @param string $provider Provider ID
+ * @return string Default model ID
+ */
+private function get_default_model_for_provider($provider) {
+    $models = AIW_Provider_Definitions::get_models_for_provider($provider);
+    
+    // Try to find a recommended model first
+    foreach ($models as $model_id => $model_config) {
+        if (!empty($model_config['recommended'])) {
+            return $model_id;
+        }
+    }
+    
+    // Fallback to first available model
+    $model_keys = array_keys($models);
+    return !empty($model_keys) ? $model_keys[0] : 'gpt-4o-mini';
 }
 
 // ==========================================
@@ -7261,15 +7327,39 @@ public function provider_section_callback() {
 
 public function api_provider_field_callback() {
     $current_provider = get_option('ai_interview_widget_api_provider', 'openai');
+    $providers = AIW_Provider_Definitions::get_providers();
     ?>
-    <select id="api_provider" name="ai_interview_widget_api_provider" onchange="toggleApiFields(this.value); updateModelOptions(this.value);">
-        <option value="openai" <?php selected($current_provider, 'openai'); ?>>OpenAI GPT-4</option>
-        <option value="anthropic" <?php selected($current_provider, 'anthropic'); ?>>Anthropic Claude</option>
-        <option value="gemini" <?php selected($current_provider, 'gemini'); ?>>Google Gemini</option>
-        <option value="azure" <?php selected($current_provider, 'azure'); ?>>Azure OpenAI</option>
-        <option value="custom" <?php selected($current_provider, 'custom'); ?>>Custom API Endpoint</option>
+    <select id="api_provider" name="ai_interview_widget_api_provider" onchange="toggleApiFields(this.value); updateModelOptions(this.value);" aria-label="AI Provider Selection">
+        <?php foreach ($providers as $provider_id => $provider_config): ?>
+            <option value="<?php echo esc_attr($provider_id); ?>" <?php selected($current_provider, $provider_id); ?>>
+                <?php echo esc_html($provider_config['name']); ?>
+            </option>
+        <?php endforeach; ?>
     </select>
-    <p class="description">Choose your AI provider. Each provider offers different capabilities and pricing.</p>
+    <p class="description">
+        Choose your AI provider. Each provider offers different capabilities and pricing.
+        <?php 
+        if (isset($providers[$current_provider])) {
+            echo '<br><strong>Current:</strong> ' . esc_html($providers[$current_provider]['description']);
+            if (!empty($providers[$current_provider]['docs_url'])) {
+                echo ' <a href="' . esc_url($providers[$current_provider]['docs_url']) . '" target="_blank" rel="noopener">View Documentation</a>';
+            }
+        }
+        ?>
+    </p>
+    
+    <?php
+    // Generate JavaScript model data from provider definitions
+    $all_providers = AIW_Provider_Definitions::get_providers();
+    $model_data = array();
+    foreach ($all_providers as $provider_id => $provider_config) {
+        $model_data[$provider_id] = AIW_Provider_Definitions::get_models_for_select($provider_id);
+    }
+    ?>
+    <script>
+    // Provider model data generated from PHP
+    window.aiwProviderModels = <?php echo wp_json_encode($model_data); ?>;
+    </script>
     
     <script>
     function toggleApiFields(provider) {
@@ -7316,56 +7406,91 @@ public function api_provider_field_callback() {
         // Clear existing options
         modelSelect.innerHTML = '';
         
-        // Add models based on provider
-        const models = {
-            'openai': [
-                { value: 'gpt-4o', label: 'GPT-4o (Latest)' },
-                { value: 'gpt-4o-mini', label: 'GPT-4o-mini (Fast)' },
-                { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
-                { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' }
-            ],
-            'anthropic': [
-                { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet (Latest)' },
-                { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus' },
-                { value: 'claude-3-sonnet-20240229', label: 'Claude 3 Sonnet' },
-                { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku' }
-            ],
-            'gemini': [
-                { value: 'gemini-2.0-flash-exp', label: 'Gemini 2.0 Flash (Experimental)' },
-                { value: 'gemini-exp-1206', label: 'Gemini Experimental 1206' },
-                { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' },
-                { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash' }
-            ],
-            'azure': [
-                { value: 'gpt-4o', label: 'GPT-4o (Azure)' },
-                { value: 'gpt-4o-mini', label: 'GPT-4o-mini (Azure)' },
-                { value: 'gpt-4-turbo', label: 'GPT-4 Turbo (Azure)' },
-                { value: 'gpt-35-turbo', label: 'GPT-3.5 Turbo (Azure)' }
-            ],
-            'custom': [
-                { value: 'custom-model', label: 'Custom Model' }
-            ]
-        };
+        // Get models from PHP-generated data
+        const allModels = window.aiwProviderModels || {};
+        const providerModels = allModels[provider] || [];
         
-        const providerModels = models[provider] || models['openai'];
+        // Add models with enhanced information
         providerModels.forEach(model => {
             const option = document.createElement('option');
             option.value = model.value;
             option.textContent = model.label;
+            
+            // Add data attributes for capabilities and deprecation info
+            if (model.capabilities) {
+                option.setAttribute('data-capabilities', model.capabilities.join(','));
+            }
+            if (model.deprecated) {
+                option.setAttribute('data-deprecated', 'true');
+                option.style.color = '#d63638'; // Red color for deprecated models
+            }
+            if (model.recommended) {
+                option.setAttribute('data-recommended', 'true');
+            }
+            if (model.migration_suggestion) {
+                option.setAttribute('data-migration', model.migration_suggestion);
+            }
+            
             modelSelect.appendChild(option);
         });
         
-        // FIXED: Preserve saved model if available, otherwise use safe default
+        // Preserve saved model if available, otherwise use safe default
         const savedModel = window.currentSavedModel || 'gpt-4o-mini';
         const isValidForProvider = providerModels.some(model => model.value === savedModel);
         
         if (isValidForProvider && savedModel) {
             modelSelect.value = savedModel;
         } else if (providerModels.length > 0) {
-            // Use default model if available, otherwise first option
-            const defaultModel = providerModels.find(model => model.value === 'gpt-4o-mini');
-            modelSelect.value = defaultModel ? defaultModel.value : providerModels[0].value;
+            // Use first recommended model or first option
+            const recommendedModel = providerModels.find(model => model.recommended);
+            modelSelect.value = recommendedModel ? recommendedModel.value : providerModels[0].value;
         }
+        
+        // Show model information
+        updateModelInfo(modelSelect.value, provider);
+    }
+    
+    function updateModelInfo(modelId, provider) {
+        const allModels = window.aiwProviderModels || {};
+        const providerModels = allModels[provider] || [];
+        const model = providerModels.find(m => m.value === modelId);
+        
+        // Remove existing model info
+        const existingInfo = document.getElementById('model-info');
+        if (existingInfo) {
+            existingInfo.remove();
+        }
+        
+        if (!model) return;
+        
+        // Create model info container
+        const infoDiv = document.createElement('div');
+        infoDiv.id = 'model-info';
+        infoDiv.style.cssText = 'margin-top: 10px; padding: 10px; background: #f9f9f9; border-radius: 4px; border-left: 4px solid #2271b1;';
+        
+        let infoHTML = '<strong>' + model.description + '</strong>';
+        
+        if (model.capabilities && model.capabilities.length > 0) {
+            infoHTML += '<br><span style="color: #666;">Capabilities: ' + model.capabilities.join(', ') + '</span>';
+        }
+        
+        if (model.deprecated) {
+            infoHTML += '<br><span style="color: #d63638; font-weight: bold;">⚠️ This model is deprecated.</span>';
+            if (model.migration_suggestion) {
+                infoHTML += ' <span style="color: #135e96;">Consider migrating to: ' + model.migration_suggestion + '</span>';
+            }
+        }
+        
+        if (model.experimental) {
+            infoHTML += '<br><span style="color: #d63638;">🧪 This is an experimental model.</span>';
+        }
+        
+        infoDiv.innerHTML = infoHTML;
+        
+        // Insert after the model select
+        const modelSelect = document.getElementById('llm_model');
+        modelSelect.parentNode.insertBefore(infoDiv, modelSelect.nextSibling);
+    }
     }
     
     // Initialize on page load
@@ -7385,7 +7510,7 @@ public function llm_model_field_callback() {
     $current_model = get_option('ai_interview_widget_llm_model', 'gpt-4o-mini');
     $current_provider = get_option('ai_interview_widget_api_provider', 'openai');
     ?>
-    <select id="llm_model" name="ai_interview_widget_llm_model">
+    <select id="llm_model" name="ai_interview_widget_llm_model" aria-label="AI Model Selection" onchange="updateModelInfo(this.value, '<?php echo esc_js($current_provider); ?>');">
         <!-- Options will be populated by JavaScript based on provider selection -->
     </select>
     <p class="description">Select the specific LLM model to use with your chosen provider. Different models offer varying capabilities and cost structures.</p>
@@ -7399,6 +7524,14 @@ public function llm_model_field_callback() {
         setTimeout(function() {
             updateModelOptions('<?php echo esc_js($current_provider); ?>');
         }, 50);
+        
+        // Add event listener for model changes
+        const modelSelect = document.getElementById('llm_model');
+        if (modelSelect) {
+            modelSelect.addEventListener('change', function() {
+                updateModelInfo(this.value, '<?php echo esc_js($current_provider); ?>');
+            });
+        }
     });
     </script>
     <?php

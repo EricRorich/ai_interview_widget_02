@@ -46,7 +46,7 @@ class AIW_Provider_Definitions {
                 'supports_function_calling' => true,
                 'supports_json_mode' => false
             ),
-            'google' => array(
+            'gemini' => array(
                 'name' => 'Google Gemini',
                 'description' => 'Google Gemini models via Vertex AI',
                 'api_url' => 'https://generativelanguage.googleapis.com/v1/models',
@@ -207,7 +207,7 @@ class AIW_Provider_Definitions {
                 );
                 break;
                 
-            case 'google':
+            case 'gemini':
                 $models = array(
                     'gemini-2.0-flash-exp' => array(
                         'name' => 'Gemini 2.0 Flash (Experimental)',

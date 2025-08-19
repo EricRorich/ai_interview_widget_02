@@ -11,6 +11,7 @@ defined('ABSPATH') or die('No script kiddies please!');
 
 // Include provider definitions class
 require_once plugin_dir_path(__FILE__) . 'includes/class-aiw-provider-definitions.php';
+require_once plugin_dir_path(__FILE__) . 'includes/class-aiw-model-cache.php';
 
 /**
  * Main AI Interview Widget plugin class
@@ -6760,6 +6761,9 @@ $this->test_elevenlabs_connection();
 if (isset($_POST['test_voice_features'])) {
 $this->test_voice_features();
 }
+if (isset($_POST['clear_model_cache'])) {
+$this->handle_clear_model_cache();
+}
 if (isset($_POST['upload_system_prompt'])) {
 $this->handle_system_prompt_upload();
 }
@@ -7313,6 +7317,12 @@ $content_settings = get_option('ai_interview_widget_content_settings', '');
                 <input type="hidden" name="test_voice_features" value="1">
                 <button type="submit" class="button button-secondary">🎤 Test Voice Features</button>
             </form>
+            
+            <form method="post" style="display: inline;">
+                <?php wp_nonce_field('clear_model_cache', 'clear_cache_nonce'); ?>
+                <input type="hidden" name="clear_model_cache" value="1">
+                <button type="submit" class="button button-secondary" onclick="return confirm('Clear model cache? This will refresh all model definitions.');">🔄 Clear Model Cache</button>
+            </form>
         </div>
     </div>
 </div>
@@ -7349,11 +7359,15 @@ public function api_provider_field_callback() {
     </p>
     
     <?php
-    // Generate JavaScript model data from provider definitions
+    // Generate JavaScript model data from provider definitions with optional caching
     $all_providers = AIW_Provider_Definitions::get_providers();
     $model_data = array();
     foreach ($all_providers as $provider_id => $provider_config) {
-        $model_data[$provider_id] = AIW_Provider_Definitions::get_models_for_select($provider_id);
+        if (AIW_Model_Cache::is_caching_enabled()) {
+            $model_data[$provider_id] = AIW_Model_Cache::get_models_for_select_with_cache($provider_id);
+        } else {
+            $model_data[$provider_id] = AIW_Provider_Definitions::get_models_for_select($provider_id);
+        }
     }
     ?>
     <script>
@@ -8158,6 +8172,32 @@ if (!empty($elevenlabs_key)) {
 }
 
 add_settings_error('test_results', 'voice_test', '✅ Voice features ready! ' . implode(' | ', $features), 'updated');
+}
+
+/**
+ * Handle model cache clearing
+ */
+public function handle_clear_model_cache() {
+    // Verify nonce
+    if (!isset($_POST['clear_cache_nonce']) || !wp_verify_nonce($_POST['clear_cache_nonce'], 'clear_model_cache')) {
+        add_settings_error('test_results', 'cache_clear_error', '❌ Security verification failed.', 'error');
+        return;
+    }
+    
+    // Check user permissions
+    if (!current_user_can('manage_options')) {
+        add_settings_error('test_results', 'cache_clear_error', '❌ Insufficient permissions.', 'error');
+        return;
+    }
+    
+    // Clear the cache
+    $success = AIW_Model_Cache::clear_all_cache();
+    
+    if ($success) {
+        add_settings_error('test_results', 'cache_clear_success', '✅ Model cache cleared successfully! Fresh model data will be loaded.', 'updated');
+    } else {
+        add_settings_error('test_results', 'cache_clear_error', '⚠️ Cache clearing completed with some errors.', 'notice-warning');
+    }
 }
 
 // Handle system prompt file upload

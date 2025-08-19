@@ -1998,9 +1998,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
 
                 const fadeDuration = isMobile ? 1500 : isTablet ? 1800 : 2000;
-                drawRestAudiobarFadeIn(() => {
+                drawRestAudiobarFadeIn(async () => {
                     try {
                         setupAudioContext();
+                        
+                        // Resume audio context if needed (critical for initial play)
+                        if (audioCtx && audioCtx.state === 'suspended') {
+                            try {
+                                await audioCtx.resume();
+                                debug("AudioContext resumed for initial audio playback");
+                            } catch (e) {
+                                debug("Failed to resume AudioContext:", e);
+                            }
+                        }
+                        
                         audio.currentTime = 0;
                         audioVisualizationActive = true;
                         drawSoundbar();

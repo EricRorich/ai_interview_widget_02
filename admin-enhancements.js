@@ -213,42 +213,107 @@
             existingInfo.remove();
         }
 
-        // Create info container
+        // Create info container with responsive design
         const infoContainer = document.createElement('div');
         infoContainer.className = 'model-info';
-        infoContainer.style.marginTop = '8px';
+        infoContainer.style.cssText = `
+            margin-top: 8px;
+            padding: 0;
+            line-height: 1.4;
+            word-wrap: break-word;
+        `;
 
         let infoHtml = '';
 
-        // Add description
+        // Add description with responsive styling
         const description = selectedOption.getAttribute('data-description');
         if (description) {
-            infoHtml += '<p class="description" style="margin: 5px 0; color: #666; font-size: 13px;"><strong>Description:</strong> ' + description + '</p>';
+            infoHtml += `
+                <p class="description" style="
+                    margin: 5px 0; 
+                    color: #666; 
+                    font-size: 13px;
+                    line-height: 1.4;
+                    word-wrap: break-word;
+                ">
+                    <strong>Description:</strong> ${description}
+                </p>
+            `;
         }
 
-        // Add capabilities
+        // Add capabilities with responsive badges
         const capabilities = selectedOption.getAttribute('data-capabilities');
         if (capabilities) {
-            infoHtml += '<p class="description" style="margin: 5px 0; color: #666; font-size: 13px;"><strong>Capabilities:</strong> ' + capabilities + '</p>';
+            const capabilityList = capabilities.split(', ').map(cap => 
+                `<span style="
+                    display: inline-block;
+                    background: #f0f6fc;
+                    color: #0969da;
+                    padding: 2px 6px;
+                    margin: 2px 4px 2px 0;
+                    border-radius: 3px;
+                    font-size: 11px;
+                    border: 1px solid #d1d9e0;
+                ">${cap}</span>`
+            ).join('');
+            
+            infoHtml += `
+                <div style="margin: 8px 0; font-size: 13px;">
+                    <strong style="color: #666;">Capabilities:</strong><br>
+                    <div style="margin-top: 4px; line-height: 1.6;">
+                        ${capabilityList}
+                    </div>
+                </div>
+            `;
         }
 
-        // Add warnings and recommendations
+        // Add warnings and recommendations with responsive styling
         if (selectedOption.getAttribute('data-deprecated') === 'true') {
-            infoHtml += '<div class="notice notice-warning inline" style="margin: 5px 0; padding: 8px 12px;">';
-            infoHtml += '<p style="margin: 0; color: #d63384;"><strong>⚠️ Deprecated:</strong> ' + aiwAdmin.strings.deprecated + '</p>';
-            infoHtml += '</div>';
+            infoHtml += `
+                <div class="notice notice-warning inline" style="
+                    margin: 8px 0; 
+                    padding: 8px 12px;
+                    border-left: 4px solid #d63384;
+                    background: #fef7f7;
+                    border-radius: 0 4px 4px 0;
+                ">
+                    <p style="margin: 0; color: #d63384; font-size: 13px;">
+                        <strong>⚠️ Deprecated:</strong> ${aiwAdmin.strings.deprecated}
+                    </p>
+                </div>
+            `;
         }
 
         if (selectedOption.getAttribute('data-recommended') === 'true') {
-            infoHtml += '<div class="notice notice-success inline" style="margin: 5px 0; padding: 8px 12px;">';
-            infoHtml += '<p style="margin: 0; color: #00a32a;"><strong>⭐ Recommended:</strong> ' + aiwAdmin.strings.recommended + '</p>';
-            infoHtml += '</div>';
+            infoHtml += `
+                <div class="notice notice-success inline" style="
+                    margin: 8px 0; 
+                    padding: 8px 12px;
+                    border-left: 4px solid #00a32a;
+                    background: #f7fcf7;
+                    border-radius: 0 4px 4px 0;
+                ">
+                    <p style="margin: 0; color: #00a32a; font-size: 13px;">
+                        <strong>⭐ Recommended:</strong> ${aiwAdmin.strings.recommended}
+                    </p>
+                </div>
+            `;
         }
 
         if (selectedOption.getAttribute('data-experimental') === 'true') {
-            infoHtml += '<div class="notice notice-info inline" style="margin: 5px 0; padding: 8px 12px;">';
-            infoHtml += '<p style="margin: 0; color: #2271b1;"><strong>🧪 Experimental:</strong> ' + aiwAdmin.strings.experimental + '</p>';
-            infoHtml += '</div>';
+            infoHtml += `
+                <div class="notice notice-info inline" style="
+                    margin: 8px 0; 
+                    padding: 8px 12px;
+                    border-left: 4px solid #2271b1;
+                    background: #f7f9fc;
+                    border-radius: 0 4px 4px 0;
+                ">
+                    <p style="margin: 0; color: #2271b1; font-size: 13px;">
+                        <strong>🧪 Experimental:</strong> ${aiwAdmin.strings.experimental}
+                    </p>
+                </div>
+            `;
         }
 
         if (infoHtml) {
@@ -261,13 +326,83 @@
      * Initialize tooltips for enhanced UX
      */
     function initializeTooltips() {
-        // Add hover tooltips to select options (if browser supports it)
+        // Add hover tooltips to select options and enhanced keyboard navigation
         const modelSelect = document.getElementById('llm_model');
-        if (!modelSelect) return;
-
-        modelSelect.addEventListener('mouseenter', function() {
-            // Enhanced select styling
-            this.style.transition = 'border-color 0.2s ease';
+        const providerSelect = document.getElementById('api_provider');
+        
+        if (modelSelect) {
+            // Enhanced select styling and accessibility
+            modelSelect.style.transition = 'border-color 0.2s ease, box-shadow 0.2s ease';
+            
+            // Add ARIA labels for accessibility
+            modelSelect.setAttribute('aria-describedby', 'model-description');
+            
+            // Keyboard navigation enhancement
+            modelSelect.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    // Show/update model info on Enter or Space
+                    setTimeout(() => showModelInfo(this), 100);
+                }
+            });
+            
+            // Focus management
+            modelSelect.addEventListener('focus', function() {
+                this.style.borderColor = '#0073aa';
+                this.style.boxShadow = '0 0 0 1px #0073aa';
+            });
+            
+            modelSelect.addEventListener('blur', function() {
+                this.style.borderColor = '';
+                this.style.boxShadow = '';
+            });
+        }
+        
+        if (providerSelect) {
+            // Enhanced provider select accessibility
+            providerSelect.setAttribute('aria-describedby', 'provider-description');
+            providerSelect.style.transition = 'border-color 0.2s ease, box-shadow 0.2s ease';
+            
+            // Focus styling
+            providerSelect.addEventListener('focus', function() {
+                this.style.borderColor = '#0073aa';
+                this.style.boxShadow = '0 0 0 1px #0073aa';
+            });
+            
+            providerSelect.addEventListener('blur', function() {
+                this.style.borderColor = '';
+                this.style.boxShadow = '';
+            });
+        }
+        
+        // Add responsive behavior for mobile devices
+        setupResponsiveEnhancements();
+    }
+    
+    /**
+     * Setup responsive enhancements for mobile and tablet
+     */
+    function setupResponsiveEnhancements() {
+        // Add media query detection
+        const isMobile = window.matchMedia('(max-width: 782px)').matches;
+        
+        if (isMobile) {
+            // Enhance mobile experience
+            const selects = document.querySelectorAll('#api_provider, #llm_model');
+            selects.forEach(select => {
+                select.style.fontSize = '16px'; // Prevent zoom on iOS
+                select.style.minHeight = '44px'; // Touch target size
+            });
+        }
+        
+        // Listen for orientation changes
+        window.addEventListener('orientationchange', function() {
+            setTimeout(() => {
+                // Refresh model info display after orientation change
+                const modelSelect = document.getElementById('llm_model');
+                if (modelSelect && modelSelect.value) {
+                    showModelInfo(modelSelect);
+                }
+            }, 300);
         });
     }
 

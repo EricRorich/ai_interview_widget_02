@@ -204,6 +204,14 @@ class AIInterviewWidget {
             true
         );
         
+        // Enqueue admin styles
+        wp_enqueue_style(
+            'ai-interview-admin-styles',
+            plugin_dir_url(__FILE__) . 'admin-styles.css',
+            array(),
+            '1.9.6'
+        );
+        
         // Localize script with AJAX URL and nonce
         wp_localize_script('ai-interview-admin', 'aiwAdmin', array(
             'ajaxurl' => admin_url('admin-ajax.php'),
@@ -1930,6 +1938,13 @@ class AIInterviewWidget {
             return;
         }
         
+        // Validate provider against allowed providers
+        $allowed_providers = array('openai', 'anthropic', 'gemini', 'azure', 'custom');
+        if (!in_array($provider, $allowed_providers, true)) {
+            wp_send_json_error('Invalid provider specified.');
+            return;
+        }
+        
         try {
             // Get models from provider definitions with caching
             if (class_exists('AIW_Model_Cache')) {
@@ -1938,12 +1953,52 @@ class AIInterviewWidget {
                 $models = AIW_Provider_Definitions::get_models_for_select($provider);
             }
             
-            // Return success response with model data
+            // Validate that we have models
+            if (empty($models) || !is_array($models)) {
+                wp_send_json_error('No models available for the selected provider.');
+                return;
+            }
+            
+            // Sanitize model data before returning
+            $sanitized_models = array();
+            foreach ($models as $model) {
+                if (is_array($model) && isset($model['value']) && isset($model['label'])) {
+                    $sanitized_model = array(
+                        'value' => sanitize_text_field($model['value']),
+                        'label' => sanitize_text_field($model['label'])
+                    );
+                    
+                    // Add optional fields if present
+                    if (isset($model['description'])) {
+                        $sanitized_model['description'] = sanitize_textarea_field($model['description']);
+                    }
+                    if (isset($model['capabilities']) && is_array($model['capabilities'])) {
+                        $sanitized_model['capabilities'] = array_map('sanitize_text_field', $model['capabilities']);
+                    }
+                    if (isset($model['deprecated'])) {
+                        $sanitized_model['deprecated'] = (bool) $model['deprecated'];
+                    }
+                    if (isset($model['recommended'])) {
+                        $sanitized_model['recommended'] = (bool) $model['recommended'];
+                    }
+                    if (isset($model['experimental'])) {
+                        $sanitized_model['experimental'] = (bool) $model['experimental'];
+                    }
+                    if (isset($model['migration_suggestion'])) {
+                        $sanitized_model['migration_suggestion'] = sanitize_text_field($model['migration_suggestion']);
+                    }
+                    
+                    $sanitized_models[] = $sanitized_model;
+                }
+            }
+            
+            // Return success response with sanitized model data
             wp_send_json_success(array(
-                'models' => $models,
+                'models' => $sanitized_models,
                 'provider' => $provider,
-                'count' => count($models),
-                'cached' => class_exists('AIW_Model_Cache')
+                'count' => count($sanitized_models),
+                'cached' => class_exists('AIW_Model_Cache'),
+                'timestamp' => current_time('timestamp')
             ));
             
         } catch (Exception $e) {

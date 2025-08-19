@@ -2,7 +2,7 @@
 /**
  * Plugin Name: AI Interview Widget
  * Description: Interactive AI widget for Eric Rorich's portfolio with voice capabilities. Displays greeting and handles chat interactions with speech-to-text and text-to-speech features. Now includes WordPress Customizer integration for play button designs.
- * Version: 1.9.5
+ * Version: 1.9.6
  * Author: Eric Rorich
  * Updated: 2025-01-27 14:30:00
  */

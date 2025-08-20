@@ -54,19 +54,22 @@
     // Configuration object
     const PREVIEW_CONFIG = {
         initialized: false,
-        canvas: null,
-        ctx: null,
+        iframe: null,
         updateTimeout: null,
         debounceDelay: 500,
         retryCount: 0,
         maxRetries: 3,
+        
+        // Canvas fallback system
+        canvas: null,
+        ctx: null,
         particles: [],
         animationFrameId: null,
         reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
         fallbackMessageHidden: false,
         
-        // Preview mode: now always 'canvas' (DOM-based approach)
-        mode: 'canvas'
+        // Preview mode: 'iframe' (preferred) or 'canvas' (fallback)
+        mode: 'iframe'
     };
 
     // Settings map for real-time updates
@@ -245,53 +248,6 @@
     }
     
     /**
-     * Hide preview loading state
-     */
-    function hidePreviewLoading() {
-        const loadingElement = document.getElementById('preview-loading');
-        if (loadingElement) {
-            loadingElement.style.display = 'none';
-        }
-    }
-    
-    /**
-     * Show preview canvas (hide loading/error states)
-     */
-    function showPreviewCanvas() {
-        document.getElementById('preview-loading').style.display = 'none';
-        document.getElementById('preview-error').style.display = 'none';
-        
-        const canvasContainer = document.getElementById('aiw-preview-canvas-container');
-        if (canvasContainer) {
-            canvasContainer.style.display = 'block';
-            debugLog('✅ Canvas preview shown');
-        }
-    }
-    
-    /**
-     * Show preview error
-     */
-    function showPreviewError(message) {
-        hidePreviewLoading();
-        
-        const errorElement = document.getElementById('preview-error');
-        const errorMessage = document.getElementById('preview-error-message');
-        
-        if (errorElement && errorMessage) {
-            errorMessage.textContent = message || 'An error occurred while loading the preview.';
-            errorElement.style.display = 'block';
-            
-            // Hide canvas container
-            const canvasContainer = document.getElementById('aiw-preview-canvas-container');
-            if (canvasContainer) {
-                canvasContainer.style.display = 'none';
-            }
-            
-            debugLog('❌ Error shown:', message);
-        }
-    }
-    
-    /**
      * Initialize iframe-based preview system
      */
     function initializeIframePreview() {
@@ -332,19 +288,15 @@
             // Setup retry button
             const retryButton = document.getElementById('retry-preview');
             if (retryButton) {
-                retryButton.addEventListener('click', function() {
-                    // Reset and reinitialize the preview system
-                    PREVIEW_CONFIG.initialized = false;
-                    initializePreview();
-                });
+                retryButton.addEventListener('click', loadPreview);
                 debugLog('✅ Retry button event listener attached');
             } else {
                 debugLog('⚠️ Retry button #retry-preview not found');
             }
             
-            // Load initial settings and start animation
-            loadInitialSettings();
-            startAnimationLoop();
+            // Load initial preview
+            debugLog('🔄 Loading initial preview...');
+            loadPreview();
             
             return true;
             
@@ -355,49 +307,39 @@
     }
     
     /**
-     * Initialize canvas-based preview system
+     * Initialize canvas-based preview system (fallback)
      */
     function initializeCanvasPreview() {
-        debugLog('🎨 Initializing canvas-based preview system...');
-        
-        try {
-            // Ensure canvas container is visible
-            const canvasContainer = document.getElementById('aiw-preview-canvas-container');
-            if (!canvasContainer) {
-                throw new Error('Canvas container not found');
-            }
-            
-            // Initialize canvas element
-            const canvas = document.getElementById('aiw-preview-canvas');
-            if (canvas) {
-                PREVIEW_CONFIG.canvas = canvas;
-                PREVIEW_CONFIG.ctx = canvas.getContext('2d');
-                
-                // Set up canvas responsiveness
-                resizeCanvas();
-                window.addEventListener('resize', resizeCanvas);
-            }
-            
-            // Setup retry button
-            const retryButton = document.getElementById('retry-preview');
-            if (retryButton) {
-                retryButton.addEventListener('click', function() {
-                    initializePreview();
-                });
-                debugLog('✅ Retry button event listener attached');
-            }
-            
-            // Load initial settings and start animation
-            loadInitialSettings();
-            startAnimationLoop();
-            
-            debugLog('✅ Canvas preview system initialized successfully');
-            return true;
-            
-        } catch (error) {
-            errorLog('❌ Failed to initialize canvas preview:', error);
-            return false;
+        // Show canvas fallback system
+        const canvasFallback = document.querySelector('.aiw-canvas-preview-fallback');
+        if (canvasFallback) {
+            canvasFallback.style.display = 'block';
         }
+        
+        // Hide iframe container
+        const iframeContainer = document.getElementById('widget_preview_container');
+        if (iframeContainer) {
+            iframeContainer.style.display = 'none';
+        }
+        
+        // Hide any fallback message that might be showing
+        hideFallbackMessage();
+        
+        // Initialize canvas
+        debugLog('Initializing canvas...');
+        initializeCanvas();
+        
+        // Setup resize observer
+        debugLog('Setting up resize observer...');
+        setupResizeObserver();
+        
+        // Load initial settings (with defaults fallback)
+        debugLog('Loading initial settings...');
+        loadInitialSettings();
+        
+        // Start animation loop
+        debugLog('Starting animation loop...');
+        startAnimationLoop();
     }
     
     /**
@@ -524,6 +466,12 @@
      * Update preview with current settings (debounced)
      */
     function updatePreview() {
+        if (PREVIEW_CONFIG.mode !== 'iframe' || !PREVIEW_CONFIG.iframe) {
+            // Fallback to canvas update
+            updateCanvasBackground();
+            return;
+        }
+        
         // Clear existing timeout
         if (PREVIEW_CONFIG.updateTimeout) {
             clearTimeout(PREVIEW_CONFIG.updateTimeout);
@@ -536,59 +484,17 @@
             // Collect current settings
             const settings = collectCurrentSettings();
             
-            // Apply CSS variables for real-time updates
-            applyCSSVariables(settings.style);
-            
-            // Update content if needed
-            updatePreviewContent(settings.content);
-            
-            debugLog('✅ Preview updated successfully');
+            // Send update to iframe
+            if (PREVIEW_CONFIG.iframe.contentWindow) {
+                PREVIEW_CONFIG.iframe.contentWindow.postMessage({
+                    type: 'updatePreview',
+                    css: generatePreviewCSS(settings.style),
+                    content_data: settings.content,
+                    headline_text: settings.content.headline_text || ''
+                }, window.location.origin);
+            }
             
         }, PREVIEW_CONFIG.debounceDelay);
-    }
-    
-    /**
-     * Apply CSS variables to preview elements
-     */
-    function applyCSSVariables(styleSettings) {
-        if (!styleSettings) return;
-        
-        const root = document.documentElement;
-        
-        // Map style settings to CSS variables
-        Object.entries(styleSettings).forEach(([key, value]) => {
-            const cssVar = SETTINGS_MAP[key];
-            if (cssVar && value) {
-                root.style.setProperty(cssVar, value);
-                debugLog(`Applied CSS variable: ${cssVar} = ${value}`);
-            }
-        });
-    }
-    
-    /**
-     * Update preview content (headlines, messages, etc.)
-     */
-    function updatePreviewContent(contentSettings) {
-        if (!contentSettings) return;
-        
-        // Update headline if present
-        if (contentSettings.headline_text) {
-            const headlines = document.querySelectorAll('.aiw-preview-headline');
-            headlines.forEach(h => {
-                h.textContent = contentSettings.headline_text;
-            });
-        }
-        
-        // Update welcome messages
-        Object.keys(contentSettings).forEach(key => {
-            if (key.startsWith('welcome_message_')) {
-                const lang = key.replace('welcome_message_', '');
-                const elements = document.querySelectorAll(`[data-lang="${lang}"] .welcome-text`);
-                elements.forEach(el => {
-                    el.textContent = contentSettings[key];
-                });
-            }
-        });
     }
     
     /**
@@ -1322,16 +1228,21 @@
      * Public API for external integration
      */
     window.aiwCustomizerPreview = {
-        // Canvas-based preview system
+        // Iframe-based preview system
         initializePreviewSystem: initializePreview,
+        loadPreview: loadPreview,
         updatePreview: updatePreview,
         
         // Legacy canvas-based system
         updateSetting: updatePreviewSetting,
         updateVariable: updateCSSVariable,
         refresh: function() {
-            updateCanvasBackground();
-            updatePreview();
+            if (PREVIEW_CONFIG.mode === 'iframe') {
+                loadPreview();
+            } else {
+                loadInitialSettings();
+                updateCanvasBackground();
+            }
         },
         
         // Manual testing functions
@@ -1350,7 +1261,7 @@
             return {
                 mode: PREVIEW_CONFIG.mode,
                 initialized: PREVIEW_CONFIG.initialized,
-                canvas: PREVIEW_CONFIG.canvas !== null
+                iframe: PREVIEW_CONFIG.iframe !== null
             };
         }
     };

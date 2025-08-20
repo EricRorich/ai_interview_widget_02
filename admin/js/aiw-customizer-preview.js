@@ -4,13 +4,16 @@
  * Real-time data binding, canvas background, visualization animation,
  * and live CSS variable updates for Enhanced Widget Customizer preview
  * 
- * @version 1.0.0
+ * @version 1.0.1
  * @author Eric Rorich
  * @since 1.9.5
  */
 
 (function() {
     'use strict';
+
+    // Immediate loading confirmation
+    console.log('🎨 AIW Customizer Preview Script Loading...');
 
     // Check if jQuery is available
     const $ = window.jQuery;
@@ -33,7 +36,18 @@
         console.error('[AIW Customizer Preview Error]', ...args);
     }
     
-    debugLog('Initializing with debug mode:', debugMode);
+    // Always log script loading (even without debug mode)
+    console.log('✅ AIW Customizer Preview Script Loaded Successfully');
+    console.log('📋 Script Info:', {
+        version: '1.0.1',
+        debugMode: debugMode,
+        hasJQuery: hasJQuery,
+        customizerDataAvailable: !!customizerData,
+        defaults: defaults
+    });
+    
+    debugLog('🎨 Initializing Enhanced Widget Customizer Preview System...');
+    debugLog('Debug mode:', debugMode);
     debugLog('Available defaults:', defaults);
     debugLog('jQuery available:', hasJQuery);
 
@@ -105,6 +119,47 @@
     }
 
     /**
+     * Validate preview system requirements
+     */
+    function validatePreviewRequirements() {
+        debugLog('🔍 Validating preview system requirements...');
+        
+        const issues = [];
+        
+        // Check for required global data
+        if (!customizerData) {
+            issues.push('Missing customizerData object');
+        } else {
+            if (!customizerData.ajaxurl) issues.push('Missing AJAX URL');
+            if (!customizerData.nonce) issues.push('Missing security nonce');
+            if (!customizerData.defaults) issues.push('Missing defaults data');
+        }
+        
+        // Check for required DOM elements
+        const requiredElements = [
+            'aiw-live-preview',
+            'widget_preview_container',
+            'preview-iframe',
+            'preview-loading',
+            'preview-error'
+        ];
+        
+        requiredElements.forEach(id => {
+            if (!document.getElementById(id)) {
+                issues.push(`Missing DOM element: #${id}`);
+            }
+        });
+        
+        if (issues.length > 0) {
+            errorLog('❌ Preview system validation failed:', issues);
+            return false;
+        }
+        
+        debugLog('✅ All preview system requirements met');
+        return true;
+    }
+
+    /**
      * Cross-browser element selector helper
      */
     function getElements(selector) {
@@ -120,27 +175,36 @@
             return;
         }
         
-        debugLog('Starting preview initialization...');
+        debugLog('🖼️ Initializing Live Widget Preview...');
+        
+        // Validate system requirements first
+        if (!validatePreviewRequirements()) {
+            errorLog('❌ Preview system requirements not met, aborting initialization');
+            showPreviewError('Preview system validation failed. Please check console for details.');
+            return;
+        }
         
         // Check if we're on the customizer page
         const previewContainer = document.getElementById('aiw-live-preview');
         if (!previewContainer) {
-            debugLog('Preview container #aiw-live-preview not found, aborting initialization');
+            errorLog('❌ Preview container #aiw-live-preview not found, aborting initialization');
+            showPreviewError('Preview container not found. Please refresh the page.');
             return;
         }
         
-        debugLog('Preview container found, proceeding with initialization');
+        debugLog('✅ Preview container found: #aiw-live-preview');
         
         try {
             // Try iframe-based preview first
             if (initializeIframePreview()) {
                 PREVIEW_CONFIG.mode = 'iframe';
-                debugLog('✅ Iframe preview system initialized');
+                debugLog('✅ Preview iframe initialized');
             } else {
                 // Fallback to canvas system
                 PREVIEW_CONFIG.mode = 'canvas';
                 debugLog('⚠️ Falling back to canvas preview system');
                 initializeCanvasPreview();
+                debugLog('✅ Preview canvas initialized');
             }
             
             // Setup control listeners for either system
@@ -152,10 +216,10 @@
             // Update status for screen readers
             updatePreviewStatus(`Live preview initialized successfully (${PREVIEW_CONFIG.mode} mode)`);
             
-            debugLog('✅ Preview initialization complete');
+            debugLog('✅ Live Widget Preview fully initialized');
             
         } catch (error) {
-            errorLog('Failed to initialize preview:', error);
+            errorLog('❌ Failed to initialize preview:', error);
             showPreviewError('Preview initialization failed. Please refresh the page.');
         }
     }
@@ -165,20 +229,36 @@
      */
     function initializeIframePreview() {
         try {
+            debugLog('🖼️ Initializing iframe-based preview system...');
+            
             const iframeContainer = document.getElementById('widget_preview_container');
             if (!iframeContainer) {
-                debugLog('Iframe container not found, cannot initialize iframe preview');
+                debugLog('❌ Iframe container #widget_preview_container not found');
                 return false;
             }
+            debugLog('✅ Iframe container found: #widget_preview_container');
             
             const iframe = document.getElementById('preview-iframe');
             const loadingElement = document.getElementById('preview-loading');
             const errorElement = document.getElementById('preview-error');
             
-            if (!iframe || !loadingElement || !errorElement) {
-                debugLog('Required iframe elements not found');
+            if (!iframe) {
+                debugLog('❌ Preview iframe #preview-iframe not found');
                 return false;
             }
+            debugLog('✅ Preview iframe found: #preview-iframe');
+            
+            if (!loadingElement) {
+                debugLog('❌ Loading element #preview-loading not found');
+                return false;
+            }
+            debugLog('✅ Loading element found: #preview-loading');
+            
+            if (!errorElement) {
+                debugLog('❌ Error element #preview-error not found');
+                return false;
+            }
+            debugLog('✅ Error element found: #preview-error');
             
             PREVIEW_CONFIG.iframe = iframe;
             
@@ -186,15 +266,19 @@
             const retryButton = document.getElementById('retry-preview');
             if (retryButton) {
                 retryButton.addEventListener('click', loadPreview);
+                debugLog('✅ Retry button event listener attached');
+            } else {
+                debugLog('⚠️ Retry button #retry-preview not found');
             }
             
             // Load initial preview
+            debugLog('🔄 Loading initial preview...');
             loadPreview();
             
             return true;
             
         } catch (error) {
-            errorLog('Error initializing iframe preview:', error);
+            errorLog('❌ Error initializing iframe preview:', error);
             return false;
         }
     }
@@ -240,15 +324,30 @@
      */
     function loadPreview() {
         if (PREVIEW_CONFIG.mode !== 'iframe' || !PREVIEW_CONFIG.iframe) {
-            debugLog('Not in iframe mode or iframe not available');
+            debugLog('❌ Not in iframe mode or iframe not available');
             return;
         }
         
-        debugLog('Loading preview...');
+        debugLog('🔄 Loading preview content...');
         showPreviewLoading();
         
+        // Validate required data
+        if (!customizerData.ajaxurl) {
+            errorLog('❌ AJAX URL not available');
+            showPreviewError('Configuration error: AJAX URL missing');
+            return;
+        }
+        
+        if (!customizerData.nonce) {
+            errorLog('❌ Security nonce not available');
+            showPreviewError('Configuration error: Security nonce missing');
+            return;
+        }
+        
         // Collect current settings
+        debugLog('📊 Collecting current settings...');
         const settings = collectCurrentSettings();
+        debugLog('✅ Settings collected:', settings);
         
         // Make AJAX request to render preview
         const formData = new FormData();
@@ -257,12 +356,18 @@
         formData.append('style_settings', JSON.stringify(settings.style));
         formData.append('content_settings', JSON.stringify(settings.content));
         
+        debugLog('🌐 Making AJAX request to:', customizerData.ajaxurl);
+        
         fetch(customizerData.ajaxurl, {
             method: 'POST',
             body: formData
         })
-        .then(response => response.json())
+        .then(response => {
+            debugLog('📡 AJAX response received, status:', response.status);
+            return response.json();
+        })
         .then(data => {
+            debugLog('📋 AJAX response data:', data);
             if (data.success) {
                 // Load HTML into iframe
                 const iframeDoc = PREVIEW_CONFIG.iframe.contentDocument || PREVIEW_CONFIG.iframe.contentWindow.document;
@@ -272,21 +377,24 @@
                 
                 showPreviewIframe();
                 PREVIEW_CONFIG.retryCount = 0;
-                debugLog('Preview loaded successfully');
+                debugLog('✅ Preview loaded successfully');
+                debugLog('✅ Preview animation started');
                 
             } else {
                 throw new Error(data.data.message || 'Failed to load preview');
             }
         })
         .catch(error => {
-            errorLog('Error loading preview:', error);
+            errorLog('❌ Error loading preview:', error);
             showPreviewError(error.message);
             
             // Retry logic
             if (PREVIEW_CONFIG.retryCount < PREVIEW_CONFIG.maxRetries) {
                 PREVIEW_CONFIG.retryCount++;
-                debugLog(`Retrying preview load (attempt ${PREVIEW_CONFIG.retryCount}/${PREVIEW_CONFIG.maxRetries})`);
+                debugLog(`🔄 Retrying preview load (attempt ${PREVIEW_CONFIG.retryCount}/${PREVIEW_CONFIG.maxRetries})`);
                 setTimeout(() => loadPreview(), 2000 * PREVIEW_CONFIG.retryCount);
+            } else {
+                errorLog('❌ Max retries reached, preview load failed permanently');
             }
         });
     }
@@ -1002,6 +1110,8 @@
      * Initialize when DOM is ready
      */
     onDOMReady(function() {
+        debugLog('🚀 DOM ready, starting preview system initialization...');
+        
         // Initialize preview system
         initializePreview();
         
@@ -1070,6 +1180,17 @@
                 loadInitialSettings();
                 updateCanvasBackground();
             }
+        },
+        
+        // Manual testing functions
+        manualInit: function() {
+            console.log('🧪 Manual initialization triggered...');
+            initializePreview();
+        },
+        
+        validateElements: function() {
+            console.log('🔍 Manual element validation...');
+            return validatePreviewRequirements();
         },
         
         // Configuration access

@@ -212,6 +212,24 @@ class AIInterviewWidget {
             '1.9.6'
         );
         
+        // Enqueue customizer preview assets on customizer page
+        if (strpos($hook, 'customizer') !== false) {
+            wp_enqueue_script(
+                'aiw-customizer-preview-js',
+                plugin_dir_url(__FILE__) . 'admin/js/aiw-customizer-preview.js',
+                array(), // No dependencies required - jQuery is optional
+                '1.0.0',
+                true
+            );
+            
+            wp_enqueue_style(
+                'aiw-customizer-preview-css',
+                plugin_dir_url(__FILE__) . 'admin/css/aiw-customizer-preview.css',
+                array(),
+                '1.0.0'
+            );
+        }
+        
         // Localize script with AJAX URL and nonce
         wp_localize_script('ai-interview-admin', 'aiwAdmin', array(
             'ajaxurl' => admin_url('admin-ajax.php'),
@@ -4091,54 +4109,26 @@ class AIInterviewWidget {
     </div>
 </div>
 
-<!-- Preview Container - Basic Structure Preserved for Future Use -->
-<!-- 
-    Widget Preview Container - Live preview functionality temporarily disabled
-    Container structure preserved for layout continuity and future implementation
--->
+<!-- Live Preview Container -->
 <div class="customizer-preview" style="flex: 1; position: sticky; top: 20px; min-height: 400px; max-height: 600px; background: #fff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); overflow: hidden;">
     <div style="padding: 20px; border-bottom: 1px solid #ddd; background: #f8f9fa;">
         <h2 style="margin: 0; color: #333; display: flex; align-items: center;">
-            <span class="dashicons dashicons-visibility" style="margin-right: 10px; opacity: 0.5;"></span>
-            Widget Preview Container
+            <span class="dashicons dashicons-visibility" style="margin-right: 10px; color: #00cfff;"></span>
+            Live Widget Preview
         </h2>
         <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">
-            <span id="preview-status">Live preview temporarily disabled</span>
+            <span id="preview-status">Real-time preview of your customizations</span>
         </p>
     </div>
 
-    <div id="widget_preview_container" style="padding: 20px; height: calc(100% - 80px); overflow: hidden; position: relative; display: flex; align-items: center; justify-content: center;" 
-         role="presentation" 
-         aria-hidden="true" 
-         data-disabled="true">
+    <div id="widget_preview_container" style="padding: 0; height: calc(100% - 80px); overflow: hidden; position: relative;" 
+         role="main" 
+         aria-label="Live widget preview">
         
-        <!-- Static preview placeholder -->
-        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 300px; text-align: center; background: #fafafa; border-radius: 8px; border: 2px dashed #ddd; width: 100%; max-width: 100%;">
-            <div style="margin-bottom: 20px;">
-                <span class="dashicons dashicons-admin-customizer" style="font-size: 64px; color: #ccc;"></span>
-            </div>
-            
-            <h3 style="color: #666; margin: 0 0 10px 0; font-size: 18px;">Preview Temporarily Disabled</h3>
-            
-            <p style="color: #999; margin: 0 0 20px 0; max-width: 300px; line-height: 1.5;">
-                Your customization settings are being saved successfully. 
-                Use the frontend to see your changes in action.
-            </p>
-            
-            <div style="background: #fff; padding: 15px; border-radius: 6px; border: 1px solid #e0e0e0; max-width: 320px;">
-                <p style="margin: 0 0 10px 0; font-weight: 600; color: #555;">Settings are still functional:</p>
-                <ul style="margin: 0; padding-left: 20px; color: #666; font-size: 14px; text-align: left;">
-                    <li>✅ Color pickers work normally</li>
-                    <li>✅ Save Styles button saves settings</li>
-                    <li>✅ All customizations apply to frontend</li>
-                    <li>✅ Reset functions remain available</li>
-                </ul>
-            </div>
-            
-            <p style="color: #999; margin: 20px 0 0 0; font-size: 12px;">
-                <span class="screen-reader-text">Live preview is disabled for maintenance. All customization features remain functional.</span>
-            </p>
-        </div>
+        <?php 
+        // Include the live preview partial
+        include plugin_dir_path(__FILE__) . 'admin/partials/customizer-preview.php';
+        ?>
         
     </div>
 </div>

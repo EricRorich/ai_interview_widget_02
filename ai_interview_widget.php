@@ -5432,7 +5432,7 @@ jQuery(document).ready(function($) {
             a.href = url;
             a.download = `ai-widget-translation-debug-${new Date().toISOString().substring(0, 19).replace(/:/g, '-')}.txt`;
             document.body.appendChild(a);
-            a.click();
+            a.dispatchEvent(new MouseEvent('click'));
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
         }
@@ -9874,7 +9874,7 @@ function exportDebugLog() {
     a.href = url;
     a.download = 'ai-widget-debug-log-' + new Date().toISOString().substring(0, 19).replace(/:/g, '-') + '.txt';
     document.body.appendChild(a);
-    a.click();
+    a.dispatchEvent(new MouseEvent('click'));
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 }

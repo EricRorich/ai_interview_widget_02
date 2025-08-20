@@ -38,6 +38,13 @@
     
     // Always log script loading (even without debug mode)
     console.log('✅ AIW Customizer Preview Script Loaded Successfully');
+    console.log('📋 Script Info:', {
+        version: '1.0.1',
+        debugMode: debugMode,
+        hasJQuery: hasJQuery,
+        customizerDataAvailable: !!customizerData,
+        defaults: defaults
+    });
     
     debugLog('🎨 Initializing Enhanced Widget Customizer Preview System...');
     debugLog('Debug mode:', debugMode);

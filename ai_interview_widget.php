@@ -217,8 +217,8 @@ class AIInterviewWidget {
             wp_enqueue_script(
                 'aiw-customizer-preview-js',
                 plugin_dir_url(__FILE__) . 'admin/js/aiw-customizer-preview.js',
-                array('wp-color-picker'), // Add wp-color-picker dependency
-                '1.0.0',
+                array('jquery', 'wp-color-picker'), // Add jquery dependency to fix migration warnings
+                '1.0.1', // Updated version to match JS file changes
                 true // Load in footer
             );
             
@@ -226,7 +226,7 @@ class AIInterviewWidget {
                 'aiw-customizer-preview-css',
                 plugin_dir_url(__FILE__) . 'admin/css/aiw-customizer-preview.css',
                 array(),
-                '1.0.0'
+                '1.0.1' // Updated version to ensure fresh cache
             );
             
             // Localize script with defaults and debug flag
@@ -251,9 +251,11 @@ class AIInterviewWidget {
                     'ai_chat_bubble_radius' => '12',
                     'ai_chat_avatar_size' => '32'
                 ),
-                'debug' => defined('WP_DEBUG') && WP_DEBUG,
+                'debug' => true, // Force enable debug mode for enhanced logging
                 'nonce' => wp_create_nonce('aiw_customizer_preview'),
-                'ajaxurl' => admin_url('admin-ajax.php')
+                'ajaxurl' => admin_url('admin-ajax.php'),
+                'version' => '1.0.1'
+            ));
             ));
         }
         

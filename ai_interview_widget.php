@@ -259,7 +259,6 @@ class AIInterviewWidget {
                 'ajaxurl' => admin_url('admin-ajax.php'),
                 'version' => '1.0.1'
             ));
-            ));
         }
         
         // Localize script with AJAX URL and nonce

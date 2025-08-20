@@ -4126,8 +4126,24 @@ class AIInterviewWidget {
          aria-label="Live widget preview">
         
         <?php 
-        // Include the live preview partial
-        include plugin_dir_path(__FILE__) . 'admin/partials/customizer-preview.php';
+        // Include the live preview partial with safety checks
+        $partial_path = plugin_dir_path(__FILE__) . 'admin/partials/customizer-preview.php';
+        if (file_exists($partial_path)) {
+            include $partial_path;
+        } else {
+            // Add admin notice for missing partial file
+            add_action('admin_notices', function() {
+                echo '<div class="notice notice-error"><p>';
+                echo '<strong>AI Interview Widget:</strong> Customizer preview partial is missing. ';
+                echo 'Please reinstall the plugin or contact support.';
+                echo '</p></div>';
+            });
+            
+            // Fallback minimal preview content
+            echo '<div class="aiw-preview-error" style="padding: 40px; text-align: center; color: #666;">';
+            echo '<p>Preview temporarily unavailable. Please save your settings and refresh the page.</p>';
+            echo '</div>';
+        }
         ?>
         
     </div>

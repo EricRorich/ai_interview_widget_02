@@ -212,52 +212,58 @@ class AIInterviewWidget {
             '1.9.6'
         );
         
-        // Enqueue customizer preview assets on Enhanced Widget Customizer page
+        // Enqueue live preview assets on Enhanced Widget Customizer page
         if ($hook === 'ai-interview-widget_page_ai-interview-widget-customizer') {
             // Log script loading for debugging
-            error_log('AI Interview Widget: Loading customizer preview assets for hook: ' . $hook);
+            error_log('AI Interview Widget: Loading live preview assets for hook: ' . $hook);
             
             wp_enqueue_script(
-                'aiw-customizer-preview-js',
-                plugin_dir_url(__FILE__) . 'admin/js/aiw-customizer-preview.js',
-                array('jquery', 'wp-color-picker'), // Add jquery dependency to fix migration warnings
-                '1.0.1', // Updated version to match JS file changes
+                'aiw-live-preview-js',
+                plugin_dir_url(__FILE__) . 'admin/js/aiw-live-preview.js',
+                array('jquery', 'wp-color-picker'),
+                '1.0.0',
                 true // Load in footer
             );
             
             wp_enqueue_style(
-                'aiw-customizer-preview-css',
-                plugin_dir_url(__FILE__) . 'admin/css/aiw-customizer-preview.css',
+                'aiw-live-preview-css',
+                plugin_dir_url(__FILE__) . 'admin/css/aiw-live-preview.css',
                 array(),
-                '1.0.1' // Updated version to ensure fresh cache
+                '1.0.0'
             );
             
             // Localize script with defaults and debug flag
-            wp_localize_script('aiw-customizer-preview-js', 'aiwCustomizerData', array(
+            wp_localize_script('aiw-live-preview-js', 'aiwCustomizerData', array(
                 'defaults' => array(
                     'ai_primary_color' => '#00cfff',
                     'ai_accent_color' => '#ff6b35',
                     'ai_background_color' => '#0a0a1a',
                     'ai_text_color' => '#ffffff',
-                    'ai_border_radius' => '8',
-                    'ai_border_width' => '2',
-                    'ai_shadow_intensity' => '20',
-                    'ai_play_button_size' => '80',
+                    'ai_border_radius' => '8px',
+                    'ai_border_width' => '2px',
+                    'ai_shadow_intensity' => '20px',
+                    'ai_play_button_size' => '80px',
                     'ai_play_button_color' => '#00cfff',
                     'ai_play_button_icon_color' => '#ffffff',
                     'ai_viz_bar_count' => '12',
-                    'ai_viz_gap' => '3',
+                    'ai_viz_gap' => '3px',
                     'ai_viz_color' => '#00cfff',
-                    'ai_viz_glow' => '10',
+                    'ai_viz_glow' => '10px',
                     'ai_viz_speed' => '1.0',
                     'ai_chat_bubble_color' => '#1e293b',
-                    'ai_chat_bubble_radius' => '12',
-                    'ai_chat_avatar_size' => '32'
+                    'ai_chat_bubble_radius' => '12px',
+                    'ai_chat_avatar_size' => '32px'
                 ),
-                'debug' => true, // Force enable debug mode for enhanced logging
-                'nonce' => wp_create_nonce('aiw_customizer_preview'),
+                'debug' => defined('WP_DEBUG') && WP_DEBUG,
+                'nonce' => wp_create_nonce('aiw_live_preview'),
                 'ajaxurl' => admin_url('admin-ajax.php'),
-                'version' => '1.0.1'
+                'version' => '1.0.0',
+                'selectors' => array(
+                    'container' => '#aiw-live-preview',
+                    'playButton' => '.aiw-preview-playbutton',
+                    'audioVis' => '.aiw-preview-audiovis', 
+                    'chatbox' => '.aiw-preview-chatbox'
+                )
             ));
         }
         

@@ -56,80 +56,71 @@ defined('ABSPATH') or die('No script kiddies please!');
         <div class="aiw-preview-sections" style="position: relative; z-index: 2; padding: 20px; height: 100%;">
             
             <!-- Play Button Preview Section -->
-            <div class="aiw-preview-section" data-label="Play Button" data-section="play-button" style="text-align: center; margin-bottom: 20px;">
-                <button class="aiw-preview-play-button" 
-                        id="aiw-preview-play-btn" 
-                        type="button"
-                        style="width: 80px; height: 80px; border: none; border-radius: 50%; background: var(--aiw-preview-primary, #00cfff); color: var(--aiw-preview-text, #ffffff); font-size: 24px; cursor: pointer; transition: all 0.3s ease; position: relative;"
-                        aria-label="Preview play button design"
-                        tabindex="0">
-                    ▶
-                    <span class="screen-reader-text">Play button preview - shows current design settings</span>
-                </button>
+            <div class="aiw-preview-section aiw-preview-playbutton" data-label="Play Button" data-section="play-button">
+                <canvas class="aiw-preview-canvas" aria-hidden="true"></canvas>
+                <div class="aiw-preview-content">
+                    <button class="aiw-preview-play-button" 
+                            id="aiw-preview-play-btn" 
+                            type="button"
+                            aria-label="Preview play button design"
+                            tabindex="0">
+                        <span class="screen-reader-text">Play button preview - shows current design settings</span>
+                    </button>
+                </div>
             </div>
             
             <!-- Audio Visualization Preview Section -->
-            <div class="aiw-preview-section" data-label="Audio Visualization" data-section="visualization" style="margin-bottom: 20px;">
-                <div class="aiw-preview-visualization" 
-                     id="aiw-preview-viz" 
-                     style="display: flex; justify-content: center; align-items: end; height: 80px; gap: 2px;"
-                     role="img" 
-                     aria-label="Audio visualization preview with animated frequency bars">
-                    
-                    <!-- Dynamic visualization bars (generated via JavaScript) -->
-                    <div class="aiw-preview-viz-bar" style="width: 4px; background: var(--aiw-preview-primary, #00cfff); border-radius: 2px; height: 20px; transition: height 0.1s ease;" aria-hidden="true"></div>
-                    <div class="aiw-preview-viz-bar" style="width: 4px; background: var(--aiw-preview-primary, #00cfff); border-radius: 2px; height: 35px; transition: height 0.1s ease;" aria-hidden="true"></div>
-                    <div class="aiw-preview-viz-bar" style="width: 4px; background: var(--aiw-preview-primary, #00cfff); border-radius: 2px; height: 50px; transition: height 0.1s ease;" aria-hidden="true"></div>
-                    <div class="aiw-preview-viz-bar" style="width: 4px; background: var(--aiw-preview-primary, #00cfff); border-radius: 2px; height: 25px; transition: height 0.1s ease;" aria-hidden="true"></div>
-                    <div class="aiw-preview-viz-bar" style="width: 4px; background: var(--aiw-preview-primary, #00cfff); border-radius: 2px; height: 60px; transition: height 0.1s ease;" aria-hidden="true"></div>
-                    <div class="aiw-preview-viz-bar" style="width: 4px; background: var(--aiw-preview-primary, #00cfff); border-radius: 2px; height: 40px; transition: height 0.1s ease;" aria-hidden="true"></div>
-                    <div class="aiw-preview-viz-bar" style="width: 4px; background: var(--aiw-preview-primary, #00cfff); border-radius: 2px; height: 30px; transition: height 0.1s ease;" aria-hidden="true"></div>
-                    <div class="aiw-preview-viz-bar" style="width: 4px; background: var(--aiw-preview-primary, #00cfff); border-radius: 2px; height: 45px; transition: height 0.1s ease;" aria-hidden="true"></div>
-                    <div class="aiw-preview-viz-bar" style="width: 4px; background: var(--aiw-preview-primary, #00cfff); border-radius: 2px; height: 55px; transition: height 0.1s ease;" aria-hidden="true"></div>
-                    <div class="aiw-preview-viz-bar" style="width: 4px; background: var(--aiw-preview-primary, #00cfff); border-radius: 2px; height: 35px; transition: height 0.1s ease;" aria-hidden="true"></div>
-                    <div class="aiw-preview-viz-bar" style="width: 4px; background: var(--aiw-preview-primary, #00cfff); border-radius: 2px; height: 25px; transition: height 0.1s ease;" aria-hidden="true"></div>
-                    <div class="aiw-preview-viz-bar" style="width: 4px; background: var(--aiw-preview-primary, #00cfff); border-radius: 2px; height: 15px; transition: height 0.1s ease;" aria-hidden="true"></div>
-                    
-                    <span class="screen-reader-text">Animated frequency bars showing current visualization style</span>
+            <div class="aiw-preview-section aiw-preview-audiovis" data-label="Audio Visualization" data-section="visualization">
+                <canvas class="aiw-preview-canvas" aria-hidden="true"></canvas>
+                <div class="aiw-preview-content">
+                    <div class="aiw-preview-visualization" 
+                         id="aiw-preview-viz" 
+                         role="img" 
+                         aria-label="Audio visualization preview with animated frequency bars">
+                        <!-- Dynamic visualization bars (generated via JavaScript) -->
+                        <span class="screen-reader-text">Animated frequency bars showing current visualization style</span>
+                    </div>
                 </div>
             </div>
             
             <!-- Chatbox Preview Section -->
-            <div class="aiw-preview-section" data-label="Chatbox" data-section="chatbox">
-                <div class="aiw-preview-chatbox" 
-                     id="aiw-preview-chat"
-                     style="background: rgba(0,0,0,0.3); border-radius: 8px; padding: 15px; max-height: 200px; overflow-y: auto;"
-                     role="log"
-                     aria-label="Chat interface preview">
-                    
-                    <!-- Incoming Message -->
-                    <div class="aiw-preview-chat-message incoming" style="display: flex; margin-bottom: 10px; align-items: start;">
-                        <div class="aiw-preview-chat-avatar" style="width: 30px; height: 30px; border-radius: 50%; background: var(--aiw-preview-accent, #ff6b35); color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; margin-right: 10px;" aria-hidden="true">AI</div>
-                        <div class="aiw-preview-chat-bubble" style="background: var(--aiw-preview-background, #1e293b); color: var(--aiw-preview-text, #ffffff); padding: 8px 12px; border-radius: 12px; max-width: 70%; font-size: 14px;">
-                            Hello! I'm Eric's AI assistant. How can I help you today?
+            <div class="aiw-preview-section aiw-preview-chatbox" data-label="Chatbox" data-section="chatbox">
+                <canvas class="aiw-preview-canvas" aria-hidden="true"></canvas>
+                <div class="aiw-preview-content">
+                    <div class="aiw-preview-chatbox" 
+                         id="aiw-preview-chat"
+                         role="log"
+                         aria-label="Chat interface preview">
+                        
+                        <!-- Incoming Message -->
+                        <div class="aiw-preview-chat-message incoming">
+                            <div class="aiw-preview-chat-avatar" aria-hidden="true">AI</div>
+                            <div class="aiw-preview-chat-bubble">
+                                Hello! I'm Eric's AI assistant. How can I help you today?
+                            </div>
                         </div>
-                    </div>
-                    
-                    <!-- Outgoing Message -->
-                    <div class="aiw-preview-chat-message outgoing" style="display: flex; margin-bottom: 10px; align-items: start; flex-direction: row-reverse;">
-                        <div class="aiw-preview-chat-avatar" style="width: 30px; height: 30px; border-radius: 50%; background: var(--aiw-preview-primary, #00cfff); color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; margin-left: 10px;" aria-hidden="true">You</div>
-                        <div class="aiw-preview-chat-bubble" style="background: var(--aiw-preview-primary, #00cfff); color: white; padding: 8px 12px; border-radius: 12px; max-width: 70%; font-size: 14px;">
-                            Tell me about Eric's experience.
+                        
+                        <!-- Outgoing Message -->
+                        <div class="aiw-preview-chat-message outgoing">
+                            <div class="aiw-preview-chat-avatar" aria-hidden="true">You</div>
+                            <div class="aiw-preview-chat-bubble">
+                                Tell me about Eric's experience.
+                            </div>
                         </div>
-                    </div>
-                    
-                    <!-- Typing Indicator -->
-                    <div class="aiw-preview-chat-message incoming" style="display: flex; margin-bottom: 10px; align-items: start;">
-                        <div class="aiw-preview-chat-avatar" style="width: 30px; height: 30px; border-radius: 50%; background: var(--aiw-preview-accent, #ff6b35); color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; margin-right: 10px;" aria-hidden="true">AI</div>
-                        <div class="aiw-preview-typing" style="background: var(--aiw-preview-background, #1e293b); padding: 8px 12px; border-radius: 12px; display: flex; gap: 3px;" aria-label="AI is typing">
-                            <div class="aiw-preview-typing-dot" style="width: 6px; height: 6px; border-radius: 50%; background: var(--aiw-preview-text, #ffffff); animation: typing 1.4s infinite;" aria-hidden="true"></div>
-                            <div class="aiw-preview-typing-dot" style="width: 6px; height: 6px; border-radius: 50%; background: var(--aiw-preview-text, #ffffff); animation: typing 1.4s infinite 0.2s;" aria-hidden="true"></div>
-                            <div class="aiw-preview-typing-dot" style="width: 6px; height: 6px; border-radius: 50%; background: var(--aiw-preview-text, #ffffff); animation: typing 1.4s infinite 0.4s;" aria-hidden="true"></div>
-                            <span class="screen-reader-text">AI is typing a response</span>
+                        
+                        <!-- Typing Indicator -->
+                        <div class="aiw-preview-chat-message incoming">
+                            <div class="aiw-preview-chat-avatar" aria-hidden="true">AI</div>
+                            <div class="aiw-preview-typing" aria-label="AI is typing">
+                                <div class="aiw-preview-typing-dot" aria-hidden="true"></div>
+                                <div class="aiw-preview-typing-dot" aria-hidden="true"></div>
+                                <div class="aiw-preview-typing-dot" aria-hidden="true"></div>
+                                <span class="screen-reader-text">AI is typing a response</span>
+                            </div>
                         </div>
+                        
+                        <span class="screen-reader-text">Chat preview showing current theme and bubble styles</span>
                     </div>
-                    
-                    <span class="screen-reader-text">Chat preview showing current theme and bubble styles</span>
                 </div>
             </div>
             
@@ -165,12 +156,12 @@ defined('ABSPATH') or die('No script kiddies please!');
 
 /* Default CSS variables for preview */
 :root {
-    --aiw-preview-primary: #00cfff;
-    --aiw-preview-accent: #ff6b35;
-    --aiw-preview-background: #0a0a1a;
-    --aiw-preview-text: #ffffff;
-    --aiw-preview-border-radius: 8px;
-    --aiw-preview-shadow: 0 4px 15px rgba(0, 207, 255, 0.3);
+    --aiw-color-primary: #00cfff;
+    --aiw-color-accent: #ff6b35;
+    --aiw-color-background: #0a0a1a;
+    --aiw-color-text: #ffffff;
+    --aiw-radius: 8px;
+    --aiw-shadow: 0 4px 15px rgba(0, 207, 255, 0.3);
 }
 
 .aiw-preview-container {
@@ -179,9 +170,9 @@ defined('ABSPATH') or die('No script kiddies please!');
 
 .aiw-canvas-preview-container {
     position: relative;
-    background: var(--aiw-preview-background);
+    background: var(--aiw-color-background);
     border: 1px solid rgba(255,255,255,0.1);
-    box-shadow: var(--aiw-preview-shadow);
+    box-shadow: var(--aiw-shadow);
 }
 
 .aiw-preview-play-button:hover {
@@ -190,7 +181,7 @@ defined('ABSPATH') or die('No script kiddies please!');
 }
 
 .aiw-preview-play-button:focus {
-    outline: 2px solid var(--aiw-preview-primary);
+    outline: 2px solid var(--aiw-color-primary);
     outline-offset: 2px;
 }
 
@@ -228,36 +219,11 @@ jQuery(document).ready(function($) {
     
     console.log('🎨 AIW Preview Partial Script Loading...');
     
-    // Initialize visualization bars animation
-    function initializeBars() {
-        const bars = document.querySelectorAll('.aiw-preview-viz-bar');
-        if (bars.length === 0) return;
-        
-        // Animate bars with random heights
-        function animateBars() {
-            bars.forEach((bar, index) => {
-                const randomHeight = Math.random() * 60 + 15; // 15-75px
-                bar.style.height = randomHeight + 'px';
-            });
-        }
-        
-        // Start animation loop
-        setInterval(animateBars, 150);
-        
-        console.log('✅ Visualization bars animation initialized');
-    }
-    
-    // Initialize bars immediately
-    initializeBars();
-    
-    // Re-initialize when bar count changes
-    window.aiwPreviewUpdateBars = initializeBars;
-    
-    // Enhanced preview system initialization
+    // Enhanced preview system initialization with fallback
     function initializePreviewWithFallback() {
-        // Check if script is loaded
-        if (typeof window.aiwCustomizerPreview === 'undefined') {
-            console.warn('⚠️ aiwCustomizerPreview not loaded yet, retrying in 500ms...');
+        // Check if live preview script is loaded
+        if (typeof window.aiwLivePreview === 'undefined') {
+            console.warn('⚠️ aiwLivePreview not loaded yet, retrying in 500ms...');
             setTimeout(initializePreviewWithFallback, 500);
             return;
         }
@@ -270,10 +236,10 @@ jQuery(document).ready(function($) {
         }
         
         console.log('✅ Preview dependencies ready, initializing...');
-        if (window.aiwCustomizerPreview.initializePreviewSystem) {
-            window.aiwCustomizerPreview.initializePreviewSystem();
+        if (window.aiwLivePreview.initialize) {
+            window.aiwLivePreview.initialize();
         } else {
-            console.error('❌ initializePreviewSystem method not found');
+            console.error('❌ aiwLivePreview.initialize method not found');
             // Show fallback since we can't initialize properly
             $('#preview-loading').hide();
             $('#preview-fallback').show();

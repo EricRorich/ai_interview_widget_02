@@ -1,0 +1,534 @@
+/**
+ * AI Interview Widget - Live Preview Styles
+ * 
+ * Realtime preview styling for Enhanced Widget Customizer
+ * Clean, standardized approach with GPU-friendly animations
+ * 
+ * @version 1.0.0
+ * @author Eric Rorich
+ * @since 1.9.5
+ */
+
+/* CSS Variables for Real-time Updates */
+:root {
+  /* Primary theme colors */
+  --aiw-color-primary: #00cfff;
+  --aiw-color-accent: #ff6b35;
+  --aiw-color-background: #0a0a1a;
+  --aiw-color-text: #ffffff;
+  
+  /* Shape properties */
+  --aiw-radius: 8px;
+  --aiw-border-width: 2px;
+  --aiw-shadow: 0 4px 15px rgba(0, 207, 255, 0.3);
+  
+  /* Play button properties */
+  --aiw-play-size: 80px;
+  --aiw-play-color: var(--aiw-color-primary);
+  --aiw-play-icon-color: #ffffff;
+  --aiw-play-hover-scale: 1.1;
+  
+  /* Audio visualization properties */
+  --aiw-visual-bars: 12;
+  --aiw-visual-gap: 3px;
+  --aiw-visual-color: var(--aiw-color-primary);
+  --aiw-visual-line-width: 4px;
+  --aiw-visual-glow: 10px;
+  --aiw-visual-speed: 1.0;
+  
+  /* Chatbox properties */
+  --aiw-chat-bg: #1e293b;
+  --aiw-chat-bubble-radius: 12px;
+  --aiw-chat-avatar-size: 32px;
+  --aiw-chat-spacing: 10px;
+}
+
+/* Main Preview Container */
+#aiw-live-preview {
+  width: 100%;
+  min-height: 500px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px;
+  background: var(--aiw-color-background);
+  border-radius: var(--aiw-radius);
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: var(--aiw-shadow);
+}
+
+/* Shared Canvas Background Layer */
+.aiw-preview-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Preview Sections Container */
+.aiw-preview-sections {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  height: 100%;
+}
+
+/* Individual Preview Section Base */
+.aiw-preview-section {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--aiw-radius);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 20px;
+  min-height: 120px;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.aiw-preview-section:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-2px);
+}
+
+/* Section Labels */
+.aiw-preview-section::before {
+  content: attr(data-label);
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+  z-index: 1;
+}
+
+/* Play Button Preview Section */
+.aiw-preview-section.aiw-preview-playbutton {
+  text-align: center;
+}
+
+.aiw-preview-play-button {
+  width: var(--aiw-play-size);
+  height: var(--aiw-play-size);
+  border-radius: 50%;
+  background: var(--aiw-play-color);
+  border: var(--aiw-border-width) solid var(--aiw-play-color);
+  color: var(--aiw-play-icon-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(var(--aiw-play-size) * 0.4);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: var(--aiw-shadow);
+  position: relative;
+  transform: translateZ(0); /* GPU acceleration */
+  will-change: transform; /* Optimize for animations */
+}
+
+.aiw-preview-play-button::before {
+  content: "▶";
+  margin-left: 3px;
+}
+
+.aiw-preview-play-button:hover {
+  transform: scale(var(--aiw-play-hover-scale)) translateZ(0);
+  box-shadow: 
+    0 0 calc(var(--aiw-visual-glow) * 2px) var(--aiw-color-primary),
+    var(--aiw-shadow);
+}
+
+.aiw-preview-play-button:focus {
+  outline: 2px solid var(--aiw-color-primary);
+  outline-offset: 4px;
+}
+
+/* Play Button Pulse Animation */
+@keyframes aiw-pulse {
+  0%, 100% { 
+    transform: scale(1) translateZ(0);
+    opacity: 1;
+  }
+  50% { 
+    transform: scale(1.1) translateZ(0);
+    opacity: 0.8;
+  }
+}
+
+.aiw-preview-play-button.pulse {
+  animation: aiw-pulse calc(2s / var(--aiw-visual-speed)) infinite ease-in-out;
+}
+
+/* Audio Visualization Preview Section */
+.aiw-preview-section.aiw-preview-audiovis {
+  flex-direction: column;
+  justify-content: center;
+}
+
+.aiw-preview-visualization {
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  gap: var(--aiw-visual-gap);
+  height: 80px;
+  padding: 0 20px;
+  width: 100%;
+}
+
+.aiw-preview-viz-bar {
+  width: var(--aiw-visual-line-width);
+  background: var(--aiw-visual-color);
+  border-radius: calc(var(--aiw-visual-line-width) / 2);
+  min-height: 4px;
+  transition: all 0.1s ease;
+  box-shadow: 0 0 var(--aiw-visual-glow) var(--aiw-visual-color);
+  animation: aiw-viz-pulse calc(800ms / var(--aiw-visual-speed)) infinite ease-in-out;
+  transform: translateZ(0); /* GPU acceleration */
+  will-change: height; /* Optimize for height animations */
+}
+
+/* Staggered animation delays for visualization bars */
+.aiw-preview-viz-bar:nth-child(1) { animation-delay: 0ms; }
+.aiw-preview-viz-bar:nth-child(2) { animation-delay: 100ms; }
+.aiw-preview-viz-bar:nth-child(3) { animation-delay: 200ms; }
+.aiw-preview-viz-bar:nth-child(4) { animation-delay: 300ms; }
+.aiw-preview-viz-bar:nth-child(5) { animation-delay: 400ms; }
+.aiw-preview-viz-bar:nth-child(6) { animation-delay: 500ms; }
+.aiw-preview-viz-bar:nth-child(7) { animation-delay: 400ms; }
+.aiw-preview-viz-bar:nth-child(8) { animation-delay: 300ms; }
+.aiw-preview-viz-bar:nth-child(9) { animation-delay: 200ms; }
+.aiw-preview-viz-bar:nth-child(10) { animation-delay: 100ms; }
+.aiw-preview-viz-bar:nth-child(11) { animation-delay: 200ms; }
+.aiw-preview-viz-bar:nth-child(12) { animation-delay: 300ms; }
+
+@keyframes aiw-viz-pulse {
+  0%, 100% { 
+    height: 8px;
+    opacity: 0.6;
+  }
+  25% { 
+    height: 35px;
+    opacity: 1;
+  }
+  50% { 
+    height: 15px;
+    opacity: 0.8;
+  }
+  75% { 
+    height: 45px;
+    opacity: 1;
+  }
+}
+
+/* Chatbox Preview Section */
+.aiw-preview-section.aiw-preview-chatbox {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  padding-top: 30px; /* Account for section label */
+}
+
+.aiw-preview-chatbox {
+  display: flex;
+  flex-direction: column;
+  gap: var(--aiw-chat-spacing);
+  width: 100%;
+  max-width: 350px;
+  margin: 0 auto;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: var(--aiw-radius);
+  padding: 15px;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.aiw-preview-chat-message {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.aiw-preview-chat-message.outgoing {
+  flex-direction: row-reverse;
+}
+
+.aiw-preview-chat-avatar {
+  width: var(--aiw-chat-avatar-size);
+  height: var(--aiw-chat-avatar-size);
+  border-radius: 50%;
+  background: var(--aiw-color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: white;
+  flex-shrink: 0;
+  font-weight: 600;
+}
+
+.aiw-preview-chat-message.incoming .aiw-preview-chat-avatar {
+  background: var(--aiw-color-accent);
+}
+
+.aiw-preview-chat-bubble {
+  background: var(--aiw-chat-bg);
+  color: var(--aiw-color-text);
+  padding: 8px 12px;
+  border-radius: var(--aiw-chat-bubble-radius);
+  font-size: 13px;
+  line-height: 1.4;
+  max-width: 200px;
+  word-wrap: break-word;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.aiw-preview-chat-message.outgoing .aiw-preview-chat-bubble {
+  background: var(--aiw-color-primary);
+  color: white;
+}
+
+/* Typing Indicator */
+.aiw-preview-typing {
+  display: flex;
+  gap: 3px;
+  padding: 8px 12px;
+  background: var(--aiw-chat-bg);
+  border-radius: var(--aiw-chat-bubble-radius);
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.aiw-preview-typing-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.6);
+  animation: aiw-typing-bounce 1.4s infinite ease-in-out;
+  transform: translateZ(0); /* GPU acceleration */
+}
+
+.aiw-preview-typing-dot:nth-child(1) { animation-delay: 0ms; }
+.aiw-preview-typing-dot:nth-child(2) { animation-delay: 200ms; }
+.aiw-preview-typing-dot:nth-child(3) { animation-delay: 400ms; }
+
+@keyframes aiw-typing-bounce {
+  0%, 60%, 100% { 
+    transform: translateY(0) translateZ(0);
+    opacity: 0.6;
+  }
+  30% { 
+    transform: translateY(-8px) translateZ(0);
+    opacity: 1;
+  }
+}
+
+/* Loading and Error States */
+.aiw-preview-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  background: #f9f9f9;
+  border-radius: var(--aiw-radius);
+  margin-bottom: 20px;
+}
+
+.aiw-preview-error {
+  padding: 20px;
+  background: #fff2f2;
+  border: 1px solid #ff6b6b;
+  border-radius: var(--aiw-radius);
+  margin-bottom: 20px;
+}
+
+.aiw-preview-fallback {
+  padding: 20px;
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: var(--aiw-radius);
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+/* Loading Spinner */
+@keyframes aiw-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.aiw-loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid var(--aiw-color-primary);
+  border-radius: 50%;
+  animation: aiw-spin 1s linear infinite;
+  margin: 0 auto;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  #aiw-live-preview {
+    padding: 15px;
+    gap: 15px;
+    min-height: 400px;
+  }
+  
+  .aiw-preview-section {
+    padding: 15px;
+    min-height: 100px;
+  }
+  
+  .aiw-preview-play-button {
+    width: calc(var(--aiw-play-size) * 0.8);
+    height: calc(var(--aiw-play-size) * 0.8);
+  }
+  
+  .aiw-preview-visualization {
+    height: 60px;
+    padding: 0 15px;
+  }
+  
+  .aiw-preview-chatbox {
+    max-width: 280px;
+  }
+}
+
+@media (max-width: 480px) {
+  #aiw-live-preview {
+    padding: 12px;
+    gap: 12px;
+  }
+  
+  .aiw-preview-section {
+    padding: 12px;
+    min-height: 80px;
+  }
+  
+  .aiw-preview-play-button {
+    width: calc(var(--aiw-play-size) * 0.7);
+    height: calc(var(--aiw-play-size) * 0.7);
+  }
+  
+  .aiw-preview-chatbox {
+    max-width: 250px;
+    padding: 12px;
+  }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  .aiw-preview-play-button,
+  .aiw-preview-viz-bar,
+  .aiw-preview-typing-dot,
+  .aiw-preview-section,
+  .aiw-loading-spinner {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .aiw-preview-play-button:hover,
+  .aiw-preview-section:hover {
+    transform: none !important;
+  }
+  
+  .aiw-preview-play-button,
+  .aiw-preview-viz-bar,
+  .aiw-preview-typing-dot {
+    will-change: auto; /* Remove optimization hints */
+  }
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+  .aiw-preview-section {
+    border: 2px solid var(--aiw-color-primary);
+    background: rgba(0, 0, 0, 0.8);
+  }
+  
+  .aiw-preview-chat-bubble {
+    border: 2px solid var(--aiw-color-text);
+  }
+  
+  .aiw-preview-play-button {
+    border: 3px solid var(--aiw-color-text);
+  }
+}
+
+/* Focus States for Accessibility */
+.aiw-preview-play-button:focus-visible {
+  outline: 3px solid var(--aiw-color-primary);
+  outline-offset: 4px;
+}
+
+/* Screen Reader Only Text */
+.screen-reader-text {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* Loading State for Container */
+#aiw-live-preview.loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+#aiw-live-preview.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 32px;
+  height: 32px;
+  margin: -16px 0 0 -16px;
+  border: 3px solid var(--aiw-color-primary);
+  border-top: 3px solid transparent;
+  border-radius: 50%;
+  animation: aiw-spin 1s linear infinite;
+  z-index: 10;
+}
+
+/* Print styles */
+@media print {
+  #aiw-live-preview {
+    background: white !important;
+    color: black !important;
+    box-shadow: none !important;
+  }
+  
+  .aiw-preview-canvas,
+  .aiw-preview-loading,
+  .aiw-preview-error {
+    display: none !important;
+  }
+  
+  .aiw-preview-section {
+    border: 1px solid #ccc !important;
+    background: #f9f9f9 !important;
+  }
+}

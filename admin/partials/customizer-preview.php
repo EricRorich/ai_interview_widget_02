@@ -230,9 +230,31 @@ document.addEventListener('DOMContentLoaded', function() {
     // Re-initialize when bar count changes
     window.aiwPreviewUpdateBars = initializeBars;
     
-    // Initialize iframe-based preview system
-    if (typeof window.aiwCustomizerPreview !== 'undefined' && window.aiwCustomizerPreview.initializePreviewSystem) {
-        window.aiwCustomizerPreview.initializePreviewSystem();
+    // Initialize iframe-based preview system with enhanced error handling
+    function initializePreviewWithFallback() {
+        // Check if script is loaded
+        if (typeof window.aiwCustomizerPreview === 'undefined') {
+            console.warn('⚠️ aiwCustomizerPreview not loaded yet, retrying in 500ms...');
+            setTimeout(initializePreviewWithFallback, 500);
+            return;
+        }
+        
+        // Check if customizerData is available
+        if (typeof window.aiwCustomizerData === 'undefined') {
+            console.warn('⚠️ aiwCustomizerData not available yet, retrying in 500ms...');
+            setTimeout(initializePreviewWithFallback, 500);
+            return;
+        }
+        
+        console.log('✅ Preview dependencies ready, initializing...');
+        if (window.aiwCustomizerPreview.initializePreviewSystem) {
+            window.aiwCustomizerPreview.initializePreviewSystem();
+        } else {
+            console.error('❌ initializePreviewSystem method not found');
+        }
     }
+    
+    // Start initialization with retry mechanism
+    initializePreviewWithFallback();
 });
 </script>

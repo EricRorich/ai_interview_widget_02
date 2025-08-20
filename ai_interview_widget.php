@@ -4392,6 +4392,35 @@ class AIInterviewWidget {
 </div>
 </div>
 
+<!-- Translation Debug Panel (minimal version for customizer page) -->
+<div style="margin-top: 20px; padding: 15px; background: #f0f0f1; border-radius: 8px; border: 1px solid #ddd;">
+    <div style="display: flex; align-items: center; margin-bottom: 15px; justify-content: space-between;">
+        <div style="display: flex; align-items: center;">
+            <span style="font-size: 20px; margin-right: 8px; color: #9C27B0;">🐛</span>
+            <h4 style="margin: 0; color: #6A1B9A; font-size: 16px;">Translation Debug Panel</h4>
+        </div>
+        <button id="toggle-debug-panel" class="button button-secondary" style="font-size: 12px;">
+            <span id="debug-panel-toggle-text">Show Debug Info</span>
+        </button>
+    </div>
+    
+    <div id="translation-debug-content" style="display: none; background: white; padding: 15px; border-radius: 6px; border: 1px solid #e1bee7;">
+        
+        <!-- Debug Log -->
+        <div style="margin-bottom: 15px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <h5 style="margin: 0; color: #6A1B9A; font-size: 14px;">Translation Debug Log</h5>
+                <div>
+                    <button id="clear-debug-log" class="button button-small">Clear</button>
+                    <button id="export-debug-log" class="button button-small">Export</button>
+                </div>
+            </div>
+            <div id="translation-debug-log" style="background: #000; color: #00ff00; padding: 10px; border-radius: 4px; height: 200px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 11px; white-space: pre-wrap;">Translation Debug Panel initialized...\n</div>
+        </div>
+        
+    </div>
+</div>
+
 <p style="margin-top: 20px;"><a href="<?php echo admin_url('admin.php?page=ai-interview-widget'); ?>" class="button button-primary">← Back to Settings</a></p>
 </div>
 
@@ -4954,20 +4983,20 @@ jQuery(document).ready(function($) {
             case 'ArrowLeft':
                 e.preventDefault();
                 const prevIndex = currentIndex > 0 ? currentIndex - 1 : $buttons.length - 1;
-                $buttons.eq(prevIndex).click().focus();
+                $buttons.eq(prevIndex).trigger('click').focus();
                 break;
             case 'ArrowRight':
                 e.preventDefault();
                 const nextIndex = currentIndex < $buttons.length - 1 ? currentIndex + 1 : 0;
-                $buttons.eq(nextIndex).click().focus();
+                $buttons.eq(nextIndex).trigger('click').focus();
                 break;
             case 'Home':
                 e.preventDefault();
-                $buttons.eq(0).click().focus();
+                $buttons.eq(0).trigger('click').focus();
                 break;
             case 'End':
                 e.preventDefault();
-                $buttons.eq($buttons.length - 1).click().focus();
+                $buttons.eq($buttons.length - 1).trigger('click').focus();
                 break;
         }
     });
@@ -5402,7 +5431,9 @@ jQuery(document).ready(function($) {
             const a = document.createElement('a');
             a.href = url;
             a.download = `ai-widget-translation-debug-${new Date().toISOString().substring(0, 19).replace(/:/g, '-')}.txt`;
+            document.body.appendChild(a);
             a.click();
+            document.body.removeChild(a);
             URL.revokeObjectURL(url);
         }
     };
@@ -9842,7 +9873,9 @@ function exportDebugLog() {
     const a = document.createElement('a');
     a.href = url;
     a.download = 'ai-widget-debug-log-' + new Date().toISOString().substring(0, 19).replace(/:/g, '-') + '.txt';
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
 }
 

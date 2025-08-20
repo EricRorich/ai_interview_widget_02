@@ -1182,6 +1182,17 @@
             }
         },
         
+        // Manual testing functions
+        manualInit: function() {
+            console.log('🧪 Manual initialization triggered...');
+            initializePreview();
+        },
+        
+        validateElements: function() {
+            console.log('🔍 Manual element validation...');
+            return validatePreviewRequirements();
+        },
+        
         // Configuration access
         getConfig: function() {
             return {

@@ -214,6 +214,9 @@ class AIInterviewWidget {
         
         // Enqueue customizer preview assets on Enhanced Widget Customizer page
         if ($hook === 'ai-interview-widget_page_ai-interview-widget-customizer') {
+            // Log script loading for debugging
+            error_log('AI Interview Widget: Loading customizer preview assets for hook: ' . $hook);
+            
             wp_enqueue_script(
                 'aiw-customizer-preview-js',
                 plugin_dir_url(__FILE__) . 'admin/js/aiw-customizer-preview.js',

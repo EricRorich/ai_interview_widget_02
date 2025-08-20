@@ -845,6 +845,12 @@
             initializeCanvas: initializeCanvas,
             initializeBars: initializeVisualizationBars,
             startAnimation: startAnimationLoop
+        },
+        
+        // Debugging support for debug window
+        debug: {
+            log: debugLog,
+            error: errorLog
         }
     };
 

@@ -217,7 +217,7 @@ class AIInterviewWidget {
             wp_enqueue_script(
                 'aiw-customizer-preview-js',
                 plugin_dir_url(__FILE__) . 'admin/js/aiw-customizer-preview.js',
-                array('jquery'),
+                array(), // No dependencies required - jQuery is optional
                 '1.0.0',
                 true
             );

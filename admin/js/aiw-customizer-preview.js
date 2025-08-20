@@ -9,8 +9,12 @@
  * @since 1.9.5
  */
 
-(function($) {
+(function() {
     'use strict';
+
+    // Check if jQuery is available
+    const $ = window.jQuery;
+    const hasJQuery = typeof $ !== 'undefined';
 
     // Configuration object
     const PREVIEW_CONFIG = {
@@ -54,6 +58,28 @@
         'ai_chat_bubble_radius': '--aiw-preview-chat-bubble-radius',
         'ai_chat_avatar_size': '--aiw-preview-chat-avatar-size'
     };
+
+    /**
+     * Cross-browser event listener helper
+     */
+    function addEventListeners(selector, events, handler) {
+        const elements = typeof selector === 'string' ? 
+            document.querySelectorAll(selector) : [selector];
+        
+        elements.forEach(element => {
+            if (!element) return;
+            events.split(' ').forEach(event => {
+                element.addEventListener(event, handler);
+            });
+        });
+    }
+
+    /**
+     * Cross-browser element selector helper
+     */
+    function getElements(selector) {
+        return document.querySelectorAll(selector);
+    }
 
     /**
      * Initialize the preview system
@@ -163,29 +189,33 @@
      * Setup control listeners for real-time updates
      */
     function setupControlListeners() {
-        // Color picker listeners
-        $(document).on('change', 'input[type="text"].wp-color-picker', handleColorChange);
+        // Handle different types of inputs
+        addEventListeners('input[type="color"].wp-color-picker', 'change input', handleColorChange);
+        addEventListeners('input[type="range"]', 'input change', handleRangeChange);
+        addEventListeners('select', 'change', handleSelectChange);
+        addEventListeners('input[type="checkbox"]', 'change', handleCheckboxChange);
+        addEventListeners('input[type="text"]:not(.wp-color-picker), input[type="number"]', 'input', handleTextChange);
         
-        // Range slider listeners  
-        $(document).on('input change', 'input[type="range"]', handleRangeChange);
+        // Fallback for any color inputs that aren't WP color pickers
+        addEventListeners('input[type="color"]:not(.wp-color-picker)', 'change input', handleColorChange);
         
-        // Select dropdown listeners
-        $(document).on('change', 'select', handleSelectChange);
-        
-        // Checkbox listeners
-        $(document).on('change', 'input[type="checkbox"]', handleCheckboxChange);
-        
-        // Text input listeners
-        $(document).on('input', 'input[type="text"]:not(.wp-color-picker), input[type="number"]', handleTextChange);
+        // If jQuery is available, also use jQuery delegation
+        if (hasJQuery) {
+            $(document).on('change', 'input[type="text"].wp-color-picker', handleColorChange);
+            $(document).on('input change', 'input[type="range"]', handleRangeChange);
+            $(document).on('change', 'select', handleSelectChange);
+            $(document).on('change', 'input[type="checkbox"]', handleCheckboxChange);
+            $(document).on('input', 'input[type="text"]:not(.wp-color-picker), input[type="number"]', handleTextChange);
+        }
     }
 
     /**
      * Handle color picker changes
      */
     function handleColorChange(event) {
-        const $input = $(event.target);
-        const settingName = $input.attr('name') || $input.attr('id');
-        const value = $input.val();
+        const input = event.target;
+        const settingName = input.getAttribute('name') || input.getAttribute('id');
+        const value = input.value;
         
         debouncedUpdate(settingName, value);
     }
@@ -194,10 +224,10 @@
      * Handle range slider changes
      */
     function handleRangeChange(event) {
-        const $input = $(event.target);
-        const settingName = $input.attr('name') || $input.attr('id');
-        const value = $input.val();
-        const unit = $input.data('unit') || '';
+        const input = event.target;
+        const settingName = input.getAttribute('name') || input.getAttribute('id');
+        const value = input.value;
+        const unit = input.getAttribute('data-unit') || '';
         
         debouncedUpdate(settingName, value + unit);
     }
@@ -206,9 +236,9 @@
      * Handle select dropdown changes
      */
     function handleSelectChange(event) {
-        const $select = $(event.target);
-        const settingName = $select.attr('name') || $select.attr('id');
-        const value = $select.val();
+        const select = event.target;
+        const settingName = select.getAttribute('name') || select.getAttribute('id');
+        const value = select.value;
         
         debouncedUpdate(settingName, value);
     }
@@ -217,9 +247,9 @@
      * Handle checkbox changes
      */
     function handleCheckboxChange(event) {
-        const $checkbox = $(event.target);
-        const settingName = $checkbox.attr('name') || $checkbox.attr('id');
-        const value = $checkbox.is(':checked');
+        const checkbox = event.target;
+        const settingName = checkbox.getAttribute('name') || checkbox.getAttribute('id');
+        const value = checkbox.checked;
         
         debouncedUpdate(settingName, value);
     }
@@ -228,9 +258,9 @@
      * Handle text input changes
      */
     function handleTextChange(event) {
-        const $input = $(event.target);
-        const settingName = $input.attr('name') || $input.attr('id');
-        const value = $input.val();
+        const input = event.target;
+        const settingName = input.getAttribute('name') || input.getAttribute('id');
+        const value = input.value;
         
         debouncedUpdate(settingName, value);
     }
@@ -340,15 +370,15 @@
     function loadInitialSettings() {
         // Collect all current form values
         Object.keys(SETTINGS_MAP).forEach(settingName => {
-            const $input = $(`[name="${settingName}"], #${settingName}`);
-            if ($input.length) {
+            const input = document.querySelector(`[name="${settingName}"], #${settingName}`);
+            if (input) {
                 let value;
                 
-                if ($input.is(':checkbox')) {
-                    value = $input.is(':checked');
+                if (input.type === 'checkbox') {
+                    value = input.checked;
                 } else {
-                    value = $input.val();
-                    const unit = $input.data('unit') || '';
+                    value = input.value;
+                    const unit = input.getAttribute('data-unit') || '';
                     if (unit) value += unit;
                 }
                 
@@ -505,30 +535,48 @@
     }
 
     /**
+     * DOM ready handler
+     */
+    function onDOMReady(callback) {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', callback);
+        } else {
+            callback();
+        }
+    }
+
+    /**
      * Initialize when DOM is ready
      */
-    $(document).ready(function() {
+    onDOMReady(function() {
         // Initialize preview system
         initializePreview();
         
         // Setup cleanup on page unload
-        $(window).on('beforeunload', cleanup);
+        window.addEventListener('beforeunload', cleanup);
         
         // Handle reduced motion preference changes
         const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-        mediaQuery.addListener(function(e) {
+        const handleMotionChange = function(e) {
             PREVIEW_CONFIG.reducedMotion = e.matches;
             
             if (e.matches) {
                 // Stop animations
                 cleanup();
                 // Remove pulse classes
-                $('.aiw-preview-play-button').removeClass('pulse');
+                const playButtons = document.querySelectorAll('.aiw-preview-play-button');
+                playButtons.forEach(btn => btn.classList.remove('pulse'));
             } else {
                 // Restart animations
                 startAnimationLoop();
             }
-        });
+        };
+        
+        if (mediaQuery.addListener) {
+            mediaQuery.addListener(handleMotionChange);
+        } else {
+            mediaQuery.addEventListener('change', handleMotionChange);
+        }
     });
 
     /**
@@ -543,4 +591,4 @@
         }
     };
 
-})(jQuery);
+})();

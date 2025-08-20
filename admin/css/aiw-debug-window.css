@@ -1,0 +1,350 @@
+/**
+ * AI Interview Widget - Debug Window Styles
+ * 
+ * Lightweight debug window for Enhanced Widget Customizer
+ * Provides real-time logging, state display, and troubleshooting tools
+ * 
+ * @version 1.0.0
+ * @author Eric Rorich
+ * @since 1.9.5
+ */
+
+/* Debug Window Container */
+.aiw-debug-window {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #1e1e1e;
+    border-top: 2px solid #00cfff;
+    box-shadow: 0 -4px 20px rgba(0, 207, 255, 0.2);
+    z-index: 9999;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 12px;
+    line-height: 1.4;
+    color: #ffffff;
+    transform: translateY(100%);
+    transition: transform 0.3s ease-in-out;
+}
+
+.aiw-debug-window.aiw-debug-open {
+    transform: translateY(0);
+}
+
+/* Debug Window Header */
+.aiw-debug-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    background: #2a2a2a;
+    border-bottom: 1px solid #444;
+    cursor: pointer;
+    user-select: none;
+}
+
+.aiw-debug-title {
+    font-weight: bold;
+    color: #00cfff;
+    margin: 0;
+    font-size: 13px;
+}
+
+.aiw-debug-toggle {
+    background: none;
+    border: none;
+    color: #00cfff;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    transition: background-color 0.2s;
+}
+
+.aiw-debug-toggle:hover {
+    background: rgba(0, 207, 255, 0.1);
+}
+
+.aiw-debug-toggle:focus {
+    outline: 2px solid #00cfff;
+    outline-offset: 2px;
+}
+
+/* Debug Window Content */
+.aiw-debug-content {
+    display: flex;
+    height: 300px;
+    max-height: 40vh;
+}
+
+/* Debug Sections */
+.aiw-debug-section {
+    flex: 1;
+    border-right: 1px solid #444;
+    display: flex;
+    flex-direction: column;
+}
+
+.aiw-debug-section:last-child {
+    border-right: none;
+}
+
+.aiw-debug-section-header {
+    padding: 8px 12px;
+    background: #333;
+    border-bottom: 1px solid #444;
+    font-weight: bold;
+    font-size: 11px;
+    color: #ccc;
+    text-transform: uppercase;
+}
+
+.aiw-debug-section-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+/* Logs Section */
+.aiw-debug-logs {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.aiw-debug-log-item {
+    padding: 4px 8px;
+    margin-bottom: 2px;
+    border-radius: 3px;
+    font-size: 11px;
+    line-height: 1.3;
+    word-wrap: break-word;
+}
+
+.aiw-debug-log-item.error {
+    background: rgba(220, 38, 38, 0.2);
+    border-left: 3px solid #dc2626;
+    color: #fca5a5;
+}
+
+.aiw-debug-log-item.warning {
+    background: rgba(245, 158, 11, 0.2);
+    border-left: 3px solid #f59e0b;
+    color: #fcd34d;
+}
+
+.aiw-debug-log-item.info {
+    background: rgba(59, 130, 246, 0.2);
+    border-left: 3px solid #3b82f6;
+    color: #93c5fd;
+}
+
+.aiw-debug-log-item.debug {
+    background: rgba(107, 114, 128, 0.2);
+    border-left: 3px solid #6b7280;
+    color: #d1d5db;
+}
+
+.aiw-debug-log-timestamp {
+    color: #9ca3af;
+    font-size: 10px;
+    margin-right: 8px;
+}
+
+.aiw-debug-log-level {
+    font-weight: bold;
+    margin-right: 8px;
+    text-transform: uppercase;
+    font-size: 10px;
+}
+
+.aiw-debug-log-message {
+    flex: 1;
+}
+
+/* Visual Style State Section */
+.aiw-debug-state {
+    background: #1a1a1a;
+    border-radius: 3px;
+    padding: 8px;
+    overflow-x: auto;
+}
+
+.aiw-debug-state pre {
+    margin: 0;
+    font-size: 10px;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.aiw-debug-state .json-key {
+    color: #60a5fa;
+}
+
+.aiw-debug-state .json-string {
+    color: #34d399;
+}
+
+.aiw-debug-state .json-number {
+    color: #fbbf24;
+}
+
+.aiw-debug-state .json-boolean {
+    color: #f87171;
+}
+
+.aiw-debug-state .json-null {
+    color: #9ca3af;
+}
+
+/* Tools Section */
+.aiw-debug-tools {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.aiw-debug-tool-button {
+    background: #374151;
+    border: 1px solid #4b5563;
+    color: #ffffff;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    transition: all 0.2s;
+}
+
+.aiw-debug-tool-button:hover {
+    background: #4b5563;
+    border-color: #6b7280;
+}
+
+.aiw-debug-tool-button:focus {
+    outline: 2px solid #00cfff;
+    outline-offset: 2px;
+}
+
+.aiw-debug-tool-button:active {
+    background: #1f2937;
+}
+
+.aiw-debug-tool-button.primary {
+    background: #1d4ed8;
+    border-color: #2563eb;
+}
+
+.aiw-debug-tool-button.primary:hover {
+    background: #2563eb;
+    border-color: #3b82f6;
+}
+
+.aiw-debug-tool-button.danger {
+    background: #dc2626;
+    border-color: #ef4444;
+}
+
+.aiw-debug-tool-button.danger:hover {
+    background: #ef4444;
+    border-color: #f87171;
+}
+
+/* Debug Toggle Button (when closed) */
+.aiw-debug-toggle-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #1e1e1e;
+    border: 2px solid #00cfff;
+    color: #00cfff;
+    padding: 12px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: bold;
+    box-shadow: 0 4px 15px rgba(0, 207, 255, 0.3);
+    z-index: 9998;
+    transition: all 0.2s;
+}
+
+.aiw-debug-toggle-button:hover {
+    background: #00cfff;
+    color: #1e1e1e;
+    box-shadow: 0 6px 20px rgba(0, 207, 255, 0.4);
+}
+
+.aiw-debug-toggle-button:focus {
+    outline: 2px solid #00cfff;
+    outline-offset: 2px;
+}
+
+.aiw-debug-toggle-button.aiw-debug-open {
+    display: none;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .aiw-debug-content {
+        flex-direction: column;
+        height: auto;
+        max-height: 50vh;
+    }
+    
+    .aiw-debug-section {
+        border-right: none;
+        border-bottom: 1px solid #444;
+        height: 120px;
+    }
+    
+    .aiw-debug-section:last-child {
+        border-bottom: none;
+    }
+    
+    .aiw-debug-toggle-button {
+        bottom: 10px;
+        right: 10px;
+        padding: 8px 12px;
+        font-size: 11px;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .aiw-debug-window,
+    .aiw-debug-toggle-button {
+        transition: none;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .aiw-debug-window {
+        border-top-color: #ffffff;
+        background: #000000;
+    }
+    
+    .aiw-debug-toggle-button {
+        border-color: #ffffff;
+        color: #ffffff;
+    }
+}
+
+/* Scrollbar styling for logs */
+.aiw-debug-section-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.aiw-debug-section-content::-webkit-scrollbar-track {
+    background: #2a2a2a;
+}
+
+.aiw-debug-section-content::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 3px;
+}
+
+.aiw-debug-section-content::-webkit-scrollbar-thumb:hover {
+    background: #777;
+}

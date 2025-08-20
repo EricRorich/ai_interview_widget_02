@@ -2397,23 +2397,131 @@ class AIInterviewWidget {
     }
 
     /**
-     * Handle Preview Render AJAX Request - DISABLED
-     * Preview functionality temporarily disabled for stability
+     * Handle Preview Render AJAX Request
+     * Generates complete iframe HTML for live preview
+     * 
+     * @since 1.9.5
      */
     public function handle_preview_render() {
-        // Preview functionality temporarily disabled
-        wp_send_json_error('Preview functionality is temporarily disabled for maintenance and stability improvements.');
-        return;
+        // Check nonce for security
+        if (!check_ajax_referer('aiw_customizer_preview', 'nonce', false)) {
+            wp_send_json_error(array(
+                'message' => 'Invalid security token',
+                'code' => 'nonce_failed'
+            ));
+            return;
+        }
+        
+        // Check user capabilities
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array(
+                'message' => 'Insufficient permissions',
+                'code' => 'permission_denied'
+            ));
+            return;
+        }
+        
+        try {
+            // Get current settings
+            $style_settings = get_option('ai_interview_widget_style_settings', '');
+            $content_settings = get_option('ai_interview_widget_content_settings', '');
+            
+            // Validate JSON settings
+            if (!$this->is_valid_json($style_settings) || !$this->is_valid_json($content_settings)) {
+                wp_send_json_error(array(
+                    'message' => 'Invalid settings format',
+                    'code' => 'invalid_json'
+                ));
+                return;
+            }
+            
+            // Generate widget HTML using shortcode
+            $widget_html = do_shortcode('[ai_interview_widget]');
+            
+            // Generate custom CSS
+            $custom_css = $this->generate_preview_css($style_settings, $content_settings);
+            
+            // Generate complete preview page
+            $preview_html = $this->generate_preview_page($widget_html, $custom_css);
+            
+            wp_send_json_success(array(
+                'html' => $preview_html,
+                'timestamp' => current_time('timestamp'),
+                'message' => 'Preview rendered successfully'
+            ));
+            
+        } catch (Exception $e) {
+            error_log('AI Interview Widget Preview Render Error: ' . $e->getMessage());
+            wp_send_json_error(array(
+                'message' => 'Failed to generate preview',
+                'code' => 'render_failed',
+                'debug' => defined('WP_DEBUG') && WP_DEBUG ? $e->getMessage() : null
+            ));
+        }
     }
     
     /**
-     * Handle Preview Update AJAX Request - DISABLED
-     * Preview functionality temporarily disabled for stability
+     * Handle Preview Update AJAX Request
+     * Provides incremental updates for real-time preview
+     * 
+     * @since 1.9.5
      */
     public function handle_preview_update() {
-        // Preview functionality temporarily disabled
-        wp_send_json_error('Preview functionality is temporarily disabled for maintenance and stability improvements.');
-        return;
+        // Check nonce for security
+        if (!check_ajax_referer('aiw_customizer_preview', 'nonce', false)) {
+            wp_send_json_error(array(
+                'message' => 'Invalid security token',
+                'code' => 'nonce_failed'
+            ));
+            return;
+        }
+        
+        // Check user capabilities
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array(
+                'message' => 'Insufficient permissions',
+                'code' => 'permission_denied'
+            ));
+            return;
+        }
+        
+        try {
+            // Get settings from POST data (for real-time updates)
+            $style_settings = isset($_POST['style_settings']) ? sanitize_textarea_field($_POST['style_settings']) : get_option('ai_interview_widget_style_settings', '');
+            $content_settings = isset($_POST['content_settings']) ? sanitize_textarea_field($_POST['content_settings']) : get_option('ai_interview_widget_content_settings', '');
+            
+            // Validate JSON settings
+            if (!$this->is_valid_json($style_settings) || !$this->is_valid_json($content_settings)) {
+                wp_send_json_error(array(
+                    'message' => 'Invalid settings format',
+                    'code' => 'invalid_json'
+                ));
+                return;
+            }
+            
+            // Generate updated CSS for incremental update
+            $updated_css = $this->generate_preview_css($style_settings, $content_settings);
+            
+            // Parse content settings for dynamic updates
+            $content_data = json_decode($content_settings, true);
+            if (!$content_data) $content_data = array();
+            
+            wp_send_json_success(array(
+                'css' => $updated_css,
+                'content_data' => $content_data,
+                'headline_text' => isset($content_data['headline_text']) ? $content_data['headline_text'] : '',
+                'timestamp' => current_time('timestamp'),
+                'message' => 'Preview updated successfully'
+            ));
+            
+        } catch (Exception $e) {
+            error_log('AI Interview Widget Preview Update Error: ' . $e->getMessage());
+            wp_send_json_error(array(
+                'message' => 'Failed to update preview',
+                'code' => 'update_failed',
+                'debug' => defined('WP_DEBUG') && WP_DEBUG ? $e->getMessage() : null
+            ));
+        }
     }
     
     /**
@@ -2560,6 +2668,109 @@ class AIInterviewWidget {
         
         json_decode($string);
         return json_last_error() === JSON_ERROR_NONE;
+    }
+    
+    /**
+     * Generate CSS for preview based on settings
+     * Creates custom CSS from style and content settings for preview iframe
+     * 
+     * @since 1.9.5
+     * @param string $style_settings JSON string of style settings
+     * @param string $content_settings JSON string of content settings
+     * @return string Generated CSS
+     */
+    private function generate_preview_css($style_settings, $content_settings) {
+        // Parse settings
+        $style_data = json_decode($style_settings, true);
+        $content_data = json_decode($content_settings, true);
+        
+        if (!$style_data) $style_data = array();
+        if (!$content_data) $content_data = array();
+        
+        // Start building CSS
+        $css = "/* AI Interview Widget Preview CSS */\n";
+        $css .= ":root {\n";
+        
+        // Container background settings
+        if (isset($style_data['container_bg_color'])) {
+            $css .= "    --aiw-container-bg-color: " . sanitize_text_field($style_data['container_bg_color']) . ";\n";
+        }
+        if (isset($style_data['container_bg_gradient_start']) && isset($style_data['container_bg_gradient_end'])) {
+            $start = sanitize_text_field($style_data['container_bg_gradient_start']);
+            $end = sanitize_text_field($style_data['container_bg_gradient_end']);
+            $css .= "    --aiw-container-bg-gradient: linear-gradient(135deg, {$start}, {$end});\n";
+        }
+        
+        // Play button settings
+        if (isset($style_data['play_button_size'])) {
+            $css .= "    --aiw-play-button-size: " . intval($style_data['play_button_size']) . "px;\n";
+        }
+        if (isset($style_data['play_button_color'])) {
+            $css .= "    --aiw-play-button-color: " . sanitize_text_field($style_data['play_button_color']) . ";\n";
+        }
+        if (isset($style_data['play_button_icon_color'])) {
+            $css .= "    --aiw-play-button-icon-color: " . sanitize_text_field($style_data['play_button_icon_color']) . ";\n";
+        }
+        
+        // Canvas and visualization settings
+        if (isset($style_data['canvas_color'])) {
+            $css .= "    --aiw-canvas-color: " . sanitize_text_field($style_data['canvas_color']) . ";\n";
+        }
+        if (isset($style_data['canvas_shadow_color'])) {
+            $css .= "    --aiw-canvas-shadow-color: " . sanitize_text_field($style_data['canvas_shadow_color']) . ";\n";
+        }
+        if (isset($style_data['visualizer_primary_color'])) {
+            $css .= "    --aiw-viz-primary-color: " . sanitize_text_field($style_data['visualizer_primary_color']) . ";\n";
+        }
+        
+        // Chatbox settings  
+        if (isset($style_data['chatbox_font_color'])) {
+            $css .= "    --aiw-chat-text-color: " . sanitize_text_field($style_data['chatbox_font_color']) . ";\n";
+        }
+        if (isset($style_data['chatbox_font_size'])) {
+            $css .= "    --aiw-chat-font-size: " . intval($style_data['chatbox_font_size']) . "px;\n";
+        }
+        
+        // Border and spacing settings
+        if (isset($style_data['container_border_radius'])) {
+            $css .= "    --aiw-border-radius: " . intval($style_data['container_border_radius']) . "px;\n";
+        }
+        if (isset($style_data['container_padding'])) {
+            $css .= "    --aiw-container-padding: " . intval($style_data['container_padding']) . "px;\n";
+        }
+        
+        $css .= "}\n\n";
+        
+        // Apply the CSS variables to actual elements
+        $css .= "/* Preview-specific styles */\n";
+        $css .= ".ai-interview-container {\n";
+        $css .= "    background: var(--aiw-container-bg-gradient, var(--aiw-container-bg-color, #0f0c29));\n";
+        $css .= "    border-radius: var(--aiw-border-radius, 15px);\n";
+        $css .= "    padding: var(--aiw-container-padding, 20px);\n";
+        $css .= "}\n\n";
+        
+        $css .= ".play-button {\n";
+        $css .= "    width: var(--aiw-play-button-size, 100px);\n";
+        $css .= "    height: var(--aiw-play-button-size, 100px);\n";
+        $css .= "    background: var(--aiw-play-button-color, #00cfff);\n";
+        $css .= "    color: var(--aiw-play-button-icon-color, #ffffff);\n";
+        $css .= "}\n\n";
+        
+        $css .= ".audio-visualization {\n";
+        $css .= "    background: var(--aiw-canvas-color, #0a0a1a);\n";
+        $css .= "    box-shadow: 0 0 20px var(--aiw-canvas-shadow-color, #00cfff);\n";
+        $css .= "}\n\n";
+        
+        $css .= ".visualization-bar {\n";
+        $css .= "    background: var(--aiw-viz-primary-color, #00cfff);\n";
+        $css .= "}\n\n";
+        
+        $css .= ".chat-interface {\n";
+        $css .= "    color: var(--aiw-chat-text-color, #ffffff);\n";
+        $css .= "    font-size: var(--aiw-chat-font-size, 16px);\n";
+        $css .= "}\n";
+        
+        return $css;
     }
 
     // Output custom CSS to frontend

@@ -126,16 +126,33 @@
         
         const issues = [];
         
-        // Check for required global data
+        // Check for required global data with detailed logging
         if (!customizerData) {
             issues.push('Missing customizerData object');
+            errorLog('❌ customizerData is undefined - script loading issue?');
         } else {
-            if (!customizerData.ajaxurl) issues.push('Missing AJAX URL');
-            if (!customizerData.nonce) issues.push('Missing security nonce');
-            if (!customizerData.defaults) issues.push('Missing defaults data');
+            debugLog('✅ customizerData exists');
+            if (!customizerData.ajaxurl) {
+                issues.push('Missing AJAX URL');
+                errorLog('❌ customizerData.ajaxurl is missing');
+            } else {
+                debugLog('✅ AJAX URL:', customizerData.ajaxurl);
+            }
+            if (!customizerData.nonce) {
+                issues.push('Missing security nonce');
+                errorLog('❌ customizerData.nonce is missing');
+            } else {
+                debugLog('✅ Security nonce available');
+            }
+            if (!customizerData.defaults) {
+                issues.push('Missing defaults data');
+                errorLog('❌ customizerData.defaults is missing');
+            } else {
+                debugLog('✅ Defaults available:', Object.keys(customizerData.defaults).length, 'keys');
+            }
         }
         
-        // Check for required DOM elements
+        // Check for required DOM elements with detailed logging
         const requiredElements = [
             'aiw-live-preview',
             'widget_preview_container',
@@ -144,14 +161,23 @@
             'preview-error'
         ];
         
+        debugLog('🔍 Checking DOM elements...');
         requiredElements.forEach(id => {
-            if (!document.getElementById(id)) {
+            const element = document.getElementById(id);
+            if (!element) {
                 issues.push(`Missing DOM element: #${id}`);
+                errorLog(`❌ DOM element not found: #${id}`);
+            } else {
+                debugLog(`✅ DOM element found: #${id}`);
             }
         });
         
         if (issues.length > 0) {
             errorLog('❌ Preview system validation failed:', issues);
+            errorLog('💡 Possible fixes:');
+            errorLog('  - Ensure customizerData is localized before script execution');
+            errorLog('  - Verify customizer-preview.php partial is included');
+            errorLog('  - Check for JavaScript errors preventing DOM rendering');
             return false;
         }
         
@@ -324,22 +350,36 @@
      */
     function loadPreview() {
         if (PREVIEW_CONFIG.mode !== 'iframe' || !PREVIEW_CONFIG.iframe) {
-            debugLog('❌ Not in iframe mode or iframe not available');
+            debugLog('❌ Not in iframe mode or iframe not available, falling back to canvas');
+            debugLog('Mode:', PREVIEW_CONFIG.mode, 'Iframe:', !!PREVIEW_CONFIG.iframe);
             return;
         }
         
         debugLog('🔄 Loading preview content...');
         showPreviewLoading();
         
-        // Validate required data
+        // Enhanced validation with detailed logging
+        if (typeof customizerData === 'undefined') {
+            errorLog('❌ customizerData object not available');
+            showPreviewError('Configuration error: customizerData not loaded');
+            return;
+        }
+        
+        debugLog('✅ customizerData available:', {
+            hasAjaxurl: !!customizerData.ajaxurl,
+            hasNonce: !!customizerData.nonce,
+            hasDefaults: !!customizerData.defaults,
+            version: customizerData.version
+        });
+        
         if (!customizerData.ajaxurl) {
-            errorLog('❌ AJAX URL not available');
+            errorLog('❌ AJAX URL not available in customizerData');
             showPreviewError('Configuration error: AJAX URL missing');
             return;
         }
         
         if (!customizerData.nonce) {
-            errorLog('❌ Security nonce not available');
+            errorLog('❌ Security nonce not available in customizerData');
             showPreviewError('Configuration error: Security nonce missing');
             return;
         }
@@ -364,13 +404,25 @@
         })
         .then(response => {
             debugLog('📡 AJAX response received, status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
             return response.json();
         })
         .then(data => {
             debugLog('📋 AJAX response data:', data);
             if (data.success) {
+                // Validate response data
+                if (!data.data || !data.data.html) {
+                    throw new Error('Invalid response: missing HTML content');
+                }
+                
                 // Load HTML into iframe
                 const iframeDoc = PREVIEW_CONFIG.iframe.contentDocument || PREVIEW_CONFIG.iframe.contentWindow.document;
+                if (!iframeDoc) {
+                    throw new Error('Cannot access iframe document');
+                }
+                
                 iframeDoc.open();
                 iframeDoc.write(data.data.html);
                 iframeDoc.close();
@@ -381,12 +433,26 @@
                 debugLog('✅ Preview animation started');
                 
             } else {
-                throw new Error(data.data.message || 'Failed to load preview');
+                const errorMessage = data.data && data.data.message ? data.data.message : 'Unknown error occurred';
+                const errorCode = data.data && data.data.code ? data.data.code : 'unknown';
+                debugLog('❌ AJAX request failed:', { message: errorMessage, code: errorCode });
+                throw new Error(`${errorMessage} (${errorCode})`);
             }
         })
         .catch(error => {
             errorLog('❌ Error loading preview:', error);
-            showPreviewError(error.message);
+            
+            // Enhanced error reporting based on error type
+            let userMessage = error.message;
+            if (error.message.includes('nonce')) {
+                userMessage = 'Security error: Please refresh the page and try again.';
+            } else if (error.message.includes('HTTP')) {
+                userMessage = 'Server error: Please check your connection and try again.';
+            } else if (error.message.includes('JSON')) {
+                userMessage = 'Response error: Server returned invalid data.';
+            }
+            
+            showPreviewError(userMessage);
             
             // Retry logic
             if (PREVIEW_CONFIG.retryCount < PREVIEW_CONFIG.maxRetries) {

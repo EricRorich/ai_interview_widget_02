@@ -40,14 +40,22 @@
     // Configuration object
     const PREVIEW_CONFIG = {
         initialized: false,
-        debounceDelay: 50,
+        iframe: null,
         updateTimeout: null,
-        animationFrameId: null,
+        debounceDelay: 500,
+        retryCount: 0,
+        maxRetries: 3,
+        
+        // Canvas fallback system
         canvas: null,
         ctx: null,
         particles: [],
+        animationFrameId: null,
         reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-        fallbackMessageHidden: false
+        fallbackMessageHidden: false,
+        
+        // Preview mode: 'iframe' (preferred) or 'canvas' (fallback)
+        mode: 'iframe'
     };
 
     // Settings map for real-time updates
@@ -123,41 +131,280 @@
         
         debugLog('Preview container found, proceeding with initialization');
         
-        // Hide any fallback message that might be showing
-        hideFallbackMessage();
-        
         try {
-            // Initialize canvas
-            debugLog('Initializing canvas...');
-            initializeCanvas();
+            // Try iframe-based preview first
+            if (initializeIframePreview()) {
+                PREVIEW_CONFIG.mode = 'iframe';
+                debugLog('✅ Iframe preview system initialized');
+            } else {
+                // Fallback to canvas system
+                PREVIEW_CONFIG.mode = 'canvas';
+                debugLog('⚠️ Falling back to canvas preview system');
+                initializeCanvasPreview();
+            }
             
-            // Setup control listeners
+            // Setup control listeners for either system
             debugLog('Setting up control listeners...');
             setupControlListeners();
-            
-            // Setup resize observer
-            debugLog('Setting up resize observer...');
-            setupResizeObserver();
-            
-            // Load initial settings (with defaults fallback)
-            debugLog('Loading initial settings...');
-            loadInitialSettings();
-            
-            // Start animation loop
-            debugLog('Starting animation loop...');
-            startAnimationLoop();
             
             PREVIEW_CONFIG.initialized = true;
             
             // Update status for screen readers
-            updatePreviewStatus('Live preview initialized successfully');
+            updatePreviewStatus(`Live preview initialized successfully (${PREVIEW_CONFIG.mode} mode)`);
             
             debugLog('✅ Preview initialization complete');
             
         } catch (error) {
             errorLog('Failed to initialize preview:', error);
-            showFallbackMessage('Preview initialization failed. Please refresh the page.');
+            showPreviewError('Preview initialization failed. Please refresh the page.');
         }
+    }
+    
+    /**
+     * Initialize iframe-based preview system
+     */
+    function initializeIframePreview() {
+        try {
+            const iframeContainer = document.getElementById('widget_preview_container');
+            if (!iframeContainer) {
+                debugLog('Iframe container not found, cannot initialize iframe preview');
+                return false;
+            }
+            
+            const iframe = document.getElementById('preview-iframe');
+            const loadingElement = document.getElementById('preview-loading');
+            const errorElement = document.getElementById('preview-error');
+            
+            if (!iframe || !loadingElement || !errorElement) {
+                debugLog('Required iframe elements not found');
+                return false;
+            }
+            
+            PREVIEW_CONFIG.iframe = iframe;
+            
+            // Setup retry button
+            const retryButton = document.getElementById('retry-preview');
+            if (retryButton) {
+                retryButton.addEventListener('click', loadPreview);
+            }
+            
+            // Load initial preview
+            loadPreview();
+            
+            return true;
+            
+        } catch (error) {
+            errorLog('Error initializing iframe preview:', error);
+            return false;
+        }
+    }
+    
+    /**
+     * Initialize canvas-based preview system (fallback)
+     */
+    function initializeCanvasPreview() {
+        // Show canvas fallback system
+        const canvasFallback = document.querySelector('.aiw-canvas-preview-fallback');
+        if (canvasFallback) {
+            canvasFallback.style.display = 'block';
+        }
+        
+        // Hide iframe container
+        const iframeContainer = document.getElementById('widget_preview_container');
+        if (iframeContainer) {
+            iframeContainer.style.display = 'none';
+        }
+        
+        // Hide any fallback message that might be showing
+        hideFallbackMessage();
+        
+        // Initialize canvas
+        debugLog('Initializing canvas...');
+        initializeCanvas();
+        
+        // Setup resize observer
+        debugLog('Setting up resize observer...');
+        setupResizeObserver();
+        
+        // Load initial settings (with defaults fallback)
+        debugLog('Loading initial settings...');
+        loadInitialSettings();
+        
+        // Start animation loop
+        debugLog('Starting animation loop...');
+        startAnimationLoop();
+    }
+    
+    /**
+     * Load preview content into iframe
+     */
+    function loadPreview() {
+        if (PREVIEW_CONFIG.mode !== 'iframe' || !PREVIEW_CONFIG.iframe) {
+            debugLog('Not in iframe mode or iframe not available');
+            return;
+        }
+        
+        debugLog('Loading preview...');
+        showPreviewLoading();
+        
+        // Collect current settings
+        const settings = collectCurrentSettings();
+        
+        // Make AJAX request to render preview
+        const formData = new FormData();
+        formData.append('action', 'ai_interview_render_preview');
+        formData.append('nonce', customizerData.nonce);
+        formData.append('style_settings', JSON.stringify(settings.style));
+        formData.append('content_settings', JSON.stringify(settings.content));
+        
+        fetch(customizerData.ajaxurl, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Load HTML into iframe
+                const iframeDoc = PREVIEW_CONFIG.iframe.contentDocument || PREVIEW_CONFIG.iframe.contentWindow.document;
+                iframeDoc.open();
+                iframeDoc.write(data.data.html);
+                iframeDoc.close();
+                
+                showPreviewIframe();
+                PREVIEW_CONFIG.retryCount = 0;
+                debugLog('Preview loaded successfully');
+                
+            } else {
+                throw new Error(data.data.message || 'Failed to load preview');
+            }
+        })
+        .catch(error => {
+            errorLog('Error loading preview:', error);
+            showPreviewError(error.message);
+            
+            // Retry logic
+            if (PREVIEW_CONFIG.retryCount < PREVIEW_CONFIG.maxRetries) {
+                PREVIEW_CONFIG.retryCount++;
+                debugLog(`Retrying preview load (attempt ${PREVIEW_CONFIG.retryCount}/${PREVIEW_CONFIG.maxRetries})`);
+                setTimeout(() => loadPreview(), 2000 * PREVIEW_CONFIG.retryCount);
+            }
+        });
+    }
+    
+    /**
+     * Update preview with current settings (debounced)
+     */
+    function updatePreview() {
+        if (PREVIEW_CONFIG.mode !== 'iframe' || !PREVIEW_CONFIG.iframe) {
+            // Fallback to canvas update
+            updateCanvasBackground();
+            return;
+        }
+        
+        // Clear existing timeout
+        if (PREVIEW_CONFIG.updateTimeout) {
+            clearTimeout(PREVIEW_CONFIG.updateTimeout);
+        }
+        
+        // Debounce updates
+        PREVIEW_CONFIG.updateTimeout = setTimeout(() => {
+            debugLog('Updating preview...');
+            
+            // Collect current settings
+            const settings = collectCurrentSettings();
+            
+            // Send update to iframe
+            if (PREVIEW_CONFIG.iframe.contentWindow) {
+                PREVIEW_CONFIG.iframe.contentWindow.postMessage({
+                    type: 'updatePreview',
+                    css: generatePreviewCSS(settings.style),
+                    content_data: settings.content,
+                    headline_text: settings.content.headline_text || ''
+                }, window.location.origin);
+            }
+            
+        }, PREVIEW_CONFIG.debounceDelay);
+    }
+    
+    /**
+     * Show preview loading state
+     */
+    function showPreviewLoading() {
+        document.getElementById('preview-loading').style.display = 'flex';
+        document.getElementById('preview-error').style.display = 'none';
+        document.getElementById('preview-iframe').style.display = 'none';
+    }
+    
+    /**
+     * Show preview iframe
+     */
+    function showPreviewIframe() {
+        document.getElementById('preview-loading').style.display = 'none';
+        document.getElementById('preview-error').style.display = 'none';
+        document.getElementById('preview-iframe').style.display = 'block';
+    }
+    
+    /**
+     * Show preview error
+     */
+    function showPreviewError(message) {
+        document.getElementById('preview-loading').style.display = 'none';
+        document.getElementById('preview-iframe').style.display = 'none';
+        
+        const errorElement = document.getElementById('preview-error');
+        const errorMessage = document.getElementById('error-message');
+        
+        if (errorMessage) {
+            errorMessage.textContent = message;
+        }
+        
+        errorElement.style.display = 'block';
+    }
+    
+    /**
+     * Collect current settings from form controls
+     */
+    function collectCurrentSettings() {
+        const style = {};
+        const content = {};
+        
+        // Collect style settings from form controls
+        const styleInputs = document.querySelectorAll('input[name*="style"], select[name*="style"]');
+        styleInputs.forEach(input => {
+            const name = input.name.replace(/^.*\[(.+)\]$/, '$1');
+            if (input.type === 'checkbox') {
+                style[name] = input.checked;
+            } else {
+                style[name] = input.value;
+            }
+        });
+        
+        // Collect content settings from form controls
+        const contentInputs = document.querySelectorAll('input[name*="content"], textarea[name*="content"]');
+        contentInputs.forEach(input => {
+            const name = input.name.replace(/^.*\[(.+)\]$/, '$1');
+            content[name] = input.value;
+        });
+        
+        return { style, content };
+    }
+    
+    /**
+     * Generate CSS from current settings
+     */
+    function generatePreviewCSS(styleSettings) {
+        let css = ':root {\n';
+        
+        // Map settings to CSS variables
+        Object.keys(styleSettings).forEach(key => {
+            const cssVar = SETTINGS_MAP[key];
+            if (cssVar && styleSettings[key]) {
+                css += `    ${cssVar}: ${styleSettings[key]};\n`;
+            }
+        });
+        
+        css += '}\n';
+        return css;
     }
 
     /**
@@ -418,11 +665,14 @@
      * Debounced update function
      */
     function debouncedUpdate(settingName, value) {
-        clearTimeout(PREVIEW_CONFIG.updateTimeout);
+        // Update CSS variable for immediate feedback (in case iframe fails)
+        const cssVariable = SETTINGS_MAP[settingName];
+        if (cssVariable) {
+            updateCSSVariable(cssVariable, value);
+        }
         
-        PREVIEW_CONFIG.updateTimeout = setTimeout(() => {
-            updatePreviewSetting(settingName, value);
-        }, PREVIEW_CONFIG.debounceDelay);
+        // Call main update method
+        updatePreview();
     }
 
     /**
@@ -805,11 +1055,30 @@
      * Public API for external integration
      */
     window.aiwCustomizerPreview = {
+        // Iframe-based preview system
+        initializePreviewSystem: initializePreview,
+        loadPreview: loadPreview,
+        updatePreview: updatePreview,
+        
+        // Legacy canvas-based system
         updateSetting: updatePreviewSetting,
         updateVariable: updateCSSVariable,
         refresh: function() {
-            loadInitialSettings();
-            updateCanvasBackground();
+            if (PREVIEW_CONFIG.mode === 'iframe') {
+                loadPreview();
+            } else {
+                loadInitialSettings();
+                updateCanvasBackground();
+            }
+        },
+        
+        // Configuration access
+        getConfig: function() {
+            return {
+                mode: PREVIEW_CONFIG.mode,
+                initialized: PREVIEW_CONFIG.initialized,
+                iframe: PREVIEW_CONFIG.iframe !== null
+            };
         }
     };
 

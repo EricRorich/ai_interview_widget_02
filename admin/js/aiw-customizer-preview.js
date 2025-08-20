@@ -233,10 +233,6 @@
             hidePreviewLoading();
             showPreviewCanvas();
             
-            // Hide loading, show preview
-            hidePreviewLoading();
-            showPreviewCanvas();
-            
             // Update status for screen readers
             updatePreviewStatus('Live preview initialized successfully (DOM/Canvas mode)');
             
@@ -336,15 +332,19 @@
             // Setup retry button
             const retryButton = document.getElementById('retry-preview');
             if (retryButton) {
-                retryButton.addEventListener('click', loadPreview);
+                retryButton.addEventListener('click', function() {
+                    // Reset and reinitialize the preview system
+                    PREVIEW_CONFIG.initialized = false;
+                    initializePreview();
+                });
                 debugLog('✅ Retry button event listener attached');
             } else {
                 debugLog('⚠️ Retry button #retry-preview not found');
             }
             
-            // Load initial preview
-            debugLog('🔄 Loading initial preview...');
-            loadPreview();
+            // Load initial settings and start animation
+            loadInitialSettings();
+            startAnimationLoop();
             
             return true;
             

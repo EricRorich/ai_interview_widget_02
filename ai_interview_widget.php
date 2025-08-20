@@ -212,14 +212,14 @@ class AIInterviewWidget {
             '1.9.6'
         );
         
-        // Enqueue customizer preview assets on customizer page
-        if (strpos($hook, 'customizer') !== false) {
+        // Enqueue customizer preview assets on Enhanced Widget Customizer page
+        if ($hook === 'ai-interview-widget_page_ai-interview-widget-customizer') {
             wp_enqueue_script(
                 'aiw-customizer-preview-js',
                 plugin_dir_url(__FILE__) . 'admin/js/aiw-customizer-preview.js',
-                array(), // No dependencies required - jQuery is optional
+                array('wp-color-picker'), // Add wp-color-picker dependency
                 '1.0.0',
-                true
+                true // Load in footer
             );
             
             wp_enqueue_style(
@@ -228,6 +228,33 @@ class AIInterviewWidget {
                 array(),
                 '1.0.0'
             );
+            
+            // Localize script with defaults and debug flag
+            wp_localize_script('aiw-customizer-preview-js', 'aiwCustomizerData', array(
+                'defaults' => array(
+                    'ai_primary_color' => '#00cfff',
+                    'ai_accent_color' => '#ff6b35',
+                    'ai_background_color' => '#0a0a1a',
+                    'ai_text_color' => '#ffffff',
+                    'ai_border_radius' => '8',
+                    'ai_border_width' => '2',
+                    'ai_shadow_intensity' => '20',
+                    'ai_play_button_size' => '80',
+                    'ai_play_button_color' => '#00cfff',
+                    'ai_play_button_icon_color' => '#ffffff',
+                    'ai_viz_bar_count' => '12',
+                    'ai_viz_gap' => '3',
+                    'ai_viz_color' => '#00cfff',
+                    'ai_viz_glow' => '10',
+                    'ai_viz_speed' => '1.0',
+                    'ai_chat_bubble_color' => '#1e293b',
+                    'ai_chat_bubble_radius' => '12',
+                    'ai_chat_avatar_size' => '32'
+                ),
+                'debug' => defined('WP_DEBUG') && WP_DEBUG,
+                'nonce' => wp_create_nonce('aiw_customizer_preview'),
+                'ajaxurl' => admin_url('admin-ajax.php')
+            ));
         }
         
         // Localize script with AJAX URL and nonce

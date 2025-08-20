@@ -15,6 +15,27 @@
     // Check if jQuery is available
     const $ = window.jQuery;
     const hasJQuery = typeof $ !== 'undefined';
+    
+    // Check for localized data
+    const customizerData = window.aiwCustomizerData || {};
+    const defaults = customizerData.defaults || {};
+    const debugMode = customizerData.debug || false;
+    
+    // Debug logging function
+    function debugLog(...args) {
+        if (debugMode) {
+            console.log('[AIW Customizer Preview]', ...args);
+        }
+    }
+    
+    // Error logging function  
+    function errorLog(...args) {
+        console.error('[AIW Customizer Preview Error]', ...args);
+    }
+    
+    debugLog('Initializing with debug mode:', debugMode);
+    debugLog('Available defaults:', defaults);
+    debugLog('jQuery available:', hasJQuery);
 
     // Configuration object
     const PREVIEW_CONFIG = {
@@ -25,7 +46,8 @@
         canvas: null,
         ctx: null,
         particles: [],
-        reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+        fallbackMessageHidden: false
     };
 
     // Settings map for real-time updates
@@ -85,34 +107,85 @@
      * Initialize the preview system
      */
     function initializePreview() {
-        if (PREVIEW_CONFIG.initialized) return;
+        if (PREVIEW_CONFIG.initialized) {
+            debugLog('Preview already initialized, skipping');
+            return;
+        }
+        
+        debugLog('Starting preview initialization...');
         
         // Check if we're on the customizer page
-        if (!document.getElementById('aiw-live-preview')) return;
+        const previewContainer = document.getElementById('aiw-live-preview');
+        if (!previewContainer) {
+            debugLog('Preview container #aiw-live-preview not found, aborting initialization');
+            return;
+        }
         
-        console.log('AIW Customizer Preview: Initializing live preview system');
+        debugLog('Preview container found, proceeding with initialization');
         
-        // Initialize canvas
-        initializeCanvas();
+        // Hide any fallback message that might be showing
+        hideFallbackMessage();
         
-        // Setup control listeners
-        setupControlListeners();
-        
-        // Setup resize observer
-        setupResizeObserver();
-        
-        // Load initial settings
-        loadInitialSettings();
-        
-        // Start animation loop
-        startAnimationLoop();
-        
-        PREVIEW_CONFIG.initialized = true;
-        
-        // Update status for screen readers
-        updatePreviewStatus('Live preview initialized successfully');
-        
-        console.log('AIW Customizer Preview: Initialization complete');
+        try {
+            // Initialize canvas
+            debugLog('Initializing canvas...');
+            initializeCanvas();
+            
+            // Setup control listeners
+            debugLog('Setting up control listeners...');
+            setupControlListeners();
+            
+            // Setup resize observer
+            debugLog('Setting up resize observer...');
+            setupResizeObserver();
+            
+            // Load initial settings (with defaults fallback)
+            debugLog('Loading initial settings...');
+            loadInitialSettings();
+            
+            // Start animation loop
+            debugLog('Starting animation loop...');
+            startAnimationLoop();
+            
+            PREVIEW_CONFIG.initialized = true;
+            
+            // Update status for screen readers
+            updatePreviewStatus('Live preview initialized successfully');
+            
+            debugLog('✅ Preview initialization complete');
+            
+        } catch (error) {
+            errorLog('Failed to initialize preview:', error);
+            showFallbackMessage('Preview initialization failed. Please refresh the page.');
+        }
+    }
+
+    /**
+     * Hide the fallback message if it exists
+     */
+    function hideFallbackMessage() {
+        const fallbackMessage = document.querySelector('.aiw-preview-error');
+        if (fallbackMessage && !PREVIEW_CONFIG.fallbackMessageHidden) {
+            fallbackMessage.style.display = 'none';
+            PREVIEW_CONFIG.fallbackMessageHidden = true;
+            debugLog('Fallback message hidden');
+        }
+    }
+    
+    /**
+     * Show fallback message if preview fails to initialize
+     */
+    function showFallbackMessage(message) {
+        const fallbackMessage = document.querySelector('.aiw-preview-error');
+        if (fallbackMessage) {
+            const messageElement = fallbackMessage.querySelector('p');
+            if (messageElement) {
+                messageElement.textContent = message || 'Preview temporarily unavailable. Please refresh the page.';
+            }
+            fallbackMessage.style.display = 'block';
+            PREVIEW_CONFIG.fallbackMessageHidden = false;
+            debugLog('Fallback message shown:', message);
+        }
     }
 
     /**
@@ -120,16 +193,31 @@
      */
     function initializeCanvas() {
         const canvas = document.getElementById('aiw-preview-canvas');
-        if (!canvas) return;
+        if (!canvas) {
+            debugLog('Canvas element #aiw-preview-canvas not found, skipping canvas initialization');
+            return;
+        }
         
-        PREVIEW_CONFIG.canvas = canvas;
-        PREVIEW_CONFIG.ctx = canvas.getContext('2d');
-        
-        // Set initial canvas size
-        resizeCanvas();
-        
-        // Initialize particles for animation
-        initializeParticles();
+        try {
+            PREVIEW_CONFIG.canvas = canvas;
+            PREVIEW_CONFIG.ctx = canvas.getContext('2d');
+            
+            if (!PREVIEW_CONFIG.ctx) {
+                errorLog('Failed to get 2D canvas context');
+                return;
+            }
+            
+            debugLog('Canvas initialized successfully');
+            
+            // Set initial canvas size
+            resizeCanvas();
+            
+            // Initialize particles for animation
+            initializeParticles();
+            
+        } catch (error) {
+            errorLog('Failed to initialize canvas:', error);
+        }
     }
 
     /**
@@ -189,23 +277,33 @@
      * Setup control listeners for real-time updates
      */
     function setupControlListeners() {
-        // Handle different types of inputs
-        addEventListeners('input[type="color"].wp-color-picker', 'change input', handleColorChange);
-        addEventListeners('input[type="range"]', 'input change', handleRangeChange);
-        addEventListeners('select', 'change', handleSelectChange);
-        addEventListeners('input[type="checkbox"]', 'change', handleCheckboxChange);
-        addEventListeners('input[type="text"]:not(.wp-color-picker), input[type="number"]', 'input', handleTextChange);
-        
-        // Fallback for any color inputs that aren't WP color pickers
-        addEventListeners('input[type="color"]:not(.wp-color-picker)', 'change input', handleColorChange);
-        
-        // If jQuery is available, also use jQuery delegation
-        if (hasJQuery) {
-            $(document).on('change', 'input[type="text"].wp-color-picker', handleColorChange);
-            $(document).on('input change', 'input[type="range"]', handleRangeChange);
-            $(document).on('change', 'select', handleSelectChange);
-            $(document).on('change', 'input[type="checkbox"]', handleCheckboxChange);
-            $(document).on('input', 'input[type="text"]:not(.wp-color-picker), input[type="number"]', handleTextChange);
+        try {
+            debugLog('Setting up control listeners...');
+            
+            // Handle different types of inputs
+            addEventListeners('input[type="color"].wp-color-picker', 'change input', handleColorChange);
+            addEventListeners('input[type="range"]', 'input change', handleRangeChange);
+            addEventListeners('select', 'change', handleSelectChange);
+            addEventListeners('input[type="checkbox"]', 'change', handleCheckboxChange);
+            addEventListeners('input[type="text"]:not(.wp-color-picker), input[type="number"]', 'input', handleTextChange);
+            
+            // Fallback for any color inputs that aren't WP color pickers
+            addEventListeners('input[type="color"]:not(.wp-color-picker)', 'change input', handleColorChange);
+            
+            // If jQuery is available, also use jQuery delegation
+            if (hasJQuery) {
+                debugLog('Setting up jQuery event delegation...');
+                $(document).on('change', 'input[type="text"].wp-color-picker', handleColorChange);
+                $(document).on('input change', 'input[type="range"]', handleRangeChange);
+                $(document).on('change', 'select', handleSelectChange);
+                $(document).on('change', 'input[type="checkbox"]', handleCheckboxChange);
+                $(document).on('input', 'input[type="text"]:not(.wp-color-picker), input[type="number"]', handleTextChange);
+            }
+            
+            debugLog('Control listeners setup complete');
+            
+        } catch (error) {
+            errorLog('Failed to setup control listeners:', error);
         }
     }
 
@@ -213,56 +311,107 @@
      * Handle color picker changes
      */
     function handleColorChange(event) {
-        const input = event.target;
-        const settingName = input.getAttribute('name') || input.getAttribute('id');
-        const value = input.value;
-        
-        debouncedUpdate(settingName, value);
+        try {
+            const input = event.target;
+            const settingName = input.getAttribute('name') || input.getAttribute('id');
+            const value = input.value;
+            
+            if (!settingName) {
+                debugLog('Color input has no name or id attribute, skipping');
+                return;
+            }
+            
+            debugLog(`Color change: ${settingName} = ${value}`);
+            debouncedUpdate(settingName, value);
+        } catch (error) {
+            errorLog('Error handling color change:', error);
+        }
     }
 
     /**
      * Handle range slider changes
      */
     function handleRangeChange(event) {
-        const input = event.target;
-        const settingName = input.getAttribute('name') || input.getAttribute('id');
-        const value = input.value;
-        const unit = input.getAttribute('data-unit') || '';
-        
-        debouncedUpdate(settingName, value + unit);
+        try {
+            const input = event.target;
+            const settingName = input.getAttribute('name') || input.getAttribute('id');
+            const value = input.value;
+            const unit = input.getAttribute('data-unit') || '';
+            
+            if (!settingName) {
+                debugLog('Range input has no name or id attribute, skipping');
+                return;
+            }
+            
+            const finalValue = value + unit;
+            debugLog(`Range change: ${settingName} = ${finalValue}`);
+            debouncedUpdate(settingName, finalValue);
+        } catch (error) {
+            errorLog('Error handling range change:', error);
+        }
     }
 
     /**
      * Handle select dropdown changes
      */
     function handleSelectChange(event) {
-        const select = event.target;
-        const settingName = select.getAttribute('name') || select.getAttribute('id');
-        const value = select.value;
-        
-        debouncedUpdate(settingName, value);
+        try {
+            const select = event.target;
+            const settingName = select.getAttribute('name') || select.getAttribute('id');
+            const value = select.value;
+            
+            if (!settingName) {
+                debugLog('Select has no name or id attribute, skipping');
+                return;
+            }
+            
+            debugLog(`Select change: ${settingName} = ${value}`);
+            debouncedUpdate(settingName, value);
+        } catch (error) {
+            errorLog('Error handling select change:', error);
+        }
     }
 
     /**
      * Handle checkbox changes
      */
     function handleCheckboxChange(event) {
-        const checkbox = event.target;
-        const settingName = checkbox.getAttribute('name') || checkbox.getAttribute('id');
-        const value = checkbox.checked;
-        
-        debouncedUpdate(settingName, value);
+        try {
+            const checkbox = event.target;
+            const settingName = checkbox.getAttribute('name') || checkbox.getAttribute('id');
+            const value = checkbox.checked;
+            
+            if (!settingName) {
+                debugLog('Checkbox has no name or id attribute, skipping');
+                return;
+            }
+            
+            debugLog(`Checkbox change: ${settingName} = ${value}`);
+            debouncedUpdate(settingName, value);
+        } catch (error) {
+            errorLog('Error handling checkbox change:', error);
+        }
     }
 
     /**
      * Handle text input changes
      */
     function handleTextChange(event) {
-        const input = event.target;
-        const settingName = input.getAttribute('name') || input.getAttribute('id');
-        const value = input.value;
-        
-        debouncedUpdate(settingName, value);
+        try {
+            const input = event.target;
+            const settingName = input.getAttribute('name') || input.getAttribute('id');
+            const value = input.value;
+            
+            if (!settingName) {
+                debugLog('Text input has no name or id attribute, skipping');
+                return;
+            }
+            
+            debugLog(`Text change: ${settingName} = ${value}`);
+            debouncedUpdate(settingName, value);
+        } catch (error) {
+            errorLog('Error handling text change:', error);
+        }
     }
 
     /**
@@ -365,40 +514,94 @@
     }
 
     /**
-     * Load initial settings from form inputs
+     * Load initial settings from form inputs with fallback to defaults
      */
     function loadInitialSettings() {
+        debugLog('Loading initial settings...');
+        let settingsLoaded = 0;
+        let settingsFromDefaults = 0;
+        
         // Collect all current form values
         Object.keys(SETTINGS_MAP).forEach(settingName => {
             const input = document.querySelector(`[name="${settingName}"], #${settingName}`);
+            let value = null;
+            
             if (input) {
-                let value;
-                
                 if (input.type === 'checkbox') {
                     value = input.checked;
                 } else {
                     value = input.value;
                     const unit = input.getAttribute('data-unit') || '';
-                    if (unit) value += unit;
+                    if (unit && value) value += unit;
                 }
                 
-                updatePreviewSetting(settingName, value);
+                // Only use form value if it's not empty
+                if (value !== null && value !== '' && value !== false) {
+                    updatePreviewSetting(settingName, value);
+                    settingsLoaded++;
+                    debugLog(`Loaded from form - ${settingName}:`, value);
+                } else {
+                    // Fall back to default
+                    const defaultValue = defaults[settingName];
+                    if (defaultValue !== undefined) {
+                        updatePreviewSetting(settingName, defaultValue);
+                        settingsFromDefaults++;
+                        debugLog(`Using default - ${settingName}:`, defaultValue);
+                    }
+                }
+            } else {
+                // No form input found, use default
+                const defaultValue = defaults[settingName];
+                if (defaultValue !== undefined) {
+                    updatePreviewSetting(settingName, defaultValue);
+                    settingsFromDefaults++;
+                    debugLog(`No input found, using default - ${settingName}:`, defaultValue);
+                }
             }
         });
+        
+        debugLog(`Settings loaded: ${settingsLoaded} from form, ${settingsFromDefaults} from defaults`);
     }
 
     /**
      * Start animation loop for canvas and visualizations
      */
     function startAnimationLoop() {
-        if (PREVIEW_CONFIG.reducedMotion) return;
+        if (PREVIEW_CONFIG.reducedMotion) {
+            debugLog('Animation loop skipped - reduced motion enabled');
+            return;
+        }
+        
+        if (document.hidden) {
+            debugLog('Animation loop skipped - tab is hidden');
+            return;
+        }
+        
+        // Cancel any existing animation frame
+        if (PREVIEW_CONFIG.animationFrameId) {
+            cancelAnimationFrame(PREVIEW_CONFIG.animationFrameId);
+        }
+        
+        debugLog('Starting animation loop');
         
         function animate() {
-            // Update canvas background
-            updateCanvas();
+            // Check if we should continue animating
+            if (PREVIEW_CONFIG.reducedMotion || document.hidden) {
+                debugLog('Stopping animation loop - conditions changed');
+                PREVIEW_CONFIG.animationFrameId = null;
+                return;
+            }
             
-            // Continue animation
-            PREVIEW_CONFIG.animationFrameId = requestAnimationFrame(animate);
+            try {
+                // Update canvas background
+                updateCanvas();
+                
+                // Continue animation
+                PREVIEW_CONFIG.animationFrameId = requestAnimationFrame(animate);
+            } catch (error) {
+                errorLog('Error in animation loop:', error);
+                PREVIEW_CONFIG.animationFrameId = null;
+            }
         }
         
         animate();
@@ -555,10 +758,27 @@
         // Setup cleanup on page unload
         window.addEventListener('beforeunload', cleanup);
         
+        // Handle tab visibility changes to pause/resume animations
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                debugLog('Tab hidden, pausing animations');
+                if (PREVIEW_CONFIG.animationFrameId) {
+                    cancelAnimationFrame(PREVIEW_CONFIG.animationFrameId);
+                    PREVIEW_CONFIG.animationFrameId = null;
+                }
+            } else {
+                debugLog('Tab visible, resuming animations');
+                if (PREVIEW_CONFIG.initialized && !PREVIEW_CONFIG.reducedMotion) {
+                    startAnimationLoop();
+                }
+            }
+        });
+        
         // Handle reduced motion preference changes
         const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
         const handleMotionChange = function(e) {
             PREVIEW_CONFIG.reducedMotion = e.matches;
+            debugLog('Reduced motion preference changed:', e.matches);
             
             if (e.matches) {
                 // Stop animations
@@ -567,8 +787,10 @@
                 const playButtons = document.querySelectorAll('.aiw-preview-play-button');
                 playButtons.forEach(btn => btn.classList.remove('pulse'));
             } else {
-                // Restart animations
-                startAnimationLoop();
+                // Restart animations if tab is visible
+                if (!document.hidden) {
+                    startAnimationLoop();
+                }
             }
         };
         

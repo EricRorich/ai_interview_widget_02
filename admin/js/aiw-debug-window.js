@@ -374,20 +374,24 @@
 
         // Try to hook into existing debugLog and errorLog functions if available
         setTimeout(() => {
-            if (window.aiwLivePreview && typeof window.aiwLivePreview.debugLog === 'function') {
-                const originalDebugLog = window.aiwLivePreview.debugLog;
-                window.aiwLivePreview.debugLog = function(...args) {
+            if (window.aiwLivePreview && window.aiwLivePreview.debug) {
+                const originalDebugLog = window.aiwLivePreview.debug.log;
+                const originalErrorLog = window.aiwLivePreview.debug.error;
+                
+                // Override the debug functions to also log to debug window
+                window.aiwLivePreview.debug.log = function(...args) {
                     originalDebugLog.apply(this, args);
                     addLog(LOG_LEVELS.DEBUG, args.join(' '));
                 };
-            }
-
-            if (window.aiwLivePreview && typeof window.aiwLivePreview.errorLog === 'function') {
-                const originalErrorLog = window.aiwLivePreview.errorLog;
-                window.aiwLivePreview.errorLog = function(...args) {
+                
+                window.aiwLivePreview.debug.error = function(...args) {
                     originalErrorLog.apply(this, args);
                     addLog(LOG_LEVELS.ERROR, args.join(' '));
                 };
+                
+                addLog(LOG_LEVELS.INFO, 'Hooked into aiwLivePreview debug functions');
+            } else {
+                addLog(LOG_LEVELS.WARNING, 'aiwLivePreview debug functions not available, using console hook only');
             }
         }, 1000);
     }

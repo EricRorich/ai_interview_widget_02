@@ -21,6 +21,23 @@
     const customizerData = window.aiwCustomizerData || {};
     const defaults = customizerData.defaults || {};
     const debugMode = customizerData.debug || false;
+
+    // Create the public API object IMMEDIATELY to prevent timing issues
+    // This ensures window.aiwLivePreview is available as soon as the script starts loading
+    window.aiwLivePreview = {
+        // Placeholder methods - will be replaced with actual implementations below
+        initialize: function() {
+            console.log('🔄 aiwLivePreview.initialize() called before script fully loaded, deferring...');
+        },
+        updatePreview: function() {},
+        updateSetting: function() {},
+        updateVariable: function() {},
+        resizeCanvas: function() {},
+        showFallbackMessage: function() {},
+        getConfig: function() { return { initialized: false }; },
+        test: {},
+        debug: {}
+    };
     
     // Logging functions
     function debugLog(...args) {
@@ -37,7 +54,8 @@
         version: '1.0.0',
         debugMode: debugMode,
         hasJQuery: hasJQuery,
-        customizerDataAvailable: !!customizerData
+        customizerDataAvailable: !!customizerData,
+        aiwLivePreviewCreated: !!window.aiwLivePreview
     });
     
     debugLog('🎨 Initializing Live Preview System...');
@@ -795,67 +813,81 @@
 
     /**
      * Initialize wrapper that handles DOM ready timing
+     * Made idempotent to safely handle multiple calls
      */
     function initializeWhenReady() {
+        // Prevent multiple simultaneous initialization attempts
+        if (initializeWhenReady._initializing) {
+            debugLog('Initialize already in progress, ignoring duplicate call');
+            return;
+        }
+        
+        if (PREVIEW_CONFIG.initialized) {
+            debugLog('Preview system already initialized');
+            return;
+        }
+        
+        initializeWhenReady._initializing = true;
+        
         onDOMReady(function() {
             debugLog('🚀 DOM ready, initializing...');
             
-            // Initialize preview system
-            initializePreviewSystem();
-            
-            // Setup event listeners
-            window.addEventListener('beforeunload', cleanup);
-            document.addEventListener('visibilitychange', handleVisibilityChange);
-            
-            // Handle reduced motion preference changes
-            const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-            if (mediaQuery.addListener) {
-                mediaQuery.addListener(handleReducedMotionChange);
-            } else {
-                mediaQuery.addEventListener('change', handleReducedMotionChange);
+            try {
+                // Initialize preview system
+                initializePreviewSystem();
+                
+                // Setup event listeners
+                window.addEventListener('beforeunload', cleanup);
+                document.addEventListener('visibilitychange', handleVisibilityChange);
+                
+                // Handle reduced motion preference changes
+                const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+                if (mediaQuery.addListener) {
+                    mediaQuery.addListener(handleReducedMotionChange);
+                } else {
+                    mediaQuery.addEventListener('change', handleReducedMotionChange);
+                }
+                
+            } catch (error) {
+                errorLog('❌ Initialization failed:', error);
+                showFallbackMessage('Preview initialization failed');
+            } finally {
+                initializeWhenReady._initializing = false;
             }
         });
     }
 
     /**
-     * Public API - Available immediately when script loads
+     * Replace placeholder methods with actual implementations
+     * Object was created at the top to ensure immediate availability
      */
-    window.aiwLivePreview = {
-        // Main functions
-        initialize: initializeWhenReady,
-        updatePreview: updatePreview,
-        updateSetting: function(settingName, value) {
-            debouncedUpdate(settingName, value);
-        },
-        
-        // Utilities
-        updateVariable: updateCSSVariable,
-        resizeCanvas: resizeCanvas,
-        showFallbackMessage: showFallbackMessage, // Expose fallback function for coordination
-        
-        // Configuration
-        getConfig: function() {
-            return {
-                initialized: PREVIEW_CONFIG.initialized,
-                reducedMotion: PREVIEW_CONFIG.reducedMotion,
-                hasCanvas: !!PREVIEW_CONFIG.canvas
-            };
-        },
-        
-        // Manual controls for testing
-        test: {
-            validateRequirements: validateRequirements,
-            initializeCanvas: initializeCanvas,
-            initializeBars: initializeVisualizationBars,
-            startAnimation: startAnimationLoop
-        },
-        
-        // Debugging support for debug window
-        debug: {
-            log: debugLog,
-            error: errorLog
-        }
+    window.aiwLivePreview.initialize = initializeWhenReady;
+    window.aiwLivePreview.updatePreview = updatePreview;
+    window.aiwLivePreview.updateSetting = function(settingName, value) {
+        debouncedUpdate(settingName, value);
     };
+    window.aiwLivePreview.updateVariable = updateCSSVariable;
+    window.aiwLivePreview.resizeCanvas = resizeCanvas;
+    window.aiwLivePreview.showFallbackMessage = showFallbackMessage;
+    window.aiwLivePreview.getConfig = function() {
+        return {
+            initialized: PREVIEW_CONFIG.initialized,
+            reducedMotion: PREVIEW_CONFIG.reducedMotion,
+            hasCanvas: !!PREVIEW_CONFIG.canvas
+        };
+    };
+    window.aiwLivePreview.test = {
+        validateRequirements: validateRequirements,
+        initializeCanvas: initializeCanvas,
+        initializeBars: initializeVisualizationBars,
+        startAnimation: startAnimationLoop
+    };
+    window.aiwLivePreview.debug = {
+        log: debugLog,
+        error: errorLog
+    };
+
+    console.log('✅ aiwLivePreview API methods assigned');
 
     // Auto-initialize when script loads (but wait for DOM ready internally)
     initializeWhenReady();

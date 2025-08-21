@@ -220,17 +220,29 @@ jQuery(document).ready(function($) {
     console.log('🎨 AIW Preview Partial Script Loading...');
     
     // Enhanced preview system initialization with fallback
+    let retryCount = 0;
+    const maxRetries = 10; // Maximum 5 seconds of retrying
+    
     function initializePreviewWithFallback() {
+        retryCount++;
+        
+        // Check if we've exceeded max retries
+        if (retryCount > maxRetries) {
+            console.error('❌ Preview initialization failed after maximum retries');
+            showDirectFallback('Preview initialization timed out. Your settings are being saved.');
+            return;
+        }
+        
         // Check if live preview script is loaded
         if (typeof window.aiwLivePreview === 'undefined') {
-            console.warn('⚠️ aiwLivePreview not loaded yet, retrying in 500ms...');
+            console.warn(`⚠️ aiwLivePreview not loaded yet, retrying in 500ms... (attempt ${retryCount}/${maxRetries})`);
             setTimeout(initializePreviewWithFallback, 500);
             return;
         }
         
         // Check if customizerData is available
         if (typeof window.aiwCustomizerData === 'undefined') {
-            console.warn('⚠️ aiwCustomizerData not available yet, retrying in 500ms...');
+            console.warn(`⚠️ aiwCustomizerData not available yet, retrying in 500ms... (attempt ${retryCount}/${maxRetries})`);
             setTimeout(initializePreviewWithFallback, 500);
             return;
         }
@@ -240,11 +252,37 @@ jQuery(document).ready(function($) {
             window.aiwLivePreview.initialize();
         } else {
             console.error('❌ aiwLivePreview.initialize method not found');
-            // Show fallback since we can't initialize properly
-            $('#preview-loading').hide();
-            $('#preview-fallback').show();
+            // Use the showFallbackMessage function if available, otherwise fallback to direct DOM manipulation
+            if (window.aiwLivePreview && typeof window.aiwLivePreview.showFallbackMessage === 'function') {
+                window.aiwLivePreview.showFallbackMessage('Live preview system unavailable');
+            } else {
+                showDirectFallback('Live preview system unavailable. Your settings are being saved.');
+            }
         }
     }
+    
+    // Direct fallback function for when aiwLivePreview is not available
+    function showDirectFallback(message) {
+        $('#preview-loading').hide();
+        $('#preview-fallback').show();
+        const fallbackMessage = $('#preview-fallback p');
+        if (fallbackMessage.length) {
+            fallbackMessage.text(message);
+        }
+        console.log('🔄 Fallback message displayed:', message);
+    }
+    
+    // Setup retry button functionality
+    $(document).on('click', '#retry-preview', function() {
+        console.log('🔄 Manual retry requested...');
+        retryCount = 0; // Reset retry counter
+        $('#preview-fallback').hide();
+        $('#preview-error').hide();
+        $('#preview-loading').show();
+        
+        // Retry initialization after a short delay
+        setTimeout(initializePreviewWithFallback, 100);
+    });
     
     // Start initialization with retry mechanism
     initializePreviewWithFallback();

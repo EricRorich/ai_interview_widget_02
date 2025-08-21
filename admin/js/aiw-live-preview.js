@@ -829,6 +829,7 @@
         // Utilities
         updateVariable: updateCSSVariable,
         resizeCanvas: resizeCanvas,
+        showFallbackMessage: showFallbackMessage, // Expose fallback function for coordination
         
         // Configuration
         getConfig: function() {

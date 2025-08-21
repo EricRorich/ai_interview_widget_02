@@ -1273,6 +1273,13 @@
         function attemptInitialization() {
             retryCount++;
             
+            // Add debugging info about the current state
+            debugLog(`🔄 Initialization attempt ${retryCount}/${maxRetries}`, {
+                aiwLivePreviewAvailable: typeof window.aiwLivePreview !== 'undefined',
+                aiwCustomizerDataAvailable: typeof window.aiwCustomizerData !== 'undefined',
+                jQueryAvailable: typeof window.jQuery !== 'undefined'
+            });
+            
             // Progressive retry delays: start fast, then slower
             const getRetryDelay = (attempt) => {
                 if (attempt <= 5) return 50;    // First 5 attempts: 50ms (250ms total)
@@ -1306,7 +1313,13 @@
             
             console.log('✅ Preview dependencies ready, initializing...');
             if (window.aiwLivePreview.initialize) {
-                window.aiwLivePreview.initialize();
+                try {
+                    window.aiwLivePreview.initialize();
+                    console.log('✅ aiwLivePreview.initialize() completed successfully');
+                } catch (error) {
+                    errorLog('❌ Error calling aiwLivePreview.initialize():', error);
+                    showDirectFallback('Preview initialization failed. Your settings are being saved.');
+                }
             } else {
                 errorLog('❌ aiwLivePreview.initialize method not found');
                 // Use the showFallbackMessage function if available, otherwise fallback to direct DOM manipulation

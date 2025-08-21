@@ -267,6 +267,12 @@
             
             PREVIEW_CONFIG.initialized = true;
             
+            // Setup retry button for preview loading
+            setupRetryButton();
+            
+            // Load the actual widget preview via AJAX
+            loadPreview();
+            
             // Update UI state
             hideLoading();
             showPreview();
@@ -693,6 +699,11 @@
                 updateCanvas();
             }
             
+            // Reload widget preview with new settings
+            if (PREVIEW_CONFIG.initialized) {
+                loadPreview();
+            }
+            
             debugLog('✅ Preview updated');
             
         } catch (error) {
@@ -951,6 +962,191 @@
     }
 
     /**
+     * Setup retry button functionality
+     */
+    function setupRetryButton() {
+        const retryButton = document.getElementById('retry-preview');
+        if (retryButton) {
+            retryButton.addEventListener('click', function() {
+                debugLog('🔄 Manual retry requested via button');
+                loadPreview();
+            });
+            debugLog('✅ Retry button event listener attached');
+        } else {
+            debugLog('⚠️ Retry button #retry-preview not found');
+        }
+    }
+
+    /**
+     * Collect current settings from form controls
+     */
+    function collectCurrentSettings() {
+        const style = {};
+        const content = {};
+        
+        // Collect style settings from form controls
+        const styleInputs = document.querySelectorAll('input[name*="style"], select[name*="style"]');
+        styleInputs.forEach(input => {
+            const name = input.name.replace(/^.*\[(.+)\]$/, '$1');
+            if (input.type === 'checkbox') {
+                style[name] = input.checked;
+            } else {
+                style[name] = input.value;
+            }
+        });
+        
+        // Collect content settings from form controls
+        const contentInputs = document.querySelectorAll('input[name*="content"], textarea[name*="content"]');
+        contentInputs.forEach(input => {
+            const name = input.name.replace(/^.*\[(.+)\]$/, '$1');
+            content[name] = input.value;
+        });
+        
+        // If no form controls found, use defaults
+        if (Object.keys(style).length === 0 && customizerData?.defaults) {
+            debugLog('No form controls found, using defaults');
+            style.primary_color = customizerData.defaults.ai_primary_color || '#00cfff';
+            style.accent_color = customizerData.defaults.ai_accent_color || '#ff6b35';
+            style.background_color = customizerData.defaults.ai_background_color || '#0a0a1a';
+        }
+        
+        return { style, content };
+    }
+
+    /**
+     * Load widget preview via AJAX
+     * Renders the actual widget content in the preview area
+     */
+    function loadPreview() {
+        debugLog('🔄 Loading widget preview via AJAX...');
+        
+        // Validate requirements
+        if (!customizerData) {
+            errorLog('❌ customizerData not available');
+            showFallbackMessage('Configuration error: Data not loaded');
+            return;
+        }
+        
+        if (!customizerData.ajaxurl) {
+            errorLog('❌ AJAX URL not available');
+            showFallbackMessage('Configuration error: AJAX URL missing');
+            return;
+        }
+        
+        if (!customizerData.nonce) {
+            errorLog('❌ Security nonce not available');
+            showFallbackMessage('Configuration error: Security nonce missing');
+            return;
+        }
+        
+        // Show loading state
+        const loadingEl = document.getElementById('preview-loading');
+        if (loadingEl) loadingEl.style.display = 'block';
+        
+        // Hide other states
+        const errorEl = document.getElementById('preview-error');
+        const fallbackEl = document.getElementById('preview-fallback');
+        if (errorEl) errorEl.style.display = 'none';
+        if (fallbackEl) fallbackEl.style.display = 'none';
+        
+        // Collect current settings from form controls
+        const settings = collectCurrentSettings();
+        debugLog('📊 Settings collected:', settings);
+        
+        // Make AJAX request to render preview
+        const formData = new FormData();
+        formData.append('action', 'ai_interview_render_preview');
+        formData.append('nonce', customizerData.nonce);
+        formData.append('style_settings', JSON.stringify(settings.style));
+        formData.append('content_settings', JSON.stringify(settings.content));
+        
+        debugLog('🌐 Making AJAX request to:', customizerData.ajaxurl);
+        
+        // Create abort controller for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+        
+        fetch(customizerData.ajaxurl, {
+            method: 'POST',
+            body: formData,
+            signal: controller.signal
+        })
+        .then(response => {
+            clearTimeout(timeoutId); // Clear timeout on success
+            debugLog('📡 AJAX response received, status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            debugLog('📋 AJAX response data:', data);
+            if (data.success && data.data && data.data.html) {
+                // Successfully loaded widget HTML
+                debugLog('✅ Widget preview loaded successfully');
+                
+                // Hide loading state
+                if (loadingEl) loadingEl.style.display = 'none';
+                
+                // Show the preview container with widget content
+                const previewContainer = document.getElementById('aiw-preview-canvas-container');
+                if (previewContainer) {
+                    // Insert the widget HTML into a dedicated preview area
+                    let widgetContainer = document.getElementById('aiw-widget-preview');
+                    if (!widgetContainer) {
+                        widgetContainer = document.createElement('div');
+                        widgetContainer.id = 'aiw-widget-preview';
+                        widgetContainer.style.cssText = `
+                            position: relative;
+                            z-index: 3;
+                            padding: 20px;
+                            background: rgba(255,255,255,0.05);
+                            border-radius: 8px;
+                            margin-top: 20px;
+                        `;
+                        previewContainer.appendChild(widgetContainer);
+                    }
+                    
+                    // Insert the widget HTML
+                    widgetContainer.innerHTML = data.data.html;
+                    previewContainer.style.display = 'block';
+                    
+                    updatePreviewStatus('Widget preview loaded successfully');
+                } else {
+                    debugLog('⚠️ Preview container not found');
+                }
+                
+            } else {
+                throw new Error(data.data?.message || 'Unknown error occurred');
+            }
+        })
+        .catch(error => {
+            clearTimeout(timeoutId); // Clear timeout on error
+            
+            if (error.name === 'AbortError') {
+                errorLog('❌ AJAX request timed out after 15 seconds');
+                error.message = 'Request timed out. Please try again.';
+            } else {
+                errorLog('❌ AJAX request failed:', error);
+            }
+            
+            // Hide loading
+            if (loadingEl) loadingEl.style.display = 'none';
+            
+            // Show error state
+            if (errorEl) {
+                const messageEl = document.getElementById('preview-error-message');
+                if (messageEl) {
+                    messageEl.textContent = `Preview loading failed: ${error.message}`;
+                }
+                errorEl.style.display = 'block';
+            } else {
+                showFallbackMessage(`Preview loading failed: ${error.message}`);
+            }
+        });
+    }
+
+    /**
      * DOM ready handler
      */
     function onDOMReady(callback) {
@@ -1014,6 +1210,7 @@
     const fullSystemObject = {
         initialize: initializeWhenReady,
         updatePreview: updatePreview,
+        loadPreview: loadPreview,
         updateSetting: function(settingName, value) {
             debouncedUpdate(settingName, value);
         },
@@ -1036,7 +1233,33 @@
         },
         debug: {
             log: debugLog,
-            error: errorLog
+            error: errorLog,
+            testAjax: function() {
+                console.log('🧪 Testing AJAX preview loading...');
+                loadPreview();
+            },
+            getSettings: function() {
+                const settings = collectCurrentSettings();
+                console.log('📊 Current settings:', settings);
+                return settings;
+            },
+            checkElements: function() {
+                const elements = {
+                    container: !!document.getElementById('aiw-live-preview'),
+                    canvasContainer: !!document.getElementById('aiw-preview-canvas-container'),
+                    canvas: !!document.getElementById('aiw-preview-canvas'),
+                    loading: !!document.getElementById('preview-loading'),
+                    error: !!document.getElementById('preview-error'),
+                    retry: !!document.getElementById('retry-preview')
+                };
+                console.log('🔍 Element check:', elements);
+                return elements;
+            },
+            reinitialize: function() {
+                console.log('🔄 Manual re-initialization...');
+                PREVIEW_CONFIG.initialized = false;
+                initializeWhenReady();
+            }
         }
     };
     

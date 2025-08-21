@@ -232,11 +232,20 @@ class AIInterviewWidget {
                 '1.0.0'
             );
             
+            // Enqueue customizer preview script for admin page functionality
+            wp_enqueue_script(
+                'aiw-customizer-preview-js',
+                plugin_dir_url(__FILE__) . 'admin/js/aiw-customizer-preview.js',
+                array('jquery', 'wp-color-picker', 'aiw-live-preview-js'),
+                '1.0.1',
+                false // Load in header to ensure availability before inline scripts
+            );
+            
             // Enqueue debug window assets
             wp_enqueue_script(
                 'aiw-debug-window-js',
                 plugin_dir_url(__FILE__) . 'admin/js/aiw-debug-window.js',
-                array('jquery', 'aiw-live-preview-js'),
+                array('jquery', 'aiw-live-preview-js', 'aiw-customizer-preview-js'),
                 '1.0.0',
                 true // Load in footer
             );

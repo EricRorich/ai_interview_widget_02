@@ -61,6 +61,25 @@
         console.error('[AIW Live Preview Error]', ...args);
     }
     
+    // Source map error handler - suppress 404 errors for missing source maps
+    const originalConsoleError = console.error;
+    console.error = function(...args) {
+        const message = args.join(' ');
+        // Suppress source map 404 errors as they don't affect functionality
+        if (message.includes('Source map error') || 
+            message.includes('sourceMappingURL') || 
+            message.includes('.js.map') ||
+            message.includes('ai-media-library.js.map')) {
+            // Log to debug only if debug mode is enabled
+            if (debugMode) {
+                originalConsoleError('[AIW Debug] Source map not found (non-critical):', ...args);
+            }
+            return;
+        }
+        // Pass through all other errors normally
+        originalConsoleError.apply(console, args);
+    };
+    
     console.log('✅ AIW Live Preview Script Loaded', {
         version: '1.0.0',
         debugMode: debugMode,
@@ -68,6 +87,33 @@
         customizerDataAvailable: !!customizerData,
         aiwLivePreviewCreated: !!window.aiwLivePreview
     });
+    
+    // Ensure aiwTranslationDebug object is available for debugging
+    if (typeof window.aiwTranslationDebug === 'undefined') {
+        window.aiwTranslationDebug = {
+            logs: [],
+            pushLog: function(level, message) {
+                this.logs.push({
+                    timestamp: new Date().toISOString(),
+                    level: level,
+                    message: message
+                });
+                if (debugMode) {
+                    console.log(`[AIW Translation Debug] ${level}: ${message}`);
+                }
+            },
+            clear: function() {
+                this.logs = [];
+                if (debugMode) {
+                    console.log('[AIW Translation Debug] Log cleared');
+                }
+            },
+            getLogs: function() {
+                return this.logs;
+            }
+        };
+        debugLog('✅ aiwTranslationDebug object initialized');
+    }
     
     debugLog('🎨 Initializing Live Preview System...');
 

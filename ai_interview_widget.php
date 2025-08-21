@@ -2627,7 +2627,7 @@ class AIInterviewWidget {
      */
     public function handle_preview_render() {
         // Check nonce for security
-        if (!check_ajax_referer('aiw_customizer_preview', 'nonce', false)) {
+        if (!check_ajax_referer('aiw_live_preview', 'nonce', false)) {
             wp_send_json_error(array(
                 'message' => 'Invalid security token',
                 'code' => 'nonce_failed'

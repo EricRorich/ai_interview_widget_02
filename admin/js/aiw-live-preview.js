@@ -267,6 +267,9 @@
             
             PREVIEW_CONFIG.initialized = true;
             
+            // Load the actual widget preview via AJAX
+            loadPreview();
+            
             // Update UI state
             hideLoading();
             showPreview();
@@ -951,6 +954,132 @@
     }
 
     /**
+     * Load widget preview via AJAX
+     * Renders the actual widget content in the preview area
+     */
+    function loadPreview() {
+        debugLog('🔄 Loading widget preview via AJAX...');
+        
+        // Validate requirements
+        if (!customizerData) {
+            errorLog('❌ customizerData not available');
+            showFallbackMessage('Configuration error: Data not loaded');
+            return;
+        }
+        
+        if (!customizerData.ajaxurl) {
+            errorLog('❌ AJAX URL not available');
+            showFallbackMessage('Configuration error: AJAX URL missing');
+            return;
+        }
+        
+        if (!customizerData.nonce) {
+            errorLog('❌ Security nonce not available');
+            showFallbackMessage('Configuration error: Security nonce missing');
+            return;
+        }
+        
+        // Show loading state
+        const loadingEl = document.getElementById('preview-loading');
+        if (loadingEl) loadingEl.style.display = 'block';
+        
+        // Hide other states
+        const errorEl = document.getElementById('preview-error');
+        const fallbackEl = document.getElementById('preview-fallback');
+        if (errorEl) errorEl.style.display = 'none';
+        if (fallbackEl) fallbackEl.style.display = 'none';
+        
+        // Collect current settings (simplified version for canvas mode)
+        const settings = {
+            style: {
+                primary_color: customizerData.defaults.ai_primary_color || '#00cfff',
+                accent_color: customizerData.defaults.ai_accent_color || '#ff6b35',
+                background_color: customizerData.defaults.ai_background_color || '#0a0a1a'
+            },
+            content: {}
+        };
+        
+        // Make AJAX request to render preview
+        const formData = new FormData();
+        formData.append('action', 'ai_interview_render_preview');
+        formData.append('nonce', customizerData.nonce);
+        formData.append('style_settings', JSON.stringify(settings.style));
+        formData.append('content_settings', JSON.stringify(settings.content));
+        
+        debugLog('🌐 Making AJAX request to:', customizerData.ajaxurl);
+        
+        fetch(customizerData.ajaxurl, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            debugLog('📡 AJAX response received, status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            debugLog('📋 AJAX response data:', data);
+            if (data.success && data.data && data.data.html) {
+                // Successfully loaded widget HTML
+                debugLog('✅ Widget preview loaded successfully');
+                
+                // Hide loading state
+                if (loadingEl) loadingEl.style.display = 'none';
+                
+                // Show the preview container with widget content
+                const previewContainer = document.getElementById('aiw-preview-canvas-container');
+                if (previewContainer) {
+                    // Insert the widget HTML into a dedicated preview area
+                    let widgetContainer = document.getElementById('aiw-widget-preview');
+                    if (!widgetContainer) {
+                        widgetContainer = document.createElement('div');
+                        widgetContainer.id = 'aiw-widget-preview';
+                        widgetContainer.style.cssText = `
+                            position: relative;
+                            z-index: 3;
+                            padding: 20px;
+                            background: rgba(255,255,255,0.05);
+                            border-radius: 8px;
+                            margin-top: 20px;
+                        `;
+                        previewContainer.appendChild(widgetContainer);
+                    }
+                    
+                    // Insert the widget HTML
+                    widgetContainer.innerHTML = data.data.html;
+                    previewContainer.style.display = 'block';
+                    
+                    updatePreviewStatus('Widget preview loaded successfully');
+                } else {
+                    debugLog('⚠️ Preview container not found');
+                }
+                
+            } else {
+                throw new Error(data.data?.message || 'Unknown error occurred');
+            }
+        })
+        .catch(error => {
+            errorLog('❌ AJAX request failed:', error);
+            
+            // Hide loading
+            if (loadingEl) loadingEl.style.display = 'none';
+            
+            // Show error state
+            if (errorEl) {
+                const messageEl = document.getElementById('preview-error-message');
+                if (messageEl) {
+                    messageEl.textContent = `Preview loading failed: ${error.message}`;
+                }
+                errorEl.style.display = 'block';
+            } else {
+                showFallbackMessage(`Preview loading failed: ${error.message}`);
+            }
+        });
+    }
+
+    /**
      * DOM ready handler
      */
     function onDOMReady(callback) {
@@ -1014,6 +1143,7 @@
     const fullSystemObject = {
         initialize: initializeWhenReady,
         updatePreview: updatePreview,
+        loadPreview: loadPreview,
         updateSetting: function(settingName, value) {
             debouncedUpdate(settingName, value);
         },

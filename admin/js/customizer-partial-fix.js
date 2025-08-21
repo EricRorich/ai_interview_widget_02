@@ -175,14 +175,23 @@
             
             try {
                 // Initialize the preview system
-                const result = window.aiwLivePreview.initialize();
+                window.aiwLivePreview.initialize();
                 
-                if (result !== false) {
+                // Check if initialization was successful by verifying the config
+                const config = window.aiwLivePreview.getConfig();
+                if (config && config.initialized) {
                     console.log('✅ Preview system successfully initialized');
                     
                     // Hide loading and show preview
-                    $('#preview-loading').hide();
-                    $('#aiw-preview-canvas-container').show();
+                    if (hasJQuery) {
+                        $('#preview-loading').hide();
+                        $('#aiw-preview-canvas-container').show();
+                    } else {
+                        const loading = document.getElementById('preview-loading');
+                        const container = document.getElementById('aiw-preview-canvas-container');
+                        if (loading) loading.style.display = 'none';
+                        if (container) container.style.display = 'block';
+                    }
                     
                     // Clear timeout
                     if (timeoutId) {
@@ -191,6 +200,8 @@
                     }
                     
                     return;
+                } else {
+                    debugLog('Initialization returned but system not marked as initialized, retrying...');
                 }
             } catch (error) {
                 errorLog('Error during initialization:', error);

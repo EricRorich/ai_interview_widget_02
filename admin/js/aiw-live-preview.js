@@ -794,33 +794,35 @@
     }
 
     /**
-     * Initialize when DOM is ready
+     * Initialize wrapper that handles DOM ready timing
      */
-    onDOMReady(function() {
-        debugLog('🚀 DOM ready, initializing...');
-        
-        // Initialize preview system
-        initializePreviewSystem();
-        
-        // Setup event listeners
-        window.addEventListener('beforeunload', cleanup);
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-        
-        // Handle reduced motion preference changes
-        const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-        if (mediaQuery.addListener) {
-            mediaQuery.addListener(handleReducedMotionChange);
-        } else {
-            mediaQuery.addEventListener('change', handleReducedMotionChange);
-        }
-    });
+    function initializeWhenReady() {
+        onDOMReady(function() {
+            debugLog('🚀 DOM ready, initializing...');
+            
+            // Initialize preview system
+            initializePreviewSystem();
+            
+            // Setup event listeners
+            window.addEventListener('beforeunload', cleanup);
+            document.addEventListener('visibilitychange', handleVisibilityChange);
+            
+            // Handle reduced motion preference changes
+            const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+            if (mediaQuery.addListener) {
+                mediaQuery.addListener(handleReducedMotionChange);
+            } else {
+                mediaQuery.addEventListener('change', handleReducedMotionChange);
+            }
+        });
+    }
 
     /**
-     * Public API
+     * Public API - Available immediately when script loads
      */
     window.aiwLivePreview = {
         // Main functions
-        initialize: initializePreviewSystem,
+        initialize: initializeWhenReady,
         updatePreview: updatePreview,
         updateSetting: function(settingName, value) {
             debouncedUpdate(settingName, value);
@@ -854,5 +856,8 @@
             error: errorLog
         }
     };
+
+    // Auto-initialize when script loads (but wait for DOM ready internally)
+    initializeWhenReady();
 
 })();

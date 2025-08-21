@@ -219,12 +219,20 @@ jQuery(document).ready(function($) {
     
     console.log('🎨 AIW Preview Partial Script Loading...');
     
-    // Enhanced preview system initialization with fallback
+    // Enhanced preview system initialization with progressive fallback
     let retryCount = 0;
-    const maxRetries = 10; // Maximum 5 seconds of retrying
+    const maxRetries = 20; // More attempts but faster
     
     function initializePreviewWithFallback() {
         retryCount++;
+        
+        // Progressive retry delays: start fast, then slower
+        const getRetryDelay = (attempt) => {
+            if (attempt <= 5) return 50;    // First 5 attempts: 50ms (250ms total)
+            if (attempt <= 10) return 100;  // Next 5 attempts: 100ms (500ms more)
+            if (attempt <= 15) return 200;  // Next 5 attempts: 200ms (1000ms more)
+            return 500;                     // Final attempts: 500ms
+        };
         
         // Check if we've exceeded max retries
         if (retryCount > maxRetries) {
@@ -235,15 +243,17 @@ jQuery(document).ready(function($) {
         
         // Check if live preview script is loaded
         if (typeof window.aiwLivePreview === 'undefined') {
-            console.warn(`⚠️ aiwLivePreview not loaded yet, retrying in 500ms... (attempt ${retryCount}/${maxRetries})`);
-            setTimeout(initializePreviewWithFallback, 500);
+            const delay = getRetryDelay(retryCount);
+            console.warn(`⚠️ aiwLivePreview not loaded yet, retrying in ${delay}ms... (attempt ${retryCount}/${maxRetries})`);
+            setTimeout(initializePreviewWithFallback, delay);
             return;
         }
         
         // Check if customizerData is available
         if (typeof window.aiwCustomizerData === 'undefined') {
-            console.warn(`⚠️ aiwCustomizerData not available yet, retrying in 500ms... (attempt ${retryCount}/${maxRetries})`);
-            setTimeout(initializePreviewWithFallback, 500);
+            const delay = getRetryDelay(retryCount);
+            console.warn(`⚠️ aiwCustomizerData not available yet, retrying in ${delay}ms... (attempt ${retryCount}/${maxRetries})`);
+            setTimeout(initializePreviewWithFallback, delay);
             return;
         }
         

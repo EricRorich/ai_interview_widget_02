@@ -98,6 +98,9 @@ class AIInterviewWidget {
         add_action('wp_ajax_ai_interview_cancel_pending_languages', array($this, 'handle_cancel_pending_languages'));
         add_action('wp_ajax_ai_interview_translate_prompt', array($this, 'handle_translate_prompt'));
         add_action('wp_ajax_ai_interview_load_preset', array($this, 'load_design_preset'));
+        
+        // Live preview AJAX handler
+        add_action('wp_ajax_ai_interview_update_preview', array($this, 'handle_preview_update'));
         add_action('wp_ajax_ai_interview_load_default_preset', array($this, 'load_default_preset'));
         add_action('wp_ajax_ai_interview_delete_preset', array($this, 'delete_design_preset'));
         add_action('wp_ajax_ai_interview_get_presets', array($this, 'get_design_presets'));
@@ -107,7 +110,6 @@ class AIInterviewWidget {
 
         // Preview system AJAX handlers
         add_action('wp_ajax_ai_interview_render_preview', array($this, 'handle_preview_render'));
-        add_action('wp_ajax_ai_interview_update_preview', array($this, 'handle_preview_update'));
 
         // Debug logging
         add_action('init', array($this, 'log_ajax_handlers_status'));
@@ -217,12 +219,31 @@ class AIInterviewWidget {
             // Log script loading for debugging
             error_log('AI Interview Widget: Loading live preview assets for hook: ' . $hook);
             
+            // 1. First load the preview handler to ensure aiwLivePreview object exists immediately
+            wp_enqueue_script(
+                'aiw-preview-handler-js',
+                plugin_dir_url(__FILE__) . 'admin/js/preview-handler.js',
+                array(), // No dependencies to ensure it loads first
+                '1.0.0',
+                false // Load in header immediately
+            );
+            
+            // 2. Load the main live preview script with proper dependencies
             wp_enqueue_script(
                 'aiw-live-preview-js',
                 plugin_dir_url(__FILE__) . 'admin/js/aiw-live-preview.js',
-                array('jquery', 'wp-color-picker'),
+                array('jquery', 'wp-color-picker', 'aiw-preview-handler-js'),
                 '1.0.0',
-                false // Load in header to ensure availability before inline scripts
+                false // Load in header after handler
+            );
+            
+            // 3. Load the partial fix script to replace inline JavaScript
+            wp_enqueue_script(
+                'aiw-customizer-partial-fix-js',
+                plugin_dir_url(__FILE__) . 'admin/js/customizer-partial-fix.js',
+                array('jquery', 'aiw-preview-handler-js'),
+                '1.0.0',
+                true // Load in footer to ensure DOM is ready
             );
             
             wp_enqueue_style(
@@ -1497,6 +1518,179 @@ class AIInterviewWidget {
         ));
     }
 
+    // Handle live preview updates
+    public function handle_preview_update() {
+        // Verify nonce for security
+        if (!check_ajax_referer('aiw_live_preview', 'nonce', false)) {
+            wp_send_json_error('Security verification failed');
+            return;
+        }
+        
+        // Check user permissions
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized access');
+            return;
+        }
+        
+        // Get the settings data
+        $settings = isset($_POST['settings']) ? $_POST['settings'] : array();
+        
+        if (empty($settings)) {
+            wp_send_json_error('No settings provided');
+            return;
+        }
+        
+        try {
+            // Generate preview HTML based on current settings
+            $preview_html = $this->generate_preview_html($settings);
+            
+            // Generate CSS for the preview
+            $preview_css = $this->generate_live_preview_css($settings);
+            
+            wp_send_json_success(array(
+                'html' => $preview_html,
+                'css' => $preview_css,
+                'message' => 'Preview updated successfully',
+                'timestamp' => current_time('timestamp')
+            ));
+            
+        } catch (Exception $e) {
+            error_log('AI Interview Widget: Preview update error: ' . $e->getMessage());
+            wp_send_json_error('Failed to generate preview: ' . $e->getMessage());
+        }
+    }
+    
+    // Generate preview HTML based on user settings
+    private function generate_preview_html($settings) {
+        $style_data = get_option('ai_interview_widget_style_settings', '');
+        $style_settings = json_decode($style_data, true) ?: array();
+        
+        // Merge with submitted settings
+        $combined_settings = array_merge($style_settings, $settings);
+        
+        // Extract key values with defaults
+        $play_button_size = isset($combined_settings['play_button_size']) ? 
+            intval($combined_settings['play_button_size']) : 80;
+        $play_button_color = isset($combined_settings['play_button_color']) ? 
+            sanitize_hex_color($combined_settings['play_button_color']) : '#00cfff';
+        $viz_bar_count = isset($combined_settings['ai_viz_bar_count']) ? 
+            intval($combined_settings['ai_viz_bar_count']) : 12;
+        
+        // Generate visualization bars
+        $viz_bars = '';
+        for ($i = 0; $i < $viz_bar_count; $i++) {
+            $height = rand(10, 60);
+            $viz_bars .= sprintf(
+                '<div class="viz-bar" style="height: %dpx; width: 3px; background: %s; margin: 0 1px; border-radius: 2px; animation-delay: %dms;"></div>',
+                $height,
+                $play_button_color,
+                $i * 100
+            );
+        }
+        
+        // Generate the preview HTML
+        $html = sprintf('
+            <div class="aiw-preview-widget" style="text-align: center; padding: 20px; color: white;">
+                <div class="preview-play-button" style="
+                    width: %dpx; 
+                    height: %dpx; 
+                    border-radius: 50%%; 
+                    background: %s; 
+                    margin: 0 auto 20px; 
+                    display: flex; 
+                    align-items: center; 
+                    justify-content: center;
+                    box-shadow: 0 0 20px rgba(0, 207, 255, 0.5);
+                    cursor: pointer;
+                ">
+                    <div style="
+                        width: 0; 
+                        height: 0; 
+                        border-left: %dpx solid white; 
+                        border-top: %dpx solid transparent; 
+                        border-bottom: %dpx solid transparent; 
+                        margin-left: 3px;
+                    "></div>
+                </div>
+                
+                <div class="preview-visualization" style="
+                    display: flex; 
+                    justify-content: center; 
+                    align-items: end; 
+                    height: 60px; 
+                    margin-bottom: 20px;
+                    gap: 2px;
+                ">
+                    %s
+                </div>
+                
+                <div class="preview-chat" style="
+                    background: rgba(30, 41, 59, 0.8); 
+                    border-radius: 12px; 
+                    padding: 15px; 
+                    max-width: 300px; 
+                    margin: 0 auto;
+                ">
+                    <div style="font-size: 14px; margin-bottom: 10px;">
+                        💬 <strong>AI Assistant:</strong> Hello! How can I help you?
+                    </div>
+                    <input type="text" placeholder="Type a message..." style="
+                        width: 100%%; 
+                        padding: 8px; 
+                        border: 1px solid %s; 
+                        border-radius: 15px; 
+                        background: rgba(0,0,0,0.3); 
+                        color: white;
+                        box-sizing: border-box;
+                    ">
+                </div>
+            </div>
+        ',
+            $play_button_size,
+            $play_button_size,
+            $play_button_color,
+            intval($play_button_size * 0.25),
+            intval($play_button_size * 0.15),
+            intval($play_button_size * 0.15),
+            $viz_bars,
+            $play_button_color
+        );
+        
+        return $html;
+    }
+    
+    // Generate preview CSS based on user settings
+    private function generate_live_preview_css($settings) {
+        $css_rules = array();
+        
+        // Map settings to CSS variables
+        $css_mapping = array(
+            'ai_primary_color' => '--aiw-preview-primary',
+            'ai_accent_color' => '--aiw-preview-accent',
+            'ai_background_color' => '--aiw-preview-background',
+            'ai_text_color' => '--aiw-preview-text',
+            'ai_border_radius' => '--aiw-preview-border-radius',
+            'play_button_color' => '--aiw-preview-play-color',
+            'ai_viz_color' => '--aiw-preview-viz-color'
+        );
+        
+        foreach ($css_mapping as $setting => $css_var) {
+            if (isset($settings[$setting])) {
+                $value = $settings[$setting];
+                
+                // Add units for certain properties
+                if (in_array($setting, array('ai_border_radius', 'play_button_size'))) {
+                    $value = intval($value) . 'px';
+                }
+                
+                $css_rules[] = sprintf('%s: %s;', $css_var, esc_attr($value));
+            }
+        }
+        
+        // Return CSS wrapped in :root selector
+        return ':root { ' . implode(' ', $css_rules) . ' }';
+    }
+
     // Reset custom styles
     public function reset_custom_styles() {
         check_ajax_referer('ai_interview_customizer', 'nonce');
@@ -2481,70 +2675,6 @@ class AIInterviewWidget {
             wp_send_json_error(array(
                 'message' => 'Failed to generate preview',
                 'code' => 'render_failed',
-                'debug' => defined('WP_DEBUG') && WP_DEBUG ? $e->getMessage() : null
-            ));
-        }
-    }
-    
-    /**
-     * Handle Preview Update AJAX Request
-     * Provides incremental updates for real-time preview
-     * 
-     * @since 1.9.5
-     */
-    public function handle_preview_update() {
-        // Check nonce for security
-        if (!check_ajax_referer('aiw_customizer_preview', 'nonce', false)) {
-            wp_send_json_error(array(
-                'message' => 'Invalid security token',
-                'code' => 'nonce_failed'
-            ));
-            return;
-        }
-        
-        // Check user capabilities
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(array(
-                'message' => 'Insufficient permissions',
-                'code' => 'permission_denied'
-            ));
-            return;
-        }
-        
-        try {
-            // Get settings from POST data (for real-time updates)
-            $style_settings = isset($_POST['style_settings']) ? sanitize_textarea_field($_POST['style_settings']) : get_option('ai_interview_widget_style_settings', '');
-            $content_settings = isset($_POST['content_settings']) ? sanitize_textarea_field($_POST['content_settings']) : get_option('ai_interview_widget_content_settings', '');
-            
-            // Validate JSON settings
-            if (!$this->is_valid_json($style_settings) || !$this->is_valid_json($content_settings)) {
-                wp_send_json_error(array(
-                    'message' => 'Invalid settings format',
-                    'code' => 'invalid_json'
-                ));
-                return;
-            }
-            
-            // Generate updated CSS for incremental update
-            $updated_css = $this->generate_preview_css($style_settings, $content_settings);
-            
-            // Parse content settings for dynamic updates
-            $content_data = json_decode($content_settings, true);
-            if (!$content_data) $content_data = array();
-            
-            wp_send_json_success(array(
-                'css' => $updated_css,
-                'content_data' => $content_data,
-                'headline_text' => isset($content_data['headline_text']) ? $content_data['headline_text'] : '',
-                'timestamp' => current_time('timestamp'),
-                'message' => 'Preview updated successfully'
-            ));
-            
-        } catch (Exception $e) {
-            error_log('AI Interview Widget Preview Update Error: ' . $e->getMessage());
-            wp_send_json_error(array(
-                'message' => 'Failed to update preview',
-                'code' => 'update_failed',
                 'debug' => defined('WP_DEBUG') && WP_DEBUG ? $e->getMessage() : null
             ));
         }

@@ -22,22 +22,33 @@
     const defaults = customizerData.defaults || {};
     const debugMode = customizerData.debug || false;
 
-    // Create the public API object IMMEDIATELY to prevent timing issues
-    // This ensures window.aiwLivePreview is available as soon as the script starts loading
-    window.aiwLivePreview = {
-        // Placeholder methods - will be replaced with actual implementations below
-        initialize: function() {
-            console.log('🔄 aiwLivePreview.initialize() called before script fully loaded, deferring...');
-        },
-        updatePreview: function() {},
-        updateSetting: function() {},
-        updateVariable: function() {},
-        resizeCanvas: function() {},
-        showFallbackMessage: function() {},
-        getConfig: function() { return { initialized: false }; },
-        test: {},
-        debug: {}
-    };
+    // Check if preview handler already created the object
+    const handlerExists = window.aiwLivePreview && window.aiwLivePreview.getConfig && 
+                         window.aiwLivePreview.getConfig().handlerReady;
+    
+    if (handlerExists) {
+        console.log('🔧 AIW Live Preview: Using existing object from preview handler');
+        // Store reference to the handler-created object
+        var handlerObject = window.aiwLivePreview;
+    } else {
+        console.log('🔧 AIW Live Preview: Creating new object (handler not present)');
+        // Create the public API object IMMEDIATELY to prevent timing issues
+        // This ensures window.aiwLivePreview is available as soon as the script starts loading
+        window.aiwLivePreview = {
+            // Placeholder methods - will be replaced with actual implementations below
+            initialize: function() {
+                console.log('🔄 aiwLivePreview.initialize() called before script fully loaded, deferring...');
+            },
+            updatePreview: function() {},
+            updateSetting: function() {},
+            updateVariable: function() {},
+            resizeCanvas: function() {},
+            showFallbackMessage: function() {},
+            getConfig: function() { return { initialized: false }; },
+            test: {},
+            debug: {}
+        };
+    }
     
     // Logging functions
     function debugLog(...args) {
@@ -859,33 +870,46 @@
 
     /**
      * Replace placeholder methods with actual implementations
-     * Object was created at the top to ensure immediate availability
+     * Use preview handler's replacement system if available
      */
-    window.aiwLivePreview.initialize = initializeWhenReady;
-    window.aiwLivePreview.updatePreview = updatePreview;
-    window.aiwLivePreview.updateSetting = function(settingName, value) {
-        debouncedUpdate(settingName, value);
+    const fullSystemObject = {
+        initialize: initializeWhenReady,
+        updatePreview: updatePreview,
+        updateSetting: function(settingName, value) {
+            debouncedUpdate(settingName, value);
+        },
+        updateVariable: updateCSSVariable,
+        resizeCanvas: resizeCanvas,
+        showFallbackMessage: showFallbackMessage,
+        getConfig: function() {
+            return {
+                initialized: PREVIEW_CONFIG.initialized,
+                reducedMotion: PREVIEW_CONFIG.reducedMotion,
+                hasCanvas: !!PREVIEW_CONFIG.canvas,
+                version: '1.0.0'
+            };
+        },
+        test: {
+            validateRequirements: validateRequirements,
+            initializeCanvas: initializeCanvas,
+            initializeBars: initializeVisualizationBars,
+            startAnimation: startAnimationLoop
+        },
+        debug: {
+            log: debugLog,
+            error: errorLog
+        }
     };
-    window.aiwLivePreview.updateVariable = updateCSSVariable;
-    window.aiwLivePreview.resizeCanvas = resizeCanvas;
-    window.aiwLivePreview.showFallbackMessage = showFallbackMessage;
-    window.aiwLivePreview.getConfig = function() {
-        return {
-            initialized: PREVIEW_CONFIG.initialized,
-            reducedMotion: PREVIEW_CONFIG.reducedMotion,
-            hasCanvas: !!PREVIEW_CONFIG.canvas
-        };
-    };
-    window.aiwLivePreview.test = {
-        validateRequirements: validateRequirements,
-        initializeCanvas: initializeCanvas,
-        initializeBars: initializeVisualizationBars,
-        startAnimation: startAnimationLoop
-    };
-    window.aiwLivePreview.debug = {
-        log: debugLog,
-        error: errorLog
-    };
+    
+    // Use preview handler replacement system if available
+    if (handlerExists && window.aiwPreviewHandler && window.aiwPreviewHandler.replaceWithFullSystem) {
+        console.log('🔧 AIW Live Preview: Using handler replacement system');
+        window.aiwPreviewHandler.replaceWithFullSystem(fullSystemObject);
+    } else {
+        console.log('🔧 AIW Live Preview: Direct assignment (no handler)');
+        // Direct assignment for backward compatibility
+        Object.assign(window.aiwLivePreview, fullSystemObject);
+    }
 
     console.log('✅ aiwLivePreview API methods assigned');
 

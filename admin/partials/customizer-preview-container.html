@@ -1,0 +1,264 @@
+<!--
+AI Interview Widget - Customizer Preview Container Template
+
+Template for the preview container with proper styling and controls
+Includes a refresh button and device preview selector (Desktop, Tablet, Mobile)
+
+@version 1.0.0
+@author Eric Rorich
+@since 1.9.5
+-->
+
+<div class="aiw-preview-container" id="aiw-live-preview" role="region" aria-label="Live Widget Preview">
+    
+    <!-- Preview Controls -->
+    <div class="aiw-preview-controls" style="margin-bottom: 20px; padding: 15px; background: #fff; border: 1px solid #ddd; border-radius: 6px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+            
+            <!-- Device Selector -->
+            <div class="aiw-device-selector">
+                <label style="margin-right: 10px; font-weight: 600;">Preview Device:</label>
+                <div style="display: inline-flex; gap: 5px; border: 1px solid #ccd0d4; border-radius: 4px; overflow: hidden;">
+                    <button type="button" class="aiw-device-btn" data-device="desktop" 
+                            style="padding: 8px 12px; border: none; background: #0073aa; color: white; cursor: pointer; font-size: 12px;">
+                        🖥️ Desktop
+                    </button>
+                    <button type="button" class="aiw-device-btn" data-device="tablet"
+                            style="padding: 8px 12px; border: none; background: #f0f0f1; color: #3c434a; cursor: pointer; font-size: 12px;">
+                        📱 Tablet
+                    </button>
+                    <button type="button" class="aiw-device-btn" data-device="mobile"
+                            style="padding: 8px 12px; border: none; background: #f0f0f1; color: #3c434a; cursor: pointer; font-size: 12px;">
+                        📱 Mobile
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Control Actions -->
+            <div class="aiw-preview-actions">
+                <button type="button" id="refresh-preview" class="button button-secondary" 
+                        style="margin-right: 10px;">
+                    🔄 Refresh Preview
+                </button>
+                <button type="button" id="reset-preview" class="button button-secondary">
+                    ↩️ Reset to Defaults
+                </button>
+            </div>
+            
+        </div>
+    </div>
+    
+    <!-- Loading State -->
+    <div class="aiw-preview-loading" id="preview-loading" 
+         style="display: flex; align-items: center; justify-content: center; padding: 60px 40px; background: linear-gradient(135deg, #f9f9f9 0%, #f1f1f1 100%); border-radius: 8px; margin-bottom: 20px; border: 2px dashed #ccd0d4;">
+        <div style="text-align: center;">
+            <div style="margin-bottom: 20px;">
+                <div class="aiw-spinner" style="width: 50px; height: 50px; border: 4px solid #f3f3f3; border-top: 4px solid #0073aa; border-radius: 50%; animation: aiwSpin 1s linear infinite; margin: 0 auto;"></div>
+            </div>
+            <h3 style="margin: 0 0 10px 0; color: #23282d; font-size: 18px;">Loading Live Preview...</h3>
+            <p style="margin: 0; color: #666; font-size: 14px;">Initializing widget preview with your custom settings</p>
+            <div id="preview-status" style="margin-top: 15px; font-size: 12px; color: #0073aa; font-weight: 500;"></div>
+        </div>
+    </div>
+    
+    <!-- Error State -->
+    <div class="aiw-preview-error" id="preview-error" 
+         style="display: none; padding: 30px; background: #fff2f2; border: 2px solid #dc3232; border-radius: 8px; margin-bottom: 20px;">
+        <div style="text-align: center;">
+            <div style="font-size: 24px; margin-bottom: 15px;">⚠️</div>
+            <h3 style="margin: 0 0 15px 0; color: #dc3232; font-size: 18px;">Preview Error</h3>
+            <p id="preview-error-message" style="margin: 0 0 20px 0; color: #666;">Unable to load preview. Please try again.</p>
+            <button type="button" id="retry-preview" class="button button-primary">
+                🔄 Retry Preview
+            </button>
+        </div>
+    </div>
+    
+    <!-- Fallback Message -->
+    <div class="aiw-preview-fallback" id="preview-fallback" 
+         style="display: none; padding: 30px; background: #fff3cd; border: 2px solid #f0ad4e; border-radius: 8px; margin-bottom: 20px;">
+        <div style="text-align: center;">
+            <div style="font-size: 24px; margin-bottom: 15px;">ℹ️</div>
+            <h3 style="margin: 0 0 15px 0; color: #856404; font-size: 18px;">Preview Temporarily Unavailable</h3>
+            <p style="margin: 0; color: #856404; font-size: 14px;">Your customizations are being saved, but the live preview cannot be displayed right now.</p>
+        </div>
+    </div>
+    
+    <!-- Main Preview Area -->
+    <div class="aiw-preview-viewport" data-device="desktop" 
+         style="position: relative; width: 100%; transition: all 0.3s ease; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+        
+        <!-- Device Frame (optional decorative element) -->
+        <div class="aiw-device-frame" style="background: #23282d; padding: 15px; border-radius: 8px 8px 0 0;">
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <div style="width: 12px; height: 12px; border-radius: 50%; background: #dc3232;"></div>
+                <div style="width: 12px; height: 12px; border-radius: 50%; background: #f0ad4e;"></div>
+                <div style="width: 12px; height: 12px; border-radius: 50%; background: #00a32a;"></div>
+                <div style="margin-left: 15px; color: #a7aaad; font-size: 12px;">AI Interview Widget Preview</div>
+            </div>
+        </div>
+        
+        <!-- Canvas-based Preview System -->
+        <div class="aiw-canvas-preview-container" id="aiw-preview-canvas-container" 
+             style="position: relative; width: 100%; min-height: 400px; background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 50%, #16213e 100%); overflow: hidden;">
+            
+            <!-- Canvas Background Layer -->
+            <canvas class="aiw-preview-canvas" id="aiw-preview-canvas" 
+                    width="800" height="400"
+                    style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;">
+                Your browser does not support HTML5 Canvas
+            </canvas>
+            
+            <!-- Widget Content Layer -->
+            <div class="aiw-preview-content" style="position: relative; z-index: 2; padding: 40px; height: 400px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                
+                <!-- Play Button -->
+                <div class="aiw-preview-playbutton" id="aiw-preview-playbutton"
+                     style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #00cfff, #0066ff); display: flex; align-items: center; justify-content: center; cursor: pointer; margin-bottom: 30px; box-shadow: 0 0 20px rgba(0, 207, 255, 0.5); transition: all 0.3s ease;">
+                    <div style="width: 0; height: 0; border-left: 20px solid white; border-top: 12px solid transparent; border-bottom: 12px solid transparent; margin-left: 4px;"></div>
+                </div>
+                
+                <!-- Audio Visualization -->
+                <div class="aiw-preview-audiovis" id="aiw-preview-audiovis" 
+                     style="display: flex; gap: 3px; align-items: end; height: 60px; margin-bottom: 30px;">
+                    <!-- Visualization bars will be generated here -->
+                </div>
+                
+                <!-- Chat Interface Preview -->
+                <div class="aiw-preview-chatbox" id="aiw-preview-chatbox"
+                     style="width: 100%; max-width: 400px; background: rgba(30, 41, 59, 0.8); border-radius: 12px; padding: 20px; backdrop-filter: blur(10px);">
+                    
+                    <div style="color: #ffffff; font-size: 14px; margin-bottom: 15px;">
+                        💬 <strong>AI Assistant:</strong> Hello! I'm Eric's AI assistant. How can I help you today?
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" placeholder="Type your message..." 
+                               style="flex: 1; padding: 10px; border: 1px solid #00cfff; border-radius: 20px; background: rgba(0, 0, 0, 0.3); color: white; font-size: 14px;">
+                        <button style="padding: 10px 15px; background: #00cfff; border: none; border-radius: 20px; color: white; cursor: pointer;">Send</button>
+                    </div>
+                    
+                </div>
+                
+            </div>
+            
+        </div>
+        
+    </div>
+    
+</div>
+
+<!-- CSS Animations -->
+<style>
+@keyframes aiwSpin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Device-specific responsive styles */
+.aiw-preview-viewport[data-device="tablet"] {
+    max-width: 768px;
+    margin: 0 auto;
+}
+
+.aiw-preview-viewport[data-device="mobile"] {
+    max-width: 375px;
+    margin: 0 auto;
+}
+
+.aiw-preview-viewport[data-device="mobile"] .aiw-preview-content {
+    padding: 20px;
+}
+
+.aiw-preview-viewport[data-device="mobile"] .aiw-preview-playbutton {
+    width: 60px;
+    height: 60px;
+}
+
+.aiw-preview-viewport[data-device="mobile"] .aiw-preview-chatbox {
+    font-size: 12px;
+}
+
+/* Device button states */
+.aiw-device-btn:hover {
+    opacity: 0.8;
+}
+
+.aiw-device-btn[data-device].active {
+    background: #0073aa !important;
+    color: white !important;
+}
+
+/* Preview controls responsiveness */
+@media (max-width: 768px) {
+    .aiw-preview-controls > div {
+        flex-direction: column;
+        align-items: flex-start !important;
+    }
+    
+    .aiw-device-selector {
+        margin-bottom: 10px;
+    }
+}
+</style>
+
+<!-- JavaScript for device switching -->
+<script>
+(function() {
+    'use strict';
+    
+    // Device switching functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const deviceButtons = document.querySelectorAll('.aiw-device-btn');
+        const viewport = document.querySelector('.aiw-preview-viewport');
+        
+        deviceButtons.forEach(function(button) {
+            button.addEventListener('click', function() {
+                const device = this.getAttribute('data-device');
+                
+                // Update button states
+                deviceButtons.forEach(function(btn) {
+                    btn.style.background = '#f0f0f1';
+                    btn.style.color = '#3c434a';
+                });
+                
+                this.style.background = '#0073aa';
+                this.style.color = 'white';
+                
+                // Update viewport
+                if (viewport) {
+                    viewport.setAttribute('data-device', device);
+                }
+                
+                console.log('📱 Device preview switched to:', device);
+            });
+        });
+        
+        // Refresh preview button
+        const refreshButton = document.getElementById('refresh-preview');
+        if (refreshButton) {
+            refreshButton.addEventListener('click', function() {
+                console.log('🔄 Manual preview refresh requested');
+                
+                if (window.aiwLivePreview && typeof window.aiwLivePreview.updatePreview === 'function') {
+                    window.aiwLivePreview.updatePreview();
+                } else {
+                    console.warn('⚠️ Preview system not available for refresh');
+                }
+            });
+        }
+        
+        // Reset preview button
+        const resetButton = document.getElementById('reset-preview');
+        if (resetButton) {
+            resetButton.addEventListener('click', function() {
+                if (confirm('Reset all customizations to default values?')) {
+                    console.log('↩️ Preview reset requested');
+                    // This would trigger a reset of all form values
+                    // Implementation depends on the existing reset functionality
+                }
+            });
+        }
+    });
+})();
+</script>

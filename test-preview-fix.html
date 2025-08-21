@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Interview Widget Preview Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin-bottom: 30px; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        .test-log { max-height: 300px; overflow-y: auto; background: #f8f9fa; padding: 10px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>AI Interview Widget Preview System Test</h1>
+    
+    <div class="test-section info">
+        <h2>Test Environment</h2>
+        <p>This page simulates the loading order of scripts in the WordPress admin customizer to test the aiwLivePreview timing fix.</p>
+    </div>
+    
+    <div class="test-section" id="test-results">
+        <h2>Test Results</h2>
+        <div id="results-content">Running tests...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test Log</h2>
+        <div class="test-log" id="test-log"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Object Inspection</h2>
+        <pre id="object-inspection"></pre>
+    </div>
+
+    <!-- Simulate jQuery (minimal version for testing) -->
+    <script>
+        window.jQuery = window.$ = function(selector) {
+            if (typeof selector === 'function') {
+                // Document ready simulation
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', selector);
+                } else {
+                    selector();
+                }
+                return;
+            }
+            return {
+                hide: function() { console.log('jQuery: hide', selector); return this; },
+                show: function() { console.log('jQuery: show', selector); return this; },
+                text: function(text) { console.log('jQuery: text', selector, text); return this; },
+                on: function() { console.log('jQuery: on', arguments); return this; },
+                is: function() { return false; },
+                find: function() { return this; },
+                length: 1
+            };
+        };
+        
+        // Simulate aiwCustomizerData
+        window.aiwCustomizerData = {
+            defaults: {
+                ai_primary_color: '#00cfff',
+                ai_accent_color: '#ff6b35'
+            },
+            debug: true,
+            nonce: 'test-nonce',
+            ajaxurl: '/wp-admin/admin-ajax.php'
+        };
+    </script>
+
+    <!-- Load scripts in the same order as WordPress would -->
+    <script src="admin/js/preview-handler.js"></script>
+    <script src="admin/js/aiw-live-preview.js"></script>
+    <script src="admin/js/customizer-partial-fix.js"></script>
+
+    <!-- Test script -->
+    <script>
+        let testLog = [];
+        let testResults = [];
+        
+        function addToLog(message, type = 'info') {
+            const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+            testLog.push(`[${timestamp}] ${type.toUpperCase()}: ${message}`);
+            updateLogDisplay();
+        }
+        
+        function updateLogDisplay() {
+            const logElement = document.getElementById('test-log');
+            logElement.innerHTML = testLog.map(log => `<div>${log}</div>`).join('');
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        function addTestResult(name, passed, details) {
+            testResults.push({ name, passed, details });
+            updateResultsDisplay();
+        }
+        
+        function updateResultsDisplay() {
+            const resultsElement = document.getElementById('test-results');
+            const passedCount = testResults.filter(r => r.passed).length;
+            const totalCount = testResults.length;
+            
+            let html = `<h2>Test Results (${passedCount}/${totalCount} passed)</h2>`;
+            
+            testResults.forEach(result => {
+                const className = result.passed ? 'success' : 'error';
+                html += `<div class="${className}" style="margin: 10px 0; padding: 10px; border-radius: 3px;">`;
+                html += `<strong>${result.passed ? '✅' : '❌'} ${result.name}</strong><br>`;
+                html += `<small>${result.details}</small>`;
+                html += `</div>`;
+            });
+            
+            resultsElement.innerHTML = html;
+            resultsElement.className = `test-section ${passedCount === totalCount ? 'success' : 'error'}`;
+        }
+        
+        function inspectObjects() {
+            const inspection = {
+                aiwLivePreview: {
+                    exists: typeof window.aiwLivePreview !== 'undefined',
+                    methods: window.aiwLivePreview ? Object.keys(window.aiwLivePreview) : [],
+                    config: window.aiwLivePreview ? window.aiwLivePreview.getConfig() : null
+                },
+                aiwPreviewHandler: {
+                    exists: typeof window.aiwPreviewHandler !== 'undefined',
+                    properties: window.aiwPreviewHandler ? Object.keys(window.aiwPreviewHandler) : []
+                },
+                aiwPartialFix: {
+                    exists: typeof window.aiwPartialFix !== 'undefined',
+                    properties: window.aiwPartialFix ? Object.keys(window.aiwPartialFix) : []
+                }
+            };
+            
+            document.getElementById('object-inspection').textContent = JSON.stringify(inspection, null, 2);
+        }
+        
+        // Run tests when everything is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            addToLog('DOM ready, starting tests...', 'info');
+            
+            setTimeout(() => {
+                runTests();
+            }, 100);
+        });
+        
+        function runTests() {
+            addToLog('Running aiwLivePreview timing fix tests', 'info');
+            
+            // Test 1: aiwLivePreview object exists
+            const objectExists = typeof window.aiwLivePreview !== 'undefined';
+            addTestResult(
+                'aiwLivePreview Object Exists', 
+                objectExists,
+                objectExists ? 'Object is available immediately' : 'Object not found'
+            );
+            
+            if (!objectExists) {
+                addToLog('Critical failure: aiwLivePreview object not found', 'error');
+                inspectObjects();
+                return;
+            }
+            
+            // Test 2: Preview handler exists
+            const handlerExists = typeof window.aiwPreviewHandler !== 'undefined';
+            addTestResult(
+                'Preview Handler Exists',
+                handlerExists,
+                handlerExists ? 'Handler system is available' : 'Handler not found'
+            );
+            
+            // Test 3: Basic methods are available
+            const requiredMethods = ['initialize', 'updatePreview', 'getConfig', 'showFallbackMessage'];
+            const methodsExist = requiredMethods.every(method => 
+                typeof window.aiwLivePreview[method] === 'function'
+            );
+            addTestResult(
+                'Required Methods Available',
+                methodsExist,
+                methodsExist ? 'All required methods present' : 'Missing required methods'
+            );
+            
+            // Test 4: Config returns valid data
+            let configValid = false;
+            try {
+                const config = window.aiwLivePreview.getConfig();
+                configValid = config && typeof config === 'object';
+                addTestResult(
+                    'getConfig() Returns Valid Data',
+                    configValid,
+                    configValid ? `Config: ${JSON.stringify(config)}` : 'Invalid config returned'
+                );
+            } catch (error) {
+                addTestResult(
+                    'getConfig() Returns Valid Data',
+                    false,
+                    `Error: ${error.message}`
+                );
+            }
+            
+            // Test 5: Partial fix system loaded
+            const partialFixExists = typeof window.aiwPartialFix !== 'undefined';
+            addTestResult(
+                'Partial Fix System Loaded',
+                partialFixExists,
+                partialFixExists ? 'Enhanced retry logic available' : 'Partial fix not loaded'
+            );
+            
+            // Test 6: Try initializing the system
+            let initializeWorks = false;
+            try {
+                const result = window.aiwLivePreview.initialize();
+                initializeWorks = true; // If no error thrown, consider it working
+                addTestResult(
+                    'Initialize Method Works',
+                    true,
+                    'No errors thrown during initialization call'
+                );
+            } catch (error) {
+                addTestResult(
+                    'Initialize Method Works',
+                    false,
+                    `Error during initialization: ${error.message}`
+                );
+            }
+            
+            // Test 7: Handler replacement system (if available)
+            if (handlerExists && window.aiwPreviewHandler.replaceWithFullSystem) {
+                try {
+                    const testObject = { test: true, initialize: function() { return 'test'; } };
+                    const replaced = window.aiwPreviewHandler.replaceWithFullSystem(testObject);
+                    addTestResult(
+                        'Handler Replacement System Works',
+                        replaced,
+                        replaced ? 'System can replace objects' : 'Replacement failed'
+                    );
+                } catch (error) {
+                    addTestResult(
+                        'Handler Replacement System Works',
+                        false,
+                        `Error: ${error.message}`
+                    );
+                }
+            }
+            
+            addToLog('All tests completed', 'info');
+            inspectObjects();
+        }
+        
+        // Override console methods to capture logs
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        console.log = function(...args) {
+            addToLog(args.join(' '), 'info');
+            originalLog.apply(console, args);
+        };
+        
+        console.error = function(...args) {
+            addToLog(args.join(' '), 'error');
+            originalError.apply(console, args);
+        };
+        
+        console.warn = function(...args) {
+            addToLog(args.join(' '), 'warn');
+            originalWarn.apply(console, args);
+        };
+    </script>
+</body>
+</html>

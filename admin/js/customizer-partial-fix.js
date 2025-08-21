@@ -9,10 +9,14 @@
  * @since 1.9.5
  */
 
-(function($) {
+(function() {
     'use strict';
     
     console.log('🔧 Customizer Partial Fix: Loading...');
+    
+    // Check if jQuery is available
+    const $ = window.jQuery;
+    const hasJQuery = typeof $ !== 'undefined';
     
     // Configuration
     const CONFIG = {
@@ -55,20 +59,40 @@
     function showEnhancedFallback(reason, technical) {
         debugLog('Showing enhanced fallback:', reason);
         
-        const $loading = $('#preview-loading');
-        const $fallback = $('#preview-fallback');
-        const $error = $('#preview-error');
-        
-        // Hide loading state
-        $loading.hide();
-        
-        // Show appropriate error state
-        if (technical) {
-            $error.show();
-            $error.find('#preview-error-message').text(reason);
+        // Try jQuery first, fallback to vanilla JS
+        if (typeof $ !== 'undefined') {
+            const $loading = $('#preview-loading');
+            const $fallback = $('#preview-fallback');
+            const $error = $('#preview-error');
+            
+            // Hide loading state
+            $loading.hide();
+            
+            // Show appropriate error state
+            if (technical) {
+                $error.show();
+                $error.find('#preview-error-message').text(reason);
+            } else {
+                $fallback.show();
+                $fallback.find('p').text(reason);
+            }
         } else {
-            $fallback.show();
-            $fallback.find('p').text(reason);
+            // Vanilla JS fallback
+            const loadingEl = document.getElementById('preview-loading');
+            const fallbackEl = document.getElementById('preview-fallback');
+            const errorEl = document.getElementById('preview-error');
+            
+            if (loadingEl) loadingEl.style.display = 'none';
+            
+            if (technical && errorEl) {
+                errorEl.style.display = 'block';
+                const messageEl = document.getElementById('preview-error-message');
+                if (messageEl) messageEl.textContent = reason;
+            } else if (fallbackEl) {
+                fallbackEl.style.display = 'block';
+                const pEl = fallbackEl.querySelector('p');
+                if (pEl) pEl.textContent = reason;
+            }
         }
         
         // Clear any timeout
@@ -187,31 +211,52 @@
     
     // Setup retry button functionality
     function setupRetryButton() {
-        $(document).on('click', '#retry-preview', function() {
-            console.log('🔄 Manual retry requested...');
-            
-            // Reset state
-            retryCount = 0;
-            startTime = Date.now();
-            
-            // Clear any existing timeout
-            if (timeoutId) {
-                clearTimeout(timeoutId);
-                timeoutId = null;
+        document.addEventListener('click', function(e) {
+            if (e.target && e.target.id === 'retry-preview') {
+                console.log('🔄 Manual retry requested...');
+                
+                // Reset state
+                retryCount = 0;
+                startTime = Date.now();
+                
+                // Clear any existing timeout
+                if (timeoutId) {
+                    clearTimeout(timeoutId);
+                    timeoutId = null;
+                }
+                
+                // Hide error states and show loading using jQuery or vanilla JS
+                if (typeof $ !== 'undefined') {
+                    $('#preview-error').hide();
+                    $('#preview-fallback').hide();
+                    $('#preview-loading').show();
+                } else {
+                    // Fallback to vanilla JS
+                    const errorEl = document.getElementById('preview-error');
+                    const fallbackEl = document.getElementById('preview-fallback');
+                    const loadingEl = document.getElementById('preview-loading');
+                    
+                    if (errorEl) errorEl.style.display = 'none';
+                    if (fallbackEl) fallbackEl.style.display = 'none';
+                    if (loadingEl) loadingEl.style.display = 'block';
+                }
+                
+                // Start initialization again
+                initializeWithSmartRetry();
             }
-            
-            // Hide error states and show loading
-            $('#preview-error').hide();
-            $('#preview-fallback').hide();
-            $('#preview-loading').show();
-            
-            // Start initialization again
-            initializeWithSmartRetry();
         });
     }
     
     // Initialize when DOM is ready
-    $(document).ready(function() {
+    function domReady(callback) {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', callback);
+        } else {
+            callback();
+        }
+    }
+    
+    domReady(function() {
         debugLog('DOM ready, starting enhanced preview initialization...');
         
         // Setup retry button
@@ -244,4 +289,4 @@
     
     console.log('✅ Customizer Partial Fix: Loaded and ready');
     
-})(jQuery);
+})();

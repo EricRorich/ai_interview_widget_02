@@ -221,7 +221,7 @@ jQuery(document).ready(function($) {
     
     // Enhanced preview system initialization with progressive fallback
     let retryCount = 0;
-    const maxRetries = 20; // More attempts but faster
+    const maxRetries = 10; // Reduced from 20 since aiwLivePreview should be available immediately
     
     function initializePreviewWithFallback() {
         retryCount++;
@@ -258,10 +258,21 @@ jQuery(document).ready(function($) {
         }
         
         console.log('✅ Preview dependencies ready, initializing...');
+        console.log('📊 aiwLivePreview object:', window.aiwLivePreview);
+        console.log('📊 aiwCustomizerData object:', window.aiwCustomizerData);
+        
         if (window.aiwLivePreview.initialize) {
-            window.aiwLivePreview.initialize();
+            console.log('🎯 Calling aiwLivePreview.initialize()...');
+            try {
+                window.aiwLivePreview.initialize();
+                console.log('✅ Preview initialization call completed');
+            } catch (error) {
+                console.error('❌ Error during preview initialization:', error);
+                showDirectFallback('Preview initialization error: ' + error.message);
+            }
         } else {
             console.error('❌ aiwLivePreview.initialize method not found');
+            console.log('📊 Available methods:', Object.keys(window.aiwLivePreview || {}));
             // Use the showFallbackMessage function if available, otherwise fallback to direct DOM manipulation
             if (window.aiwLivePreview && typeof window.aiwLivePreview.showFallbackMessage === 'function') {
                 window.aiwLivePreview.showFallbackMessage('Live preview system unavailable');

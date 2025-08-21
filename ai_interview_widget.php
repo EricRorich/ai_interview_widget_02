@@ -219,6 +219,9 @@ class AIInterviewWidget {
             // Log script loading for debugging
             error_log('AI Interview Widget: Loading live preview assets for hook: ' . $hook);
             
+            // Ensure WordPress media scripts are available
+            wp_enqueue_media();
+            
             // 1. First load the preview handler to ensure aiwLivePreview object exists immediately
             wp_enqueue_script(
                 'aiw-preview-handler-js',
@@ -228,11 +231,11 @@ class AIInterviewWidget {
                 false // Load in header immediately
             );
             
-            // 2. Load the main live preview script with proper dependencies
+            // 2. Load the main live preview script with proper dependencies (including media)
             wp_enqueue_script(
                 'aiw-live-preview-js',
                 plugin_dir_url(__FILE__) . 'admin/js/aiw-live-preview.js',
-                array('jquery', 'wp-color-picker', 'aiw-preview-handler-js'),
+                array('jquery', 'wp-color-picker', 'media-views', 'aiw-preview-handler-js'),
                 '1.0.0',
                 false // Load in header after handler
             );

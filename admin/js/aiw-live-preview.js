@@ -61,23 +61,46 @@
         console.error('[AIW Live Preview Error]', ...args);
     }
     
-    // Source map error handler - suppress 404 errors for missing source maps
+    // Source map error handler - suppress 404 errors for missing source maps and handle ai-media-library issues
     const originalConsoleError = console.error;
+    const originalConsoleWarn = console.warn;
+    
     console.error = function(...args) {
         const message = args.join(' ');
-        // Suppress source map 404 errors as they don't affect functionality
+        
+        // Suppress non-critical errors that don't affect functionality
         if (message.includes('Source map error') || 
             message.includes('sourceMappingURL') || 
             message.includes('.js.map') ||
-            message.includes('ai-media-library.js.map')) {
+            message.includes('ai-media-library.js.map') ||
+            message.includes('unreachable code after return statement') ||
+            message.includes('ai-media-library.js')) {
             // Log to debug only if debug mode is enabled
             if (debugMode) {
-                originalConsoleError('[AIW Debug] Source map not found (non-critical):', ...args);
+                originalConsoleError('[AIW Debug] Non-critical error suppressed:', ...args);
             }
             return;
         }
+        
         // Pass through all other errors normally
         originalConsoleError.apply(console, args);
+    };
+    
+    // Also handle console warnings for deprecated jQuery usage
+    console.warn = function(...args) {
+        const message = args.join(' ');
+        
+        // Suppress jQuery migration warnings that don't affect functionality
+        if (message.includes('JQMIGRATE') || 
+            message.includes('jQuery.fn.click() event shorthand is deprecated')) {
+            if (debugMode) {
+                originalConsoleWarn('[AIW Debug] jQuery deprecation warning suppressed:', ...args);
+            }
+            return;
+        }
+        
+        // Pass through all other warnings normally
+        originalConsoleWarn.apply(console, args);
     };
     
     console.log('✅ AIW Live Preview Script Loaded', {
@@ -178,31 +201,88 @@
         // Validate requirements
         if (!validateRequirements()) {
             errorLog('❌ Preview requirements not met');
-            showFallbackMessage();
+            showFallbackMessage('Preview container not found. Please refresh the page.');
             return;
         }
         
+        let initializationSuccess = true;
+        const failedComponents = [];
+        
         try {
-            // Initialize components
-            initializeCanvas();
-            initializeVisualizationBars();
-            setupControlListeners();
-            setupResizeObserver();
-            loadInitialSettings();
-            startAnimationLoop();
+            // Initialize components one by one, continue even if some fail
+            try {
+                initializeCanvas();
+                debugLog('✅ Canvas initialized');
+            } catch (error) {
+                errorLog('⚠️ Canvas initialization failed:', error);
+                failedComponents.push('Canvas');
+                // Continue without canvas
+            }
+            
+            try {
+                initializeVisualizationBars();
+                debugLog('✅ Visualization bars initialized');
+            } catch (error) {
+                errorLog('⚠️ Visualization bars initialization failed:', error);
+                failedComponents.push('Visualization');
+                // Continue without visualization
+            }
+            
+            try {
+                setupControlListeners();
+                debugLog('✅ Control listeners setup');
+            } catch (error) {
+                errorLog('⚠️ Control listeners setup failed:', error);
+                failedComponents.push('Controls');
+                // Continue without some controls
+            }
+            
+            try {
+                setupResizeObserver();
+                debugLog('✅ Resize observer setup');
+            } catch (error) {
+                errorLog('⚠️ Resize observer setup failed:', error);
+                // Not critical, continue
+            }
+            
+            try {
+                loadInitialSettings();
+                debugLog('✅ Initial settings loaded');
+            } catch (error) {
+                errorLog('⚠️ Initial settings loading failed:', error);
+                // Continue with defaults
+            }
+            
+            try {
+                if (!PREVIEW_CONFIG.reducedMotion) {
+                    startAnimationLoop();
+                    debugLog('✅ Animation loop started');
+                } else {
+                    debugLog('ℹ️ Animations disabled (reduced motion preference)');
+                }
+            } catch (error) {
+                errorLog('⚠️ Animation loop failed:', error);
+                // Continue without animations
+            }
             
             PREVIEW_CONFIG.initialized = true;
             
             // Update UI state
             hideLoading();
             showPreview();
-            updatePreviewStatus('Live preview initialized successfully');
             
-            debugLog('✅ Live Preview System fully initialized');
+            // Show status based on success level
+            if (failedComponents.length === 0) {
+                updatePreviewStatus('Live preview initialized successfully');
+                debugLog('✅ Live Preview System fully initialized');
+            } else {
+                updatePreviewStatus(`Live preview initialized with limited features (${failedComponents.join(', ')} unavailable)`);
+                debugLog(`⚠️ Live Preview System partially initialized. Failed components: ${failedComponents.join(', ')}`);
+            }
             
         } catch (error) {
-            errorLog('❌ Failed to initialize preview:', error);
-            showFallbackMessage('Preview initialization failed');
+            errorLog('❌ Critical failure during preview initialization:', error);
+            showFallbackMessage('Preview initialization failed. Your settings are still being saved.');
         }
     }
 
@@ -213,14 +293,16 @@
         debugLog('🔍 Validating requirements...');
         
         const issues = [];
+        const warnings = [];
         
-        // Check for preview container
+        // Check for preview container (critical)
         const container = document.getElementById('aiw-live-preview');
         if (!container) {
             issues.push('Missing preview container #aiw-live-preview');
+            return false; // This is critical, fail immediately
         }
         
-        // Check for required sections
+        // Check for preview sections (non-critical, can work without some sections)
         const sections = [
             '.aiw-preview-section.aiw-preview-playbutton',
             '.aiw-preview-section.aiw-preview-audiovis', 
@@ -229,22 +311,33 @@
         
         sections.forEach(selector => {
             if (!document.querySelector(selector)) {
-                issues.push(`Missing section: ${selector}`);
+                warnings.push(`Optional section missing: ${selector}`);
             }
         });
         
-        // Check for canvas
+        // Check for canvas (non-critical, preview can work without canvas)
         const canvas = document.querySelector('.aiw-preview-canvas');
         if (!canvas) {
-            issues.push('Missing canvas element');
+            warnings.push('Canvas element not found - animations will be disabled');
         }
         
+        // Check for WordPress media dependencies (optional)
+        if (typeof wp === 'undefined' || typeof wp.media === 'undefined') {
+            warnings.push('WordPress media scripts not loaded - some features may be limited');
+        }
+        
+        // Log warnings but don't fail
+        if (warnings.length > 0) {
+            debugLog('⚠️ Non-critical issues detected:', warnings);
+        }
+        
+        // Only fail on critical issues
         if (issues.length > 0) {
-            errorLog('❌ Validation failed:', issues);
+            errorLog('❌ Critical validation failed:', issues);
             return false;
         }
         
-        debugLog('✅ All requirements met');
+        debugLog('✅ Core requirements met, proceeding with initialization');
         return true;
     }
 

@@ -36,6 +36,25 @@
         console.error('[AIW Customizer Preview Error]', ...args);
     }
     
+    // Source map error handler - suppress 404 errors for missing source maps
+    const originalConsoleError = console.error;
+    console.error = function(...args) {
+        const message = args.join(' ');
+        // Suppress source map 404 errors as they don't affect functionality
+        if (message.includes('Source map error') || 
+            message.includes('sourceMappingURL') || 
+            message.includes('.js.map') ||
+            message.includes('ai-media-library.js.map')) {
+            // Log to debug only if debug mode is enabled
+            if (debugMode) {
+                originalConsoleError('[AIW Debug] Source map not found (non-critical):', ...args);
+            }
+            return;
+        }
+        // Pass through all other errors normally
+        originalConsoleError.apply(console, args);
+    };
+    
     // Always log script loading (even without debug mode)
     console.log('✅ AIW Customizer Preview Script Loaded Successfully');
     console.log('📋 Script Info:', {

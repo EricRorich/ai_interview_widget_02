@@ -1062,11 +1062,17 @@
         
         debugLog('🌐 Making AJAX request to:', customizerData.ajaxurl);
         
+        // Create abort controller for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+        
         fetch(customizerData.ajaxurl, {
             method: 'POST',
-            body: formData
+            body: formData,
+            signal: controller.signal
         })
         .then(response => {
+            clearTimeout(timeoutId); // Clear timeout on success
             debugLog('📡 AJAX response received, status:', response.status);
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -1115,7 +1121,14 @@
             }
         })
         .catch(error => {
-            errorLog('❌ AJAX request failed:', error);
+            clearTimeout(timeoutId); // Clear timeout on error
+            
+            if (error.name === 'AbortError') {
+                errorLog('❌ AJAX request timed out after 15 seconds');
+                error.message = 'Request timed out. Please try again.';
+            } else {
+                errorLog('❌ AJAX request failed:', error);
+            }
             
             // Hide loading
             if (loadingEl) loadingEl.style.display = 'none';
@@ -1220,7 +1233,33 @@
         },
         debug: {
             log: debugLog,
-            error: errorLog
+            error: errorLog,
+            testAjax: function() {
+                console.log('🧪 Testing AJAX preview loading...');
+                loadPreview();
+            },
+            getSettings: function() {
+                const settings = collectCurrentSettings();
+                console.log('📊 Current settings:', settings);
+                return settings;
+            },
+            checkElements: function() {
+                const elements = {
+                    container: !!document.getElementById('aiw-live-preview'),
+                    canvasContainer: !!document.getElementById('aiw-preview-canvas-container'),
+                    canvas: !!document.getElementById('aiw-preview-canvas'),
+                    loading: !!document.getElementById('preview-loading'),
+                    error: !!document.getElementById('preview-error'),
+                    retry: !!document.getElementById('retry-preview')
+                };
+                console.log('🔍 Element check:', elements);
+                return elements;
+            },
+            reinitialize: function() {
+                console.log('🔄 Manual re-initialization...');
+                PREVIEW_CONFIG.initialized = false;
+                initializeWhenReady();
+            }
         }
     };
     

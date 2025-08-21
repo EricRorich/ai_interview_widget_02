@@ -267,6 +267,9 @@
             
             PREVIEW_CONFIG.initialized = true;
             
+            // Setup retry button for preview loading
+            setupRetryButton();
+            
             // Load the actual widget preview via AJAX
             loadPreview();
             
@@ -696,6 +699,11 @@
                 updateCanvas();
             }
             
+            // Reload widget preview with new settings
+            if (PREVIEW_CONFIG.initialized) {
+                loadPreview();
+            }
+            
             debugLog('✅ Preview updated');
             
         } catch (error) {
@@ -954,6 +962,58 @@
     }
 
     /**
+     * Setup retry button functionality
+     */
+    function setupRetryButton() {
+        const retryButton = document.getElementById('retry-preview');
+        if (retryButton) {
+            retryButton.addEventListener('click', function() {
+                debugLog('🔄 Manual retry requested via button');
+                loadPreview();
+            });
+            debugLog('✅ Retry button event listener attached');
+        } else {
+            debugLog('⚠️ Retry button #retry-preview not found');
+        }
+    }
+
+    /**
+     * Collect current settings from form controls
+     */
+    function collectCurrentSettings() {
+        const style = {};
+        const content = {};
+        
+        // Collect style settings from form controls
+        const styleInputs = document.querySelectorAll('input[name*="style"], select[name*="style"]');
+        styleInputs.forEach(input => {
+            const name = input.name.replace(/^.*\[(.+)\]$/, '$1');
+            if (input.type === 'checkbox') {
+                style[name] = input.checked;
+            } else {
+                style[name] = input.value;
+            }
+        });
+        
+        // Collect content settings from form controls
+        const contentInputs = document.querySelectorAll('input[name*="content"], textarea[name*="content"]');
+        contentInputs.forEach(input => {
+            const name = input.name.replace(/^.*\[(.+)\]$/, '$1');
+            content[name] = input.value;
+        });
+        
+        // If no form controls found, use defaults
+        if (Object.keys(style).length === 0 && customizerData?.defaults) {
+            debugLog('No form controls found, using defaults');
+            style.primary_color = customizerData.defaults.ai_primary_color || '#00cfff';
+            style.accent_color = customizerData.defaults.ai_accent_color || '#ff6b35';
+            style.background_color = customizerData.defaults.ai_background_color || '#0a0a1a';
+        }
+        
+        return { style, content };
+    }
+
+    /**
      * Load widget preview via AJAX
      * Renders the actual widget content in the preview area
      */
@@ -989,15 +1049,9 @@
         if (errorEl) errorEl.style.display = 'none';
         if (fallbackEl) fallbackEl.style.display = 'none';
         
-        // Collect current settings (simplified version for canvas mode)
-        const settings = {
-            style: {
-                primary_color: customizerData.defaults.ai_primary_color || '#00cfff',
-                accent_color: customizerData.defaults.ai_accent_color || '#ff6b35',
-                background_color: customizerData.defaults.ai_background_color || '#0a0a1a'
-            },
-            content: {}
-        };
+        // Collect current settings from form controls
+        const settings = collectCurrentSettings();
+        debugLog('📊 Settings collected:', settings);
         
         // Make AJAX request to render preview
         const formData = new FormData();

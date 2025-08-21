@@ -222,7 +222,7 @@ class AIInterviewWidget {
                 plugin_dir_url(__FILE__) . 'admin/js/aiw-live-preview.js',
                 array('jquery', 'wp-color-picker'),
                 '1.0.0',
-                true // Load in footer
+                false // Load in header to ensure availability before inline scripts
             );
             
             wp_enqueue_style(

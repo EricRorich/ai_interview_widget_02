@@ -213,88 +213,9 @@ defined('ABSPATH') or die('No script kiddies please!');
 }
 </style>
 
+<!-- Preview initialization is now handled by aiw-customizer-preview.js -->
 <script>
-jQuery(document).ready(function($) {
-    'use strict';
-    
-    console.log('🎨 AIW Preview Partial Script Loading...');
-    
-    // Enhanced preview system initialization with progressive fallback
-    let retryCount = 0;
-    const maxRetries = 20; // More attempts but faster
-    
-    function initializePreviewWithFallback() {
-        retryCount++;
-        
-        // Progressive retry delays: start fast, then slower
-        const getRetryDelay = (attempt) => {
-            if (attempt <= 5) return 50;    // First 5 attempts: 50ms (250ms total)
-            if (attempt <= 10) return 100;  // Next 5 attempts: 100ms (500ms more)
-            if (attempt <= 15) return 200;  // Next 5 attempts: 200ms (1000ms more)
-            return 500;                     // Final attempts: 500ms
-        };
-        
-        // Check if we've exceeded max retries
-        if (retryCount > maxRetries) {
-            console.error('❌ Preview initialization failed after maximum retries');
-            showDirectFallback('Preview initialization timed out. Your settings are being saved.');
-            return;
-        }
-        
-        // Check if live preview script is loaded
-        if (typeof window.aiwLivePreview === 'undefined') {
-            const delay = getRetryDelay(retryCount);
-            console.warn(`⚠️ aiwLivePreview not loaded yet, retrying in ${delay}ms... (attempt ${retryCount}/${maxRetries})`);
-            setTimeout(initializePreviewWithFallback, delay);
-            return;
-        }
-        
-        // Check if customizerData is available
-        if (typeof window.aiwCustomizerData === 'undefined') {
-            const delay = getRetryDelay(retryCount);
-            console.warn(`⚠️ aiwCustomizerData not available yet, retrying in ${delay}ms... (attempt ${retryCount}/${maxRetries})`);
-            setTimeout(initializePreviewWithFallback, delay);
-            return;
-        }
-        
-        console.log('✅ Preview dependencies ready, initializing...');
-        if (window.aiwLivePreview.initialize) {
-            window.aiwLivePreview.initialize();
-        } else {
-            console.error('❌ aiwLivePreview.initialize method not found');
-            // Use the showFallbackMessage function if available, otherwise fallback to direct DOM manipulation
-            if (window.aiwLivePreview && typeof window.aiwLivePreview.showFallbackMessage === 'function') {
-                window.aiwLivePreview.showFallbackMessage('Live preview system unavailable');
-            } else {
-                showDirectFallback('Live preview system unavailable. Your settings are being saved.');
-            }
-        }
-    }
-    
-    // Direct fallback function for when aiwLivePreview is not available
-    function showDirectFallback(message) {
-        $('#preview-loading').hide();
-        $('#preview-fallback').show();
-        const fallbackMessage = $('#preview-fallback p');
-        if (fallbackMessage.length) {
-            fallbackMessage.text(message);
-        }
-        console.log('🔄 Fallback message displayed:', message);
-    }
-    
-    // Setup retry button functionality
-    $(document).on('click', '#retry-preview', function() {
-        console.log('🔄 Manual retry requested...');
-        retryCount = 0; // Reset retry counter
-        $('#preview-fallback').hide();
-        $('#preview-error').hide();
-        $('#preview-loading').show();
-        
-        // Retry initialization after a short delay
-        setTimeout(initializePreviewWithFallback, 100);
-    });
-    
-    // Start initialization with retry mechanism
-    initializePreviewWithFallback();
-});
+// Legacy inline script removed - initialization moved to proper JavaScript file
+// This ensures proper loading order and dependency management
+console.log('📝 Customizer preview partial loaded - initialization handled by external script');
 </script>

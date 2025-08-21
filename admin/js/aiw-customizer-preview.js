@@ -1264,13 +1264,105 @@
     }
 
     /**
+     * Initialize live preview with fallback mechanism
+     */
+    function initializePreviewWithFallback() {
+        let retryCount = 0;
+        const maxRetries = 20;
+        
+        function attemptInitialization() {
+            retryCount++;
+            
+            // Progressive retry delays: start fast, then slower
+            const getRetryDelay = (attempt) => {
+                if (attempt <= 5) return 50;    // First 5 attempts: 50ms (250ms total)
+                if (attempt <= 10) return 100;  // Next 5 attempts: 100ms (500ms more)
+                if (attempt <= 15) return 200;  // Next 5 attempts: 200ms (1000ms more)
+                return 500;                     // Final attempts: 500ms
+            };
+            
+            // Check if we've exceeded max retries
+            if (retryCount > maxRetries) {
+                errorLog('❌ Preview initialization failed after maximum retries');
+                showDirectFallback('Preview initialization timed out. Your settings are being saved.');
+                return;
+            }
+            
+            // Check if live preview script is loaded
+            if (typeof window.aiwLivePreview === 'undefined') {
+                const delay = getRetryDelay(retryCount);
+                console.warn(`⚠️ aiwLivePreview not loaded yet, retrying in ${delay}ms... (attempt ${retryCount}/${maxRetries})`);
+                setTimeout(attemptInitialization, delay);
+                return;
+            }
+            
+            // Check if customizerData is available
+            if (typeof window.aiwCustomizerData === 'undefined') {
+                const delay = getRetryDelay(retryCount);
+                console.warn(`⚠️ aiwCustomizerData not available yet, retrying in ${delay}ms... (attempt ${retryCount}/${maxRetries})`);
+                setTimeout(attemptInitialization, delay);
+                return;
+            }
+            
+            console.log('✅ Preview dependencies ready, initializing...');
+            if (window.aiwLivePreview.initialize) {
+                window.aiwLivePreview.initialize();
+            } else {
+                errorLog('❌ aiwLivePreview.initialize method not found');
+                // Use the showFallbackMessage function if available, otherwise fallback to direct DOM manipulation
+                if (window.aiwLivePreview && typeof window.aiwLivePreview.showFallbackMessage === 'function') {
+                    window.aiwLivePreview.showFallbackMessage('Live preview system unavailable');
+                } else {
+                    showDirectFallback('Live preview system unavailable. Your settings are being saved.');
+                }
+            }
+        }
+        
+        // Start the initialization attempt
+        attemptInitialization();
+    }
+    
+    /**
+     * Direct fallback function for when aiwLivePreview is not available
+     */
+    function showDirectFallback(message) {
+        const $ = window.jQuery;
+        if ($) {
+            $('#preview-loading').hide();
+            $('#preview-fallback').show();
+            const fallbackMessage = $('#preview-fallback p');
+            if (fallbackMessage.length) {
+                fallbackMessage.text(message);
+            }
+        }
+        console.log('🔄 Fallback message displayed:', message);
+    }
+
+    /**
      * Initialize when DOM is ready
      */
     onDOMReady(function() {
         debugLog('🚀 DOM ready, starting preview system initialization...');
         
-        // Initialize preview system
+        // Try to initialize aiwLivePreview first (for compatibility)
+        initializePreviewWithFallback();
+        
+        // Also initialize the canvas-based system as backup
         initializePreview();
+        
+        // Setup retry button functionality for fallback UI
+        const $ = window.jQuery;
+        if ($) {
+            $(document).on('click', '#retry-preview', function() {
+                console.log('🔄 Manual retry requested...');
+                $('#preview-fallback').hide();
+                $('#preview-error').hide();
+                $('#preview-loading').show();
+                
+                // Retry initialization after a short delay
+                setTimeout(initializePreviewWithFallback, 100);
+            });
+        }
         
         // Setup cleanup on page unload
         window.addEventListener('beforeunload', cleanup);

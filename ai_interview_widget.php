@@ -9528,13 +9528,66 @@ public function register_customizer_controls($wp_customize) {
 
 // Enqueue Customizer live preview script
 public function enqueue_customizer_preview_script() {
+    // Enqueue the main live preview script
     wp_enqueue_script(
-        'ai-interview-customizer-preview',
-        plugin_dir_url(__FILE__) . 'customizer-preview.js',
+        'aiw-live-preview-js',
+        plugin_dir_url(__FILE__) . 'admin/js/aiw-live-preview.js',
         array('jquery', 'customize-preview'),
         '1.0.0',
-        true
+        false // Load in header to ensure availability before inline scripts
     );
+    
+    // Enqueue the customizer preview script
+    wp_enqueue_script(
+        'aiw-customizer-preview-js',
+        plugin_dir_url(__FILE__) . 'admin/js/aiw-customizer-preview.js',
+        array('jquery', 'customize-preview', 'aiw-live-preview-js'),
+        '1.0.1',
+        false // Load in header
+    );
+    
+    // Enqueue preview styles
+    wp_enqueue_style(
+        'aiw-live-preview-css',
+        plugin_dir_url(__FILE__) . 'admin/css/aiw-live-preview.css',
+        array(),
+        '1.0.0'
+    );
+    
+    // Localize script with customizer data (same as Enhanced Widget Customizer)
+    wp_localize_script('aiw-live-preview-js', 'aiwCustomizerData', array(
+        'defaults' => array(
+            'ai_primary_color' => '#00cfff',
+            'ai_accent_color' => '#ff6b35',
+            'ai_background_color' => '#0a0a1a',
+            'ai_text_color' => '#ffffff',
+            'ai_border_radius' => '8px',
+            'ai_border_width' => '2px',
+            'ai_shadow_intensity' => '20px',
+            'ai_play_button_size' => '80px',
+            'ai_play_button_color' => '#00cfff',
+            'ai_play_button_icon_color' => '#ffffff',
+            'ai_viz_bar_count' => '12',
+            'ai_viz_gap' => '3px',
+            'ai_viz_color' => '#00cfff',
+            'ai_viz_glow' => '10px',
+            'ai_viz_speed' => '1.0',
+            'ai_chat_bubble_color' => '#1e293b',
+            'ai_chat_bubble_radius' => '12px',
+            'ai_chat_avatar_size' => '32px'
+        ),
+        'debug' => defined('WP_DEBUG') && WP_DEBUG,
+        'nonce' => wp_create_nonce('aiw_live_preview'),
+        'ajaxurl' => admin_url('admin-ajax.php'),
+        'version' => '1.0.0',
+        'selectors' => array(
+            'container' => '#aiw-live-preview',
+            'playButton' => '.aiw-preview-playbutton',
+            'audioVis' => '.aiw-preview-audiovis',
+            'canvas' => '#aiw-preview-canvas',
+            'chat' => '#aiw-preview-chat'
+        )
+    ));
 }
 
 // Sanitization functions for Customizer controls

@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Interview Widget - Greetings Audio Test</title>
+    <link rel="stylesheet" href="ai-interview-widget.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+        
+        .test-header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        .test-info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            color: white;
+            max-width: 800px;
+            margin: 0 auto 30px auto;
+        }
+        
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .feature-list li {
+            margin: 10px 0;
+            padding: 8px 0;
+            border-left: 3px solid #00cfff;
+            padding-left: 15px;
+        }
+        
+        .feature-list li:before {
+            content: "✓";
+            color: #00ff88;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-header">
+        <h1>AI Interview Widget - Enhanced Greetings Audio</h1>
+        <p>Testing the new features: 2-second delay, centered positioning, and admin controls</p>
+    </div>
+    
+    <div class="test-info">
+        <h3>🎯 Implemented Features:</h3>
+        <ul class="feature-list">
+            <li><strong>Two-Second Loading Delay:</strong> Added automatic 2-second delay before greeting audio playback starts</li>
+            <li><strong>Centered Widget Positioning:</strong> Widget now centers horizontally on the page with max-width and auto margins</li>
+            <li><strong>Enhanced Admin Controls:</strong> New "Greeting Audio Playback Configuration" section in admin</li>
+            <li><strong>Audio Visualization Integration:</strong> Existing canvas-based soundbar visualization works with greeting audio</li>
+            <li><strong>Multi-Language Support:</strong> Existing infrastructure supports multiple audio files for different languages</li>
+        </ul>
+    </div>
+
+    <!-- This is where the actual widget would be rendered via shortcode [ai_interview_widget] -->
+    <div class="ai-interview-container">
+        <div class="ai-interview-inner-container">
+            
+            <!-- Audio visualization canvas -->
+            <div id="canvasContainer" class="canvas-container">
+                <canvas id="soundbar" width="800" height="500"></canvas>
+                <canvas id="audio-visualizer" width="800" height="500" style="display:none;"></canvas>
+                
+                <!-- Separated Play Button -->
+                <div id="playButtonContainer" class="play-button-container">
+                    <button id="playButton" class="play-button" aria-label="Play Audio Introduction">
+                        <span class="play-icon">▶</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Hidden audio element for greeting -->
+            <audio id="aiEricGreeting" controls preload="auto" style="visibility:hidden; margin-top:16px; display:block;">
+                <source src="greeting_en.mp3" type="audio/mpeg">
+            </audio>
+            
+            <!-- Controls (initially hidden, shown after audio) -->
+            <div class="ai-interview-controls" id="aiwControls">
+                <button id="pauseBtn" class="ai-interview-btn">⏸️ Pause</button>
+                <button id="skipBtn" class="ai-interview-btn">⏩ Skip</button>
+            </div>
+            
+            <!-- Chat interface (shown after audio or when skipped) -->
+            <div class="chat-interface" id="aiwChatInterface" style="display: none;">
+                <div class="chat-box" id="aiwChatBox">
+                    <div class="chat-message ai-message">
+                        <div class="message-content">
+                            Hi! I'm Eric's AI assistant. How can I help you learn more about his experience?
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="chat-input-container">
+                    <input type="text" id="aiwChatInput" placeholder="Ask me anything about Eric..." aria-label="Chat input">
+                    <button id="aiwSendBtn" class="send-btn" aria-label="Send message">
+                        <span>➤</span>
+                    </button>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+    <script>
+        // Simplified test version of the widget functionality
+        // This demonstrates the new 2-second delay feature
+        
+        const playButton = document.getElementById('playButton');
+        const audio = document.getElementById('aiEricGreeting');
+        const chatInterface = document.getElementById('aiwChatInterface');
+        const controls = document.getElementById('aiwControls');
+        
+        // Mock widget data for testing
+        const widgetData = {
+            greeting_en: 'greeting_en.mp3',
+            greeting_de: 'greeting_de.mp3',
+            audio_files_available: true
+        };
+
+        function debug(message, ...args) {
+            console.log('[AI Widget Debug]', message, ...args);
+        }
+
+        function showChatInterface() {
+            debug('Showing chat interface');
+            chatInterface.style.display = 'block';
+            controls.style.display = 'flex';
+            if (playButton) {
+                playButton.style.display = 'none';
+            }
+        }
+
+        // Simulate the enhanced play button click with 2-second delay
+        if (playButton) {
+            playButton.addEventListener('click', function() {
+                debug('Play button clicked - starting 2-second loading delay...');
+                
+                // Disable button during delay
+                playButton.disabled = true;
+                playButton.style.opacity = '0.6';
+                playButton.textContent = 'Loading...';
+                
+                // Implement 2-second delay before starting playback
+                const greetingLoadDelay = 2000; // Required 2-second delay for greetings audio
+                
+                setTimeout(() => {
+                    debug('2-second delay complete, attempting audio playback...');
+                    
+                    if (audio) {
+                        audio.style.visibility = 'visible';
+                        audio.currentTime = 0;
+                        
+                        // Simulate audio playback (since we don't have actual audio files in test)
+                        debug('Audio playback started successfully after loading delay');
+                        
+                        // Show controls after delay
+                        setTimeout(() => {
+                            controls.style.opacity = '1';
+                            controls.style.pointerEvents = 'auto';
+                        }, 500);
+                        
+                        // Simulate audio ending after 5 seconds for demo
+                        setTimeout(() => {
+                            debug('Simulated audio playback complete, showing chat interface');
+                            showChatInterface();
+                        }, 5000);
+                        
+                    } else {
+                        debug('Audio element not found, showing chat interface');
+                        showChatInterface();
+                    }
+                }, greetingLoadDelay);
+            });
+        }
+
+        // Skip button functionality
+        const skipBtn = document.getElementById('skipBtn');
+        if (skipBtn) {
+            skipBtn.addEventListener('click', function() {
+                debug('Skip button clicked');
+                if (audio) {
+                    audio.pause();
+                }
+                showChatInterface();
+            });
+        }
+
+        // Pause button functionality
+        const pauseBtn = document.getElementById('pauseBtn');
+        if (pauseBtn) {
+            pauseBtn.addEventListener('click', function() {
+                debug('Pause button clicked');
+                if (audio) {
+                    if (audio.paused) {
+                        audio.play();
+                        pauseBtn.textContent = '⏸️ Pause';
+                    } else {
+                        audio.pause();
+                        pauseBtn.textContent = '▶️ Play';
+                    }
+                }
+            });
+        }
+
+        // Chat input functionality  
+        const chatInput = document.getElementById('aiwChatInput');
+        const sendBtn = document.getElementById('aiwSendBtn');
+        
+        function sendMessage() {
+            const message = chatInput.value.trim();
+            if (message) {
+                debug('Sending message:', message);
+                
+                // Add user message to chat
+                const chatBox = document.getElementById('aiwChatBox');
+                const userMsg = document.createElement('div');
+                userMsg.className = 'chat-message user-message';
+                userMsg.innerHTML = `<div class="message-content">${message}</div>`;
+                chatBox.appendChild(userMsg);
+                
+                // Clear input
+                chatInput.value = '';
+                
+                // Simulate AI response
+                setTimeout(() => {
+                    const aiMsg = document.createElement('div');
+                    aiMsg.className = 'chat-message ai-message';
+                    aiMsg.innerHTML = `<div class="message-content">Thanks for your question about "${message}". This is a demo response showing the enhanced widget functionality.</div>`;
+                    chatBox.appendChild(aiMsg);
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                }, 1000);
+            }
+        }
+
+        if (sendBtn) {
+            sendBtn.addEventListener('click', sendMessage);
+        }
+        
+        if (chatInput) {
+            chatInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+        }
+
+        debug('Test widget initialized with enhanced greetings audio features');
+    </script>
+</body>
+</html>

@@ -53,12 +53,13 @@
 }
 
 .ai-interview-container {
-    margin: 20px 0 !important;
+    margin: 20px auto !important;
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important;
     justify-content: center !important;
     min-height: 500px !important;
+    max-width: 900px !important;
     background: var(--container-background, linear-gradient(135deg, #0f0c29, #302b63, #24243e)) !important;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
     color: white !important;

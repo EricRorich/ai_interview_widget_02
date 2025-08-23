@@ -1997,26 +1997,31 @@ document.addEventListener('DOMContentLoaded', function() {
                     }, 200);
                 }
 
+                // Implement 2-second delay before starting playback to ensure proper loading
+                const greetingLoadDelay = 2000; // Required 2-second delay for greetings audio
                 const fadeDuration = isMobile ? 1500 : isTablet ? 1800 : 2000;
-                drawRestAudiobarFadeIn(async () => {
-                    try {
-                        setupAudioContext();
-                        
-                        // Resume audio context if needed (critical for initial play)
-                        if (audioCtx && audioCtx.state === 'suspended') {
-                            try {
-                                await audioCtx.resume();
-                                debug("AudioContext resumed for initial audio playback");
-                            } catch (e) {
-                                debug("Failed to resume AudioContext:", e);
+                
+                debug("Starting 2-second greeting audio loading delay...");
+                setTimeout(() => {
+                    drawRestAudiobarFadeIn(async () => {
+                        try {
+                            setupAudioContext();
+                            
+                            // Resume audio context if needed (critical for initial play)
+                            if (audioCtx && audioCtx.state === 'suspended') {
+                                try {
+                                    await audioCtx.resume();
+                                    debug("AudioContext resumed for initial audio playback");
+                                } catch (e) {
+                                    debug("Failed to resume AudioContext:", e);
+                                }
                             }
-                        }
-                        
-                        audio.currentTime = 0;
+                            
+                            audio.currentTime = 0;
 
-                        debug("Attempting to play audio:", currentAudioSrc);
-                        audio.play().then(() => {
-                            debug("Audio playback started successfully");
+                            debug("Attempting to play audio after loading delay:", currentAudioSrc);
+                            audio.play().then(() => {
+                            debug("Audio playback started successfully after loading delay");
                             // Start visualization only after audio is actually playing
                             audioVisualizationActive = true;
                             drawSoundbar();
@@ -2033,6 +2038,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         showChatInterface();
                     }
                 }, fadeDuration);
+                }, greetingLoadDelay);
             } else {
                 debug("Audio still not ready after loading attempt, showing chat interface");
                 showChatInterface();

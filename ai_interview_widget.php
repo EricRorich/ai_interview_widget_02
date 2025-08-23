@@ -4483,6 +4483,61 @@ class AIInterviewWidget {
                 </div>
             </div>
 
+            <!-- Greeting Audio Playback Configuration -->
+            <div id="greeting_audio_config_section" class="control-section" style="margin-bottom: 25px; padding: 15px; background: #e7f3ff; border-radius: 5px; border-left: 4px solid #0073aa;">
+                <h3 style="margin: 0 0 15px 0; color: #555;">⚙️ Greeting Audio Playback Configuration</h3>
+                <p style="margin: 0 0 15px 0; color: #666; font-size: 14px;">Configure how greeting audio behaves and displays to users.</p>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+                    <!-- Audio Playback Settings -->
+                    <div class="config-group">
+                        <h4 style="margin: 0 0 10px 0; color: #333; font-size: 16px;">🔊 Audio Playback Settings</h4>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" name="ai_interview_widget_disable_greeting_audio" value="1" <?php checked(get_option('ai_interview_widget_disable_greeting_audio', false)); ?>>
+                                <span style="font-weight: 500;">Disable Greeting Audio</span>
+                            </label>
+                            <p style="margin: 5px 0 0 26px; color: #666; font-size: 13px;">When enabled, greeting audio will not play automatically when the widget loads.</p>
+                        </div>
+
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">⏱️ Loading Delay</label>
+                            <p style="margin: 0 0 8px 0; color: #666; font-size: 13px;">The widget implements a 2-second delay before starting audio playback to ensure proper loading.</p>
+                            <div style="padding: 8px; background: #f0f8ff; border: 1px solid #b3d9ff; border-radius: 3px;">
+                                <span style="color: #0066cc; font-size: 12px;">✓ 2-second delay is automatically applied for optimal user experience</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Audio Visualization Settings -->
+                    <div class="config-group">
+                        <h4 style="margin: 0 0 10px 0; color: #333; font-size: 16px;">🎨 Audio Visualization Settings</h4>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" name="ai_interview_widget_disable_audio_visualization" value="1" <?php checked(get_option('ai_interview_widget_disable_audio_visualization', false)); ?>>
+                                <span style="font-weight: 500;">Disable Audio Visualization</span>
+                            </label>
+                            <p style="margin: 5px 0 0 26px; color: #666; font-size: 13px;">When enabled, the canvas audio visualization will be hidden, showing only the chat interface.</p>
+                        </div>
+
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" name="ai_interview_widget_chatbox_only_mode" value="1" <?php checked(get_option('ai_interview_widget_chatbox_only_mode', false)); ?>>
+                                <span style="font-weight: 500;">Chatbox-Only Mode</span>
+                            </label>
+                            <p style="margin: 5px 0 0 26px; color: #666; font-size: 13px;">Enable chatbox-only mode with no audio features or visualization canvas.</p>
+                        </div>
+
+                        <div style="padding: 10px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px;">
+                            <p style="margin: 0; color: #555; font-size: 13px;"><strong>💡 Visualization Info:</strong></p>
+                            <p style="margin: 5px 0 0 0; color: #666; font-size: 12px;">The audio visualization uses canvas-based soundbar visualization that responds to audio frequency data, creating an engaging visual experience during greeting playback.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Current Audio Status -->
             <div id="audio_status_section" class="control-section" style="margin-bottom: 25px; padding: 15px; background: #f8f9fa; border-radius: 5px; border-left: 4px solid #6c757d;">
                 <h3 style="margin: 0 0 15px 0; color: #555;">📊 Current Audio Status</h3>

@@ -194,23 +194,6 @@ class Assets {
     }
 
     /**
-     * Get asset version for cache busting
-     * 
-     * @param string $asset_path Relative path to asset
-     * @return string Version string
-     */
-    private function get_asset_version($asset_path) {
-        $file_path = $this->plugin_dir . 'assets/' . $asset_path;
-        
-        // Use file modification time in development, plugin version in production
-        if (defined('WP_DEBUG') && WP_DEBUG && file_exists($file_path)) {
-            return filemtime($file_path);
-        }
-        
-        return $this->version;
-    }
-
-    /**
      * Get manifest-based asset URL
      * 
      * @param string $asset_name Asset name from manifest

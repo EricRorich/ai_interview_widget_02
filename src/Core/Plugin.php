@@ -14,6 +14,8 @@ use EricRorich\AIInterviewWidget\Admin\AdminService;
 use EricRorich\AIInterviewWidget\Core\Assets;
 use EricRorich\AIInterviewWidget\Setup\Requirements;
 use EricRorich\AIInterviewWidget\Widgets\ElementorService;
+use EricRorich\AIInterviewWidget\Setup\UpgradeServiceProvider;
+use EricRorich\AIInterviewWidget\Admin\AdminServiceProvider;
 
 /**
  * Main Plugin class - Service Container and Bootstrap
@@ -44,6 +46,13 @@ class Plugin {
      * @var array
      */
     private $services = [];
+
+    /**
+     * Dependency injection container
+     * 
+     * @var Container
+     */
+    private $container;
 
     /**
      * Plugin initialized flag
@@ -105,17 +114,52 @@ class Plugin {
      * @return void
      */
     private function register_services() {
-        // Core services
-        $this->services['assets'] = new Assets();
+        // Initialize container
+        $container = new Container();
         
-        // Admin services (only in admin)
+        // Register core services
+        $container->singleton('assets', function() {
+            return new Assets();
+        });
+        
+        // Register service providers
+        $providers = apply_filters('ai_interview_widget_service_providers', [
+            new I18nServiceProvider(),
+            new UpgradeServiceProvider(),
+            new \EricRorich\AIInterviewWidget\Frontend\FrontendServiceProvider(),
+        ]);
+        
+        // Add admin provider only in admin
         if (is_admin()) {
-            $this->services['admin'] = new AdminService();
+            $providers[] = new AdminServiceProvider();
         }
-
-        // Elementor service (when Elementor is active)
+        
+        // Add Elementor provider when available
         if (did_action('elementor/loaded') || class_exists('\Elementor\Plugin')) {
-            $this->services['elementor'] = new ElementorService();
+            $providers[] = new \EricRorich\AIInterviewWidget\Integrations\Elementor\ElementorServiceProvider();
+        }
+        
+        // Register all providers
+        foreach ($providers as $provider) {
+            $provider->register($container);
+        }
+        
+        // Boot all providers
+        foreach ($providers as $provider) {
+            $provider->boot($container);
+        }
+        
+        $this->container = $container;
+        
+        // Legacy services for backward compatibility
+        $this->services['assets'] = $container->make('assets');
+        
+        if (is_admin() && $container->has('admin.service')) {
+            $this->services['admin'] = $container->make('admin.service');
+        }
+        
+        if ($container->has('elementor.widget_manager')) {
+            $this->services['elementor'] = $container->make('elementor.widget_manager');
         }
     }
 
@@ -143,6 +187,24 @@ class Plugin {
     }
 
     /**
+     * Get the dependency injection container
+     * 
+     * @return Container
+     */
+    public function get_container() {
+        return $this->container;
+    }
+
+    /**
+     * Check if plugin is initialized
+     * 
+     * @return bool
+     */
+    public function is_initialized() {
+        return $this->initialized;
+    }
+
+    /**
      * Show admin notice
      * 
      * @param string $message Notice message
@@ -166,14 +228,5 @@ class Plugin {
      */
     public function get_version() {
         return self::VERSION;
-    }
-
-    /**
-     * Check if plugin is initialized
-     * 
-     * @return bool
-     */
-    public function is_initialized() {
-        return $this->initialized;
     }
 }

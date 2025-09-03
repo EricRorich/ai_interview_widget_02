@@ -41,6 +41,13 @@ class Assets {
     private $plugin_dir;
 
     /**
+     * Asset manifest data
+     * 
+     * @var array|null
+     */
+    private $manifest = null;
+
+    /**
      * Constructor
      */
     public function __construct() {
@@ -201,6 +208,111 @@ class Assets {
         }
         
         return $this->version;
+    }
+
+    /**
+     * Get manifest-based asset URL
+     * 
+     * @param string $asset_name Asset name from manifest
+     * @return string Asset URL
+     */
+    public function get_manifest_asset_url(string $asset_name): string {
+        $manifest = $this->get_manifest();
+        
+        if (isset($manifest[$asset_name])) {
+            return $this->plugin_url . 'assets/build/' . $manifest[$asset_name];
+        }
+        
+        // Fallback to src files if manifest not available
+        return $this->get_fallback_asset_url($asset_name);
+    }
+
+    /**
+     * Get asset version from manifest or fallback
+     * 
+     * @param string $asset_name Asset name
+     * @return string Version string
+     */
+    public function get_asset_version(string $asset_name): string {
+        $manifest = $this->get_manifest();
+        
+        if (isset($manifest[$asset_name])) {
+            // Extract hash from filename if present
+            $filename = $manifest[$asset_name];
+            if (preg_match('/\.([a-f0-9]{8,})\./', $filename, $matches)) {
+                return $matches[1];
+            }
+        }
+        
+        // Fallback to file modification time or plugin version
+        $fallback_path = $this->get_fallback_asset_path($asset_name);
+        if ($fallback_path && file_exists($fallback_path)) {
+            return defined('WP_DEBUG') && WP_DEBUG ? filemtime($fallback_path) : $this->version;
+        }
+        
+        return $this->version;
+    }
+
+    /**
+     * Get asset manifest
+     * 
+     * @return array Manifest data
+     */
+    private function get_manifest(): array {
+        if ($this->manifest === null) {
+            $manifest_path = $this->plugin_dir . 'assets/build/manifest.json';
+            
+            if (file_exists($manifest_path)) {
+                $manifest_content = file_get_contents($manifest_path);
+                $this->manifest = json_decode($manifest_content, true) ?: [];
+            } else {
+                $this->manifest = [];
+            }
+        }
+        
+        return $this->manifest;
+    }
+
+    /**
+     * Get fallback asset URL when manifest not available
+     * 
+     * @param string $asset_name Asset name
+     * @return string Fallback URL
+     */
+    private function get_fallback_asset_url(string $asset_name): string {
+        $fallback_map = [
+            'frontend.css' => 'src/css/frontend.css',
+            'frontend.js' => 'src/js/frontend.js',
+            'admin.css' => 'src/css/admin.css', 
+            'admin.js' => 'src/js/admin.js',
+            'elementor-widgets.css' => 'src/css/elementor-widgets.css',
+            'elementor-widgets.js' => 'src/js/elementor-widgets.js',
+        ];
+        
+        $fallback_path = $fallback_map[$asset_name] ?? "src/{$asset_name}";
+        return $this->plugin_url . 'assets/' . $fallback_path;
+    }
+
+    /**
+     * Get fallback asset file path
+     * 
+     * @param string $asset_name Asset name
+     * @return string|null Fallback file path or null
+     */
+    private function get_fallback_asset_path(string $asset_name): ?string {
+        $fallback_map = [
+            'frontend.css' => 'src/css/frontend.css',
+            'frontend.js' => 'src/js/frontend.js', 
+            'admin.css' => 'src/css/admin.css',
+            'admin.js' => 'src/js/admin.js',
+            'elementor-widgets.css' => 'src/css/elementor-widgets.css',
+            'elementor-widgets.js' => 'src/js/elementor-widgets.js',
+        ];
+        
+        $fallback_path = $fallback_map[$asset_name] ?? "src/{$asset_name}";
+        $full_path = $this->plugin_dir . 'assets/' . $fallback_path;
+        
+        return file_exists($full_path) ? $full_path : null;
     }
 
     /**

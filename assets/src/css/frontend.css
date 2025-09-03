@@ -1,0 +1,416 @@
+/**
+ * Frontend Styles
+ * 
+ * Main CSS for frontend widget functionality.
+ * 
+ * @package AIInterviewWidget
+ * @since 2.0.0
+ */
+
+@import 'normalize.css';
+@import '_variables.scss';
+
+/* Base Widget Styles */
+.aiw-widget {
+  font-family: var(--aiw-font-family);
+  font-size: var(--aiw-font-size-md);
+  line-height: 1.5;
+  color: var(--aiw-text-primary);
+  background: var(--aiw-bg-white);
+  border: 1px solid var(--aiw-border-light);
+  border-radius: var(--aiw-radius-lg);
+  box-shadow: var(--aiw-shadow-md);
+  overflow: hidden;
+  max-width: 100%;
+  
+  * {
+    box-sizing: border-box;
+  }
+}
+
+/* Widget Header */
+.aiw-header {
+  padding: var(--aiw-spacing-lg);
+  border-bottom: 1px solid var(--aiw-border-light);
+  background: var(--aiw-bg-light);
+}
+
+.aiw-title {
+  margin: 0 0 var(--aiw-spacing-sm) 0;
+  font-size: var(--aiw-font-size-xl);
+  font-weight: 600;
+  color: var(--aiw-text-primary);
+}
+
+.aiw-subtitle {
+  margin: 0;
+  font-size: var(--aiw-font-size-sm);
+  color: var(--aiw-text-secondary);
+}
+
+/* Chat Container */
+.aiw-chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 400px;
+  min-height: 300px;
+}
+
+.aiw-messages {
+  flex: 1;
+  padding: var(--aiw-spacing-md);
+  overflow-y: auto;
+  background: var(--aiw-bg-white);
+}
+
+/* Messages */
+.aiw-message {
+  margin-bottom: var(--aiw-spacing-md);
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all var(--aiw-transition-normal);
+  
+  &.aiw-message-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.aiw-message-content {
+  padding: var(--aiw-spacing-sm) var(--aiw-spacing-md);
+  border-radius: var(--aiw-radius-md);
+  max-width: 80%;
+  word-wrap: break-word;
+}
+
+.aiw-message-time {
+  font-size: var(--aiw-font-size-xs);
+  color: var(--aiw-text-light);
+  margin-top: var(--aiw-spacing-xs);
+}
+
+/* User Messages */
+.aiw-message-user {
+  text-align: right;
+  
+  .aiw-message-content {
+    background: var(--aiw-primary-color);
+    color: var(--aiw-text-white);
+    margin-left: auto;
+  }
+}
+
+/* Assistant Messages */
+.aiw-message-assistant {
+  text-align: left;
+  
+  .aiw-message-content {
+    background: var(--aiw-secondary-color);
+    color: var(--aiw-text-primary);
+    margin-right: auto;
+  }
+}
+
+/* Error Messages */
+.aiw-message-error {
+  text-align: center;
+  
+  .aiw-message-content {
+    background: var(--aiw-error);
+    color: var(--aiw-text-white);
+    margin: 0 auto;
+  }
+}
+
+/* Typing Indicator */
+.aiw-typing-indicator {
+  .aiw-message-content {
+    padding: var(--aiw-spacing-md);
+  }
+}
+
+.aiw-typing-dots {
+  display: flex;
+  gap: var(--aiw-spacing-xs);
+  
+  span {
+    width: 8px;
+    height: 8px;
+    background: var(--aiw-text-secondary);
+    border-radius: 50%;
+    animation: aiw-typing 1.4s infinite ease-in-out;
+    
+    &:nth-child(1) { animation-delay: -0.32s; }
+    &:nth-child(2) { animation-delay: -0.16s; }
+  }
+}
+
+@keyframes aiw-typing {
+  0%, 80%, 100% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Input Container */
+.aiw-input-container {
+  display: flex;
+  padding: var(--aiw-spacing-md);
+  border-top: 1px solid var(--aiw-border-light);
+  background: var(--aiw-bg-light);
+  gap: var(--aiw-spacing-sm);
+}
+
+.aiw-message-input {
+  flex: 1;
+  padding: var(--aiw-spacing-sm) var(--aiw-spacing-md);
+  border: 1px solid var(--aiw-border-medium);
+  border-radius: var(--aiw-radius-md);
+  font-size: var(--aiw-font-size-md);
+  font-family: inherit;
+  outline: none;
+  transition: border-color var(--aiw-transition-fast);
+  
+  &:focus {
+    border-color: var(--aiw-primary-color);
+    box-shadow: 0 0 0 2px var(--aiw-primary-light);
+  }
+  
+  &::placeholder {
+    color: var(--aiw-text-light);
+  }
+  
+  &:disabled {
+    background: var(--aiw-bg-light);
+    cursor: not-allowed;
+  }
+}
+
+.aiw-send-button {
+  padding: var(--aiw-spacing-sm) var(--aiw-spacing-md);
+  background: var(--aiw-primary-color);
+  color: var(--aiw-text-white);
+  border: none;
+  border-radius: var(--aiw-radius-md);
+  font-size: var(--aiw-font-size-md);
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color var(--aiw-transition-fast);
+  
+  &:hover:not(:disabled) {
+    background: var(--aiw-primary-hover);
+  }
+  
+  &:disabled {
+    background: var(--aiw-text-light);
+    cursor: not-allowed;
+  }
+}
+
+/* Voice Toggle */
+.aiw-voice-toggle {
+  padding: var(--aiw-spacing-xs) var(--aiw-spacing-sm);
+  background: transparent;
+  color: var(--aiw-text-secondary);
+  border: 1px solid var(--aiw-border-medium);
+  border-radius: var(--aiw-radius-sm);
+  font-size: var(--aiw-font-size-sm);
+  cursor: pointer;
+  transition: all var(--aiw-transition-fast);
+  
+  &:hover {
+    background: var(--aiw-bg-light);
+    color: var(--aiw-text-primary);
+  }
+  
+  .aiw-voice-enabled & {
+    background: var(--aiw-primary-color);
+    color: var(--aiw-text-white);
+    border-color: var(--aiw-primary-color);
+  }
+}
+
+/* Animations */
+.aiw-animate {
+  &.aiw-animate-fadeIn {
+    animation: aiw-fadeIn 0.5s ease-out;
+  }
+  
+  &.aiw-animate-slideIn {
+    animation: aiw-slideIn 0.5s ease-out;
+  }
+  
+  &.aiw-animate-bounceIn {
+    animation: aiw-bounceIn 0.8s ease-out;
+  }
+}
+
+@keyframes aiw-fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes aiw-slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes aiw-bounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .aiw-widget {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+  
+  .aiw-chat-container {
+    height: 350px;
+  }
+  
+  .aiw-message-content {
+    max-width: 90%;
+  }
+  
+  .aiw-input-container {
+    flex-direction: column;
+    gap: var(--aiw-spacing-sm);
+  }
+  
+  .aiw-send-button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .aiw-header {
+    padding: var(--aiw-spacing-md);
+  }
+  
+  .aiw-title {
+    font-size: var(--aiw-font-size-lg);
+  }
+  
+  .aiw-chat-container {
+    height: 300px;
+  }
+  
+  .aiw-messages {
+    padding: var(--aiw-spacing-sm);
+  }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .aiw-widget {
+    background: var(--aiw-bg-dark);
+    border-color: #444444;
+    color: var(--aiw-text-white);
+  }
+  
+  .aiw-header {
+    background: #34495e;
+    border-color: #444444;
+  }
+  
+  .aiw-title {
+    color: var(--aiw-text-white);
+  }
+  
+  .aiw-subtitle {
+    color: #bdc3c7;
+  }
+  
+  .aiw-messages {
+    background: var(--aiw-bg-dark);
+  }
+  
+  .aiw-message-assistant .aiw-message-content {
+    background: #34495e;
+    color: var(--aiw-text-white);
+  }
+  
+  .aiw-input-container {
+    background: #34495e;
+    border-color: #444444;
+  }
+  
+  .aiw-message-input {
+    background: var(--aiw-bg-dark);
+    border-color: #444444;
+    color: var(--aiw-text-white);
+    
+    &::placeholder {
+      color: #7f8c8d;
+    }
+  }
+}
+
+/* Error State */
+.aiw-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--aiw-spacing-lg);
+  background: #ffeaea;
+  color: var(--aiw-error);
+  border: 1px solid #f5c6cb;
+  border-radius: var(--aiw-radius-md);
+  font-size: var(--aiw-font-size-sm);
+}
+
+/* Loading State */
+.aiw-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--aiw-spacing-lg);
+  
+  &::after {
+    content: '';
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--aiw-border-light);
+    border-top: 2px solid var(--aiw-primary-color);
+    border-radius: 50%;
+    animation: aiw-spin 1s linear infinite;
+  }
+}
+
+@keyframes aiw-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

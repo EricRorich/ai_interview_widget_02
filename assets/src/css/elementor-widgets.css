@@ -1,0 +1,387 @@
+/**
+ * Elementor Widgets Styles
+ * 
+ * CSS for Elementor widget functionality.
+ * 
+ * @package AIInterviewWidget
+ * @since 2.0.0
+ */
+
+@import '_variables.scss';
+
+/* Base Elementor Widget Styles */
+.aiw-interview-widget-elementor,
+.aiw-interview-list-widget-elementor {
+  font-family: var(--aiw-font-family);
+  
+  .aiw-widget {
+    border: 1px solid var(--aiw-border-light);
+    border-radius: var(--aiw-radius-lg);
+    overflow: hidden;
+    background: var(--aiw-bg-white);
+    box-shadow: var(--aiw-shadow-md);
+  }
+}
+
+/* Interview Widget Specific */
+.aiw-interview-widget-elementor {
+  .aiw-chat-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 400px;
+  }
+  
+  .aiw-messages {
+    flex: 1;
+    padding: var(--aiw-spacing-md);
+    overflow-y: auto;
+    background: var(--aiw-bg-white);
+  }
+  
+  .aiw-input-container {
+    display: flex;
+    gap: var(--aiw-spacing-sm);
+    padding: var(--aiw-spacing-md);
+    border-top: 1px solid var(--aiw-border-light);
+    background: var(--aiw-bg-light);
+  }
+  
+  .aiw-message-input {
+    flex: 1;
+    padding: var(--aiw-spacing-sm) var(--aiw-spacing-md);
+    border: 1px solid var(--aiw-border-medium);
+    border-radius: var(--aiw-radius-sm);
+    font-size: var(--aiw-font-size-md);
+    outline: none;
+    
+    &:focus {
+      border-color: var(--aiw-primary-color);
+      box-shadow: 0 0 0 2px var(--aiw-primary-light);
+    }
+  }
+  
+  .aiw-send-button {
+    padding: var(--aiw-spacing-sm) var(--aiw-spacing-md);
+    background: var(--aiw-primary-color);
+    color: var(--aiw-text-white);
+    border: none;
+    border-radius: var(--aiw-radius-sm);
+    cursor: pointer;
+    transition: background-color var(--aiw-transition-fast);
+    
+    &:hover:not(:disabled) {
+      background: var(--aiw-primary-hover);
+    }
+    
+    &:disabled {
+      background: var(--aiw-text-light);
+      cursor: not-allowed;
+    }
+  }
+}
+
+/* Interview List Widget Specific */
+.aiw-interview-list-widget-elementor {
+  .aiw-topics-container {
+    padding: var(--aiw-spacing-lg);
+  }
+  
+  /* Cards Layout */
+  &.aiw-layout-cards {
+    .aiw-topics-container {
+      display: grid;
+      gap: var(--aiw-spacing-md);
+    }
+    
+    &.aiw-columns-1 .aiw-topics-container {
+      grid-template-columns: 1fr;
+    }
+    
+    &.aiw-columns-2 .aiw-topics-container {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    
+    &.aiw-columns-3 .aiw-topics-container {
+      grid-template-columns: repeat(3, 1fr);
+    }
+    
+    &.aiw-columns-4 .aiw-topics-container {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+  
+  /* List Layout */
+  &.aiw-layout-list {
+    .aiw-topic-item {
+      border-bottom: 1px solid var(--aiw-border-light);
+      
+      &:last-child {
+        border-bottom: none;
+      }
+    }
+  }
+  
+  /* Accordion Layout */
+  &.aiw-layout-accordion {
+    .aiw-topic-item {
+      border-bottom: 1px solid var(--aiw-border-light);
+    }
+    
+    .aiw-topic-title {
+      cursor: pointer;
+      position: relative;
+      padding-right: var(--aiw-spacing-xl);
+      
+      &::after {
+        content: '+';
+        position: absolute;
+        right: var(--aiw-spacing-md);
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: var(--aiw-font-size-lg);
+        transition: transform var(--aiw-transition-fast);
+      }
+    }
+    
+    .aiw-topic-expanded .aiw-topic-title::after {
+      content: '−';
+      transform: translateY(-50%) rotate(180deg);
+    }
+    
+    .aiw-topic-description,
+    .aiw-topic-questions {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height var(--aiw-transition-normal);
+    }
+    
+    .aiw-topic-expanded {
+      .aiw-topic-description,
+      .aiw-topic-questions {
+        max-height: 500px;
+      }
+    }
+  }
+}
+
+/* Topic Items */
+.aiw-topic-item {
+  transition: all var(--aiw-transition-fast);
+}
+
+.aiw-topic-card {
+  background: var(--aiw-bg-white);
+  border: 1px solid var(--aiw-border-light);
+  border-radius: var(--aiw-radius-md);
+  padding: var(--aiw-spacing-lg);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  transition: all var(--aiw-transition-fast);
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--aiw-shadow-lg);
+    border-color: var(--aiw-primary-color);
+  }
+}
+
+.aiw-topic-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: var(--aiw-primary-light);
+  color: var(--aiw-primary-color);
+  border-radius: var(--aiw-radius-md);
+  margin-bottom: var(--aiw-spacing-md);
+  font-size: var(--aiw-font-size-lg);
+}
+
+.aiw-topic-title {
+  margin: 0 0 var(--aiw-spacing-sm) 0;
+  font-size: var(--aiw-font-size-lg);
+  font-weight: 600;
+  color: var(--aiw-text-primary);
+}
+
+.aiw-topic-description {
+  margin: 0 0 var(--aiw-spacing-md) 0;
+  font-size: var(--aiw-font-size-md);
+  color: var(--aiw-text-secondary);
+  flex: 1;
+}
+
+.aiw-topic-questions {
+  margin-top: auto;
+  
+  strong {
+    font-size: var(--aiw-font-size-sm);
+    color: var(--aiw-text-primary);
+    margin-bottom: var(--aiw-spacing-xs);
+    display: block;
+  }
+  
+  .aiw-questions-list {
+    font-size: var(--aiw-font-size-sm);
+    color: var(--aiw-text-secondary);
+    line-height: 1.4;
+  }
+}
+
+/* Messages for Elementor widgets */
+.aiw-interview-widget-elementor {
+  .aiw-message {
+    margin-bottom: var(--aiw-spacing-md);
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all var(--aiw-transition-normal);
+    
+    &.aiw-message-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .aiw-message-content {
+    padding: var(--aiw-spacing-sm) var(--aiw-spacing-md);
+    border-radius: var(--aiw-radius-md);
+    max-width: 80%;
+    word-wrap: break-word;
+  }
+  
+  .aiw-message-time {
+    font-size: var(--aiw-font-size-xs);
+    color: var(--aiw-text-light);
+    margin-top: var(--aiw-spacing-xs);
+  }
+  
+  .aiw-message-user {
+    text-align: right;
+    
+    .aiw-message-content {
+      background: var(--aiw-primary-color);
+      color: var(--aiw-text-white);
+      margin-left: auto;
+    }
+  }
+  
+  .aiw-message-assistant {
+    text-align: left;
+    
+    .aiw-message-content {
+      background: var(--aiw-secondary-color);
+      color: var(--aiw-text-primary);
+      margin-right: auto;
+    }
+  }
+  
+  .aiw-message-error {
+    text-align: center;
+    
+    .aiw-message-content {
+      background: var(--aiw-error);
+      color: var(--aiw-text-white);
+      margin: 0 auto;
+    }
+  }
+}
+
+/* Typing Indicator for Elementor */
+.aiw-typing-indicator {
+  .aiw-typing-dots {
+    display: flex;
+    gap: var(--aiw-spacing-xs);
+    
+    span {
+      width: 8px;
+      height: 8px;
+      background: var(--aiw-text-secondary);
+      border-radius: 50%;
+      animation: aiw-typing 1.4s infinite ease-in-out;
+      
+      &:nth-child(1) { animation-delay: -0.32s; }
+      &:nth-child(2) { animation-delay: -0.16s; }
+    }
+  }
+}
+
+@keyframes aiw-typing {
+  0%, 80%, 100% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Elementor Editor Styles */
+.elementor-editor-active {
+  .aiw-interview-widget-elementor,
+  .aiw-interview-list-widget-elementor {
+    pointer-events: none;
+    
+    .aiw-message-input,
+    .aiw-send-button,
+    .aiw-topic-title {
+      pointer-events: none;
+    }
+  }
+}
+
+/* Responsive Design for Elementor Widgets */
+@media (max-width: 768px) {
+  .aiw-interview-list-widget-elementor {
+    &.aiw-layout-cards {
+      &.aiw-columns-3 .aiw-topics-container,
+      &.aiw-columns-4 .aiw-topics-container {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  }
+  
+  .aiw-interview-widget-elementor {
+    .aiw-input-container {
+      flex-direction: column;
+      gap: var(--aiw-spacing-sm);
+    }
+    
+    .aiw-send-button {
+      width: 100%;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .aiw-interview-list-widget-elementor {
+    &.aiw-layout-cards {
+      .aiw-topics-container {
+        grid-template-columns: 1fr;
+      }
+    }
+  }
+  
+  .aiw-topic-card {
+    padding: var(--aiw-spacing-md);
+  }
+  
+  .aiw-interview-widget-elementor {
+    .aiw-chat-container {
+      min-height: 300px;
+    }
+    
+    .aiw-messages {
+      padding: var(--aiw-spacing-sm);
+    }
+  }
+}
+
+/* Elementor Color Classes */
+.aiw-primary-color { color: var(--aiw-primary-color); }
+.aiw-primary-bg { background-color: var(--aiw-primary-color); }
+.aiw-primary-border { border-color: var(--aiw-primary-color); }
+.aiw-secondary-color { color: var(--aiw-secondary-color); }
+.aiw-secondary-bg { background-color: var(--aiw-secondary-color); }

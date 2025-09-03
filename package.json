@@ -1,0 +1,48 @@
+{
+  "name": "ai-interview-widget",
+  "version": "2.0.0",
+  "description": "Interactive AI widget for Eric Rorich's portfolio with voice capabilities and WordPress/Elementor integration",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint assets/src/js --ext .js,.jsx --fix",
+    "lint-css": "stylelint \"assets/src/css/**/*.css\" --fix"
+  },
+  "keywords": [
+    "wordpress",
+    "plugin", 
+    "ai",
+    "interview",
+    "elementor",
+    "widget"
+  ],
+  "author": "Eric Rorich <eric@ericrorich.com>",
+  "license": "GPL-2.0-or-later",
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "vite-plugin-manifest": "^1.0.0",
+    "@vitejs/plugin-legacy": "^5.0.0",
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.32",
+    "sass": "^1.69.5",
+    "eslint": "^8.55.0",
+    "eslint-config-standard": "^17.1.0",
+    "stylelint": "^15.11.0",
+    "stylelint-config-standard": "^34.0.0"
+  },
+  "dependencies": {
+    "normalize.css": "^8.0.1"
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead",
+    "not ie 11"
+  ],
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  }
+}

@@ -1,0 +1,145 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        php-version: ['8.1', '8.2', '8.3']
+        node-version: ['20']
+    
+    name: PHP ${{ matrix.php-version }} / Node ${{ matrix.node-version }}
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup PHP ${{ matrix.php-version }}
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ matrix.php-version }}
+        extensions: mbstring, intl, bcmath, curl, json, zip
+        ini-values: post_max_size=256M, max_execution_time=180
+        coverage: xdebug
+        tools: composer:v2
+    
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+    
+    - name: Get Composer Cache Directory
+      id: composer-cache
+      run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+    
+    - name: Cache Composer packages
+      uses: actions/cache@v3
+      with:
+        path: ${{ steps.composer-cache.outputs.dir }}
+        key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-composer-
+    
+    - name: Install Composer dependencies
+      run: composer install --prefer-dist --no-progress --no-suggest --optimize-autoloader
+    
+    - name: Install Node.js dependencies
+      run: npm ci
+    
+    - name: Build assets
+      run: npm run build
+    
+    - name: Check PHP coding standards
+      run: composer run phpcs
+    
+    - name: Run PHPStan static analysis
+      run: composer run phpstan
+      continue-on-error: true
+    
+    - name: Run PHPMD mess detector
+      run: composer run phpmd
+      continue-on-error: true
+    
+    - name: Run PHPUnit tests
+      run: composer run test-coverage
+    
+    - name: Lint JavaScript
+      run: npm run lint
+      continue-on-error: true
+    
+    - name: Lint CSS
+      run: npm run lint-css
+      continue-on-error: true
+    
+    - name: Upload coverage reports to Codecov
+      if: matrix.php-version == '8.2' && matrix.node-version == '20'
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage/clover.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+  security:
+    runs-on: ubuntu-latest
+    name: Security Audit
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        tools: composer:v2
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: |
+        composer install --prefer-dist --no-progress --no-suggest
+        npm ci
+    
+    - name: Run Composer security audit
+      run: composer audit
+      continue-on-error: true
+    
+    - name: Run npm security audit
+      run: npm audit --audit-level moderate
+      continue-on-error: true
+
+  compatibility:
+    runs-on: ubuntu-latest
+    name: WordPress Compatibility
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.1'
+        tools: composer:v2
+    
+    - name: Install dependencies
+      run: composer install --prefer-dist --no-progress --no-suggest
+    
+    - name: Check WordPress compatibility
+      run: |
+        # Install PHP_CodeSniffer WordPress standards
+        vendor/bin/phpcs --config-set installed_paths vendor/wp-coding-standards/wpcs
+        
+        # Run WordPress compatibility check
+        vendor/bin/phpcs --standard=PHPCompatibilityWP --runtime-set testVersion 7.4- src/
+      continue-on-error: true

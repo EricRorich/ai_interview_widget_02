@@ -1,0 +1,401 @@
+/**
+ * Admin Styles
+ * 
+ * CSS for admin interface and settings pages.
+ * 
+ * @package AIInterviewWidget
+ * @since 2.0.0
+ */
+
+@import '_variables.scss';
+
+/* Admin Container */
+.aiw-admin-container {
+  max-width: 1200px;
+  margin: 0;
+  font-family: var(--aiw-font-family);
+}
+
+/* Admin Header */
+.aiw-admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--aiw-spacing-xl);
+  padding-bottom: var(--aiw-spacing-lg);
+  border-bottom: 1px solid var(--aiw-border-light);
+}
+
+.aiw-admin-title {
+  margin: 0;
+  font-size: var(--aiw-font-size-xxl);
+  font-weight: 600;
+  color: var(--aiw-text-primary);
+}
+
+/* Tab Navigation */
+.aiw-tab-nav {
+  display: flex;
+  margin-bottom: var(--aiw-spacing-lg);
+  border-bottom: 1px solid var(--aiw-border-light);
+}
+
+.aiw-tab-button {
+  padding: var(--aiw-spacing-md) var(--aiw-spacing-lg);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-size: var(--aiw-font-size-md);
+  color: var(--aiw-text-secondary);
+  cursor: pointer;
+  transition: all var(--aiw-transition-fast);
+  text-decoration: none;
+  
+  &:hover {
+    color: var(--aiw-text-primary);
+    background: var(--aiw-bg-light);
+  }
+  
+  &.active {
+    color: var(--aiw-primary-color);
+    border-bottom-color: var(--aiw-primary-color);
+  }
+}
+
+/* Tab Content */
+.aiw-tab-content {
+  min-height: 400px;
+}
+
+.aiw-tab-pane {
+  display: none;
+  
+  &.active {
+    display: block;
+  }
+}
+
+/* Form Styles */
+.aiw-admin-form {
+  background: var(--aiw-bg-white);
+  border: 1px solid var(--aiw-border-light);
+  border-radius: var(--aiw-radius-md);
+  padding: var(--aiw-spacing-lg);
+  margin-bottom: var(--aiw-spacing-lg);
+}
+
+.aiw-form-group {
+  margin-bottom: var(--aiw-spacing-lg);
+}
+
+.aiw-form-label {
+  display: block;
+  margin-bottom: var(--aiw-spacing-sm);
+  font-weight: 600;
+  color: var(--aiw-text-primary);
+}
+
+.aiw-form-input,
+.aiw-form-textarea,
+.aiw-form-select {
+  width: 100%;
+  padding: var(--aiw-spacing-sm) var(--aiw-spacing-md);
+  border: 1px solid var(--aiw-border-medium);
+  border-radius: var(--aiw-radius-sm);
+  font-size: var(--aiw-font-size-md);
+  font-family: inherit;
+  transition: border-color var(--aiw-transition-fast);
+  
+  &:focus {
+    outline: none;
+    border-color: var(--aiw-primary-color);
+    box-shadow: 0 0 0 2px var(--aiw-primary-light);
+  }
+  
+  &.error {
+    border-color: var(--aiw-error);
+  }
+}
+
+.aiw-form-textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.aiw-form-description {
+  margin-top: var(--aiw-spacing-xs);
+  font-size: var(--aiw-font-size-sm);
+  color: var(--aiw-text-secondary);
+}
+
+.aiw-field-error {
+  margin-top: var(--aiw-spacing-xs);
+  font-size: var(--aiw-font-size-sm);
+  color: var(--aiw-error);
+}
+
+/* Buttons */
+.aiw-button {
+  display: inline-block;
+  padding: var(--aiw-spacing-sm) var(--aiw-spacing-md);
+  background: var(--aiw-primary-color);
+  color: var(--aiw-text-white);
+  border: none;
+  border-radius: var(--aiw-radius-sm);
+  font-size: var(--aiw-font-size-md);
+  font-family: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--aiw-transition-fast);
+  
+  &:hover {
+    background: var(--aiw-primary-hover);
+    color: var(--aiw-text-white);
+  }
+  
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--aiw-primary-light);
+  }
+  
+  &.aiw-button-secondary {
+    background: var(--aiw-secondary-color);
+    color: var(--aiw-text-primary);
+    
+    &:hover {
+      background: var(--aiw-secondary-dark);
+      color: var(--aiw-text-primary);
+    }
+  }
+  
+  &.aiw-button-danger {
+    background: var(--aiw-error);
+    
+    &:hover {
+      background: #c82333;
+    }
+  }
+  
+  &:disabled {
+    background: var(--aiw-text-light);
+    cursor: not-allowed;
+  }
+}
+
+.aiw-button-group {
+  display: flex;
+  gap: var(--aiw-spacing-sm);
+  margin-top: var(--aiw-spacing-lg);
+}
+
+/* Color Picker */
+.aiw-color-picker-wrapper {
+  position: relative;
+}
+
+.aiw-color-picker {
+  width: 60px;
+  height: 40px;
+  border: 1px solid var(--aiw-border-medium);
+  border-radius: var(--aiw-radius-sm);
+  cursor: pointer;
+}
+
+/* Provider Options */
+.aiw-provider-options {
+  margin-top: var(--aiw-spacing-md);
+  padding: var(--aiw-spacing-md);
+  background: var(--aiw-bg-light);
+  border: 1px solid var(--aiw-border-light);
+  border-radius: var(--aiw-radius-sm);
+}
+
+.aiw-provider-title {
+  margin: 0 0 var(--aiw-spacing-md) 0;
+  font-size: var(--aiw-font-size-lg);
+  font-weight: 600;
+}
+
+/* Stats Cards */
+.aiw-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--aiw-spacing-md);
+  margin-bottom: var(--aiw-spacing-lg);
+}
+
+.aiw-stat-card {
+  background: var(--aiw-bg-white);
+  border: 1px solid var(--aiw-border-light);
+  border-radius: var(--aiw-radius-md);
+  padding: var(--aiw-spacing-lg);
+  text-align: center;
+}
+
+.aiw-stat-number {
+  display: block;
+  font-size: var(--aiw-font-size-xxl);
+  font-weight: 700;
+  color: var(--aiw-primary-color);
+  margin-bottom: var(--aiw-spacing-xs);
+}
+
+.aiw-stat-label {
+  font-size: var(--aiw-font-size-sm);
+  color: var(--aiw-text-secondary);
+}
+
+/* Settings Sections */
+.aiw-settings-section {
+  margin-bottom: var(--aiw-spacing-xxl);
+}
+
+.aiw-section-title {
+  margin: 0 0 var(--aiw-spacing-lg) 0;
+  font-size: var(--aiw-font-size-xl);
+  font-weight: 600;
+  color: var(--aiw-text-primary);
+  border-bottom: 1px solid var(--aiw-border-light);
+  padding-bottom: var(--aiw-spacing-sm);
+}
+
+/* Toggle Switch */
+.aiw-toggle {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 24px;
+}
+
+.aiw-toggle-input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.aiw-toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--aiw-text-light);
+  transition: var(--aiw-transition-fast);
+  border-radius: 24px;
+  
+  &::before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    transition: var(--aiw-transition-fast);
+    border-radius: 50%;
+  }
+}
+
+.aiw-toggle-input:checked + .aiw-toggle-slider {
+  background-color: var(--aiw-primary-color);
+}
+
+.aiw-toggle-input:checked + .aiw-toggle-slider::before {
+  transform: translateX(26px);
+}
+
+/* Notices */
+.aiw-notice {
+  padding: var(--aiw-spacing-md);
+  border-radius: var(--aiw-radius-sm);
+  margin-bottom: var(--aiw-spacing-md);
+  
+  &.aiw-notice-success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+  }
+  
+  &.aiw-notice-warning {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+  }
+  
+  &.aiw-notice-error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+  }
+  
+  &.aiw-notice-info {
+    background: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+  }
+}
+
+/* Loading States */
+.aiw-loading-overlay {
+  position: relative;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+  }
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid var(--aiw-border-light);
+    border-top: 2px solid var(--aiw-primary-color);
+    border-radius: 50%;
+    animation: aiw-spin 1s linear infinite;
+    z-index: 11;
+  }
+}
+
+@keyframes aiw-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .aiw-admin-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--aiw-spacing-md);
+  }
+  
+  .aiw-tab-nav {
+    flex-wrap: wrap;
+  }
+  
+  .aiw-tab-button {
+    padding: var(--aiw-spacing-sm) var(--aiw-spacing-md);
+  }
+  
+  .aiw-stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .aiw-button-group {
+    flex-direction: column;
+  }
+}

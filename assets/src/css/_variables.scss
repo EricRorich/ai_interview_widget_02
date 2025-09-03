@@ -1,0 +1,79 @@
+/**
+ * CSS Variables and Base Configuration
+ * 
+ * @package AIInterviewWidget
+ * @since 2.0.0
+ */
+
+:root {
+  /* Primary Colors */
+  --aiw-primary-color: #007cba;
+  --aiw-primary-hover: #005a87;
+  --aiw-primary-light: #b8e6ff;
+  
+  /* Secondary Colors */
+  --aiw-secondary-color: #f1f1f1;
+  --aiw-secondary-dark: #e1e1e1;
+  
+  /* Text Colors */
+  --aiw-text-primary: #333333;
+  --aiw-text-secondary: #666666;
+  --aiw-text-light: #999999;
+  --aiw-text-white: #ffffff;
+  
+  /* Background Colors */
+  --aiw-bg-white: #ffffff;
+  --aiw-bg-light: #f9f9f9;
+  --aiw-bg-dark: #2c3e50;
+  
+  /* Border Colors */
+  --aiw-border-light: #e1e1e1;
+  --aiw-border-medium: #cccccc;
+  --aiw-border-dark: #999999;
+  
+  /* Status Colors */
+  --aiw-success: #28a745;
+  --aiw-warning: #ffc107;
+  --aiw-error: #dc3545;
+  --aiw-info: #17a2b8;
+  
+  /* Spacing */
+  --aiw-spacing-xs: 4px;
+  --aiw-spacing-sm: 8px;
+  --aiw-spacing-md: 16px;
+  --aiw-spacing-lg: 24px;
+  --aiw-spacing-xl: 32px;
+  --aiw-spacing-xxl: 48px;
+  
+  /* Typography */
+  --aiw-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+  --aiw-font-size-xs: 12px;
+  --aiw-font-size-sm: 14px;
+  --aiw-font-size-md: 16px;
+  --aiw-font-size-lg: 18px;
+  --aiw-font-size-xl: 20px;
+  --aiw-font-size-xxl: 24px;
+  
+  /* Border Radius */
+  --aiw-radius-sm: 4px;
+  --aiw-radius-md: 8px;
+  --aiw-radius-lg: 12px;
+  --aiw-radius-xl: 16px;
+  
+  /* Shadows */
+  --aiw-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.1);
+  --aiw-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --aiw-shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.15);
+  --aiw-shadow-xl: 0 8px 16px rgba(0, 0, 0, 0.2);
+  
+  /* Transitions */
+  --aiw-transition-fast: 0.15s ease;
+  --aiw-transition-normal: 0.3s ease;
+  --aiw-transition-slow: 0.5s ease;
+  
+  /* Z-index */
+  --aiw-z-dropdown: 1000;
+  --aiw-z-overlay: 1010;
+  --aiw-z-modal: 1020;
+  --aiw-z-tooltip: 1030;
+}

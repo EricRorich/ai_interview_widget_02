@@ -1,6 +1,6 @@
 {
   "name": "ai-interview-widget",
-  "version": "2.0.0",
+  "version": "0.2.0",
   "description": "Interactive AI widget for Eric Rorich's portfolio with voice capabilities and WordPress/Elementor integration",
   "main": "index.js",
   "scripts": {
@@ -22,7 +22,7 @@
   "license": "GPL-2.0-or-later",
   "devDependencies": {
     "vite": "^5.0.0",
-    "vite-plugin-manifest": "^1.0.0",
+
     "@vitejs/plugin-legacy": "^5.0.0",
     "autoprefixer": "^10.4.16",
     "postcss": "^8.4.32",

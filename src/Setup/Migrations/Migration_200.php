@@ -27,7 +27,7 @@ class Migration_200 implements MigrationInterface {
      * @return string Version string
      */
     public function targetVersion(): string {
-        return '2.0.0';
+        return '0.1.0';
     }
 
     /**

@@ -15,6 +15,7 @@ use EricRorich\AIInterviewWidget\Core\Contracts\ServiceProviderInterface;
 use EricRorich\AIInterviewWidget\Setup\Upgrade\VersionManager;
 use EricRorich\AIInterviewWidget\Setup\Migrations\Migration_200;
 use EricRorich\AIInterviewWidget\Setup\Migrations\Migration_210;
+use EricRorich\AIInterviewWidget\Setup\Migrations\Migration_020;
 
 /**
  * Upgrade Service Provider
@@ -40,6 +41,7 @@ class UpgradeServiceProvider implements ServiceProviderInterface {
             return [
                 new Migration_200(),
                 new Migration_210(),
+                new Migration_020(),
             ];
         });
     }

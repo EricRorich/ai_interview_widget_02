@@ -7,7 +7,7 @@
  * @since 2.0.0
  */
 
-@import 'normalize.css';
+@import 'normalize.css/normalize.css';
 @import '_variables.scss';
 
 /* Base Widget Styles */

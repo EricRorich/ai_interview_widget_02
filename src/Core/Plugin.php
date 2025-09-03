@@ -31,7 +31,7 @@ class Plugin {
      * 
      * @var string
      */
-    const VERSION = '2.0.0';
+    const VERSION = '0.2.0';
 
     /**
      * Plugin instance
@@ -139,27 +139,53 @@ class Plugin {
             $providers[] = new \EricRorich\AIInterviewWidget\Integrations\Elementor\ElementorServiceProvider();
         }
         
-        // Register all providers
+        // Register all providers with error handling
         foreach ($providers as $provider) {
-            $provider->register($container);
+            try {
+                if ($provider instanceof \EricRorich\AIInterviewWidget\Core\Contracts\ServiceProviderInterface) {
+                    $provider->register($container);
+                } else {
+                    error_log('AI Interview Widget: Invalid service provider class - ' . get_class($provider));
+                }
+            } catch (\Exception $e) {
+                error_log('AI Interview Widget: Failed to register service provider ' . get_class($provider) . ' - ' . $e->getMessage());
+            }
         }
         
-        // Boot all providers
+        // Boot all providers with error handling
         foreach ($providers as $provider) {
-            $provider->boot($container);
+            try {
+                if ($provider instanceof \EricRorich\AIInterviewWidget\Core\Contracts\ServiceProviderInterface) {
+                    $provider->boot($container);
+                }
+            } catch (\Exception $e) {
+                error_log('AI Interview Widget: Failed to boot service provider ' . get_class($provider) . ' - ' . $e->getMessage());
+            }
         }
         
         $this->container = $container;
         
-        // Legacy services for backward compatibility
-        $this->services['assets'] = $container->make('assets');
+        // Legacy services for backward compatibility with defensive checks
+        try {
+            $this->services['assets'] = $container->make('assets');
+        } catch (\Exception $e) {
+            error_log('AI Interview Widget: Failed to resolve assets service - ' . $e->getMessage());
+        }
         
         if (is_admin() && $container->has('admin.service')) {
-            $this->services['admin'] = $container->make('admin.service');
+            try {
+                $this->services['admin'] = $container->make('admin.service');
+            } catch (\Exception $e) {
+                error_log('AI Interview Widget: Failed to resolve admin service - ' . $e->getMessage());
+            }
         }
         
         if ($container->has('elementor.widget_manager')) {
-            $this->services['elementor'] = $container->make('elementor.widget_manager');
+            try {
+                $this->services['elementor'] = $container->make('elementor.widget_manager');
+            } catch (\Exception $e) {
+                error_log('AI Interview Widget: Failed to resolve elementor service - ' . $e->getMessage());
+            }
         }
     }
 
@@ -171,7 +197,11 @@ class Plugin {
     private function initialize_services() {
         foreach ($this->services as $service) {
             if (method_exists($service, 'init')) {
-                $service->init();
+                try {
+                    $service->init();
+                } catch (\Exception $e) {
+                    error_log('AI Interview Widget: Failed to initialize service ' . get_class($service) . ' - ' . $e->getMessage());
+                }
             }
         }
     }
@@ -189,7 +219,7 @@ class Plugin {
     /**
      * Get the dependency injection container
      * 
-     * @return Container
+     * @return Container|null
      */
     public function get_container() {
         return $this->container;
@@ -214,8 +244,9 @@ class Plugin {
     private function show_admin_notice($message, $type = 'info') {
         add_action('admin_notices', function() use ($message, $type) {
             printf(
-                '<div class="notice notice-%s"><p><strong>AI Interview Widget:</strong> %s</p></div>',
+                '<div class="notice notice-%s"><p><strong>%s:</strong> %s</p></div>',
                 esc_attr($type),
+                esc_html__('AI Interview Widget', 'ai-interview-widget'),
                 esc_html($message)
             );
         });

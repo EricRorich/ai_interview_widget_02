@@ -65,11 +65,6 @@ export default defineConfig({
       plugins: [
         require('autoprefixer')
       ]
-    },
-    preprocessorOptions: {
-      scss: {
-        additionalData: `@import "assets/src/css/_variables.scss";`
-      }
     }
   },
   

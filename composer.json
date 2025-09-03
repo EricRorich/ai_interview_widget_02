@@ -2,7 +2,7 @@
     "name": "ericrorich/ai-interview-widget",
     "description": "Interactive AI widget for Eric Rorich's portfolio with voice capabilities and WordPress/Elementor integration",
     "type": "wordpress-plugin",
-    "version": "2.0.0",
+    "version": "0.2.0",
     "license": "GPL-2.0-or-later",
     "authors": [
         {

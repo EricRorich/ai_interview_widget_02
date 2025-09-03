@@ -1,6 +1,6 @@
 {
   "name": "ai-interview-widget",
-  "version": "2.0.0",
+  "version": "0.2.0",
   "description": "Interactive AI widget for Eric Rorich's portfolio with voice capabilities and WordPress/Elementor integration",
   "main": "index.js",
   "scripts": {

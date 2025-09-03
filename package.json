@@ -22,7 +22,7 @@
   "license": "GPL-2.0-or-later",
   "devDependencies": {
     "vite": "^5.0.0",
-    "vite-plugin-manifest": "^1.0.0",
+
     "@vitejs/plugin-legacy": "^5.0.0",
     "autoprefixer": "^10.4.16",
     "postcss": "^8.4.32",

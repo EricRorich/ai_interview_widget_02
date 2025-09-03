@@ -1,0 +1,38 @@
+{
+    "name": "ericrorich/ai-interview-widget",
+    "description": "Interactive AI widget for Eric Rorich's portfolio with voice capabilities and WordPress/Elementor integration",
+    "type": "wordpress-plugin",
+    "version": "2.0.0",
+    "license": "GPL-2.0-or-later",
+    "authors": [
+        {
+            "name": "Eric Rorich",
+            "email": "eric@ericrorich.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.4"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.5",
+        "yoast/phpunit-polyfills": "^1.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "EricRorich\\AIInterviewWidget\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "EricRorich\\AIInterviewWidget\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "test-coverage": "phpunit --coverage-html coverage"
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
+    }
+}

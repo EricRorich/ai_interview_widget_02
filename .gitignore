@@ -13,4 +13,24 @@ test_*.js
 
 # OS files
 .DS_Store
-Thumbs.dbtest-widget-functionality.html
+Thumbs.db
+
+# Dependencies
+vendor/
+node_modules/
+
+# Coverage and test reports
+coverage/
+coverage.xml
+.phpunit.result.cache
+
+# WordPress testing
+/tmp/
+
+# Build artifacts
+dist/
+build/
+
+# Logs
+*.log
+debug.log
